@@ -1,0 +1,374 @@
+// admin.js — página admin/index.html (equivalente ao antigo /admin)
+
+const ADMIN_SESSION_KEY = 'pedeai_admin_authenticated'
+const root = document.getElementById('root')
+
+const state = {
+  authenticated: sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true',
+  loginError: '',
+  restaurants: [],
+  loading: true,
+  creating: false,
+  formError: '',
+  nameDraft: '',
+  searchQuery: '',
+  qrRestaurant: null,
+  qrDataUrl: null,
+}
+
+function render() {
+  root.innerHTML = state.authenticated ? dashboardHtml() : loginHtml()
+  bindEvents()
+}
+
+function loginHtml() {
+  return `
+    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-purple/10 via-neutral-50 to-brand-orange/10 px-4">
+      <form id="login-form" class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm space-y-5 fade-slide-in">
+        <div class="flex justify-center mb-1">${renderLogo({ size: 'lg', showSlogan: true })}</div>
+        <div class="flex items-center justify-center gap-1.5 text-neutral-500 text-sm">
+          <span>🔒</span>
+          <h1>Área do super admin</h1>
+        </div>
+        <input
+          type="password"
+          id="password-input"
+          autofocus
+          placeholder="Senha de admin"
+          class="w-full border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+        />
+        ${state.loginError ? `<p class="text-brand-red text-sm flex items-center gap-1.5">⚠️ ${escapeHtml(state.loginError)}</p>` : ''}
+        <button
+          type="submit"
+          class="w-full bg-brand-purple text-white font-semibold rounded-lg py-2.5 hover:opacity-90 active:scale-[0.99] transition"
+        >
+          Entrar
+        </button>
+      </form>
+    </div>
+  `
+}
+
+function dashboardHtml() {
+  const total = state.restaurants.length
+  const active = state.restaurants.filter((r) => r.is_active).length
+
+  return `
+    <div class="min-h-screen bg-neutral-50">
+      <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
+        <div>
+          ${renderLogo({ size: 'sm' })}
+          <p class="text-xs text-neutral-400 mt-0.5">Painel do administrador</p>
+        </div>
+        <button id="logout-btn" class="text-sm text-neutral-500 hover:text-brand-red transition">Sair</button>
+      </header>
+
+      <main class="max-w-4xl mx-auto px-6 py-8 space-y-6">
+        <section class="grid grid-cols-2 gap-4">
+          <div class="bg-white rounded-xl border border-neutral-200 p-4">
+            <p class="text-xs text-neutral-400 font-medium">Restaurantes</p>
+            <p class="text-2xl font-bold text-neutral-900 mt-1">${total}</p>
+          </div>
+          <div class="bg-white rounded-xl border border-neutral-200 p-4">
+            <p class="text-xs text-neutral-400 font-medium">Ativos agora</p>
+            <p class="text-2xl font-bold text-emerald-600 mt-1">${active}</p>
+          </div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
+          <h2 class="font-semibold text-lg mb-4">Cadastrar restaurante</h2>
+          <form id="create-form" class="flex flex-col sm:flex-row gap-3">
+            <input
+              id="name-input"
+              value="${escapeHtml(state.nameDraft)}"
+              placeholder="Nome do restaurante"
+              class="flex-1 border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+            />
+            <button
+              type="submit"
+              ${state.creating ? 'disabled' : ''}
+              class="bg-brand-orange text-white font-semibold rounded-lg px-5 py-2.5 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 whitespace-nowrap"
+            >
+              ${state.creating ? 'Criando...' : '+ Cadastrar'}
+            </button>
+          </form>
+          ${state.formError ? `<p class="text-brand-red text-sm mt-2 flex items-center gap-1.5">⚠️ ${escapeHtml(state.formError)}</p>` : ''}
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
+          <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 class="font-semibold text-lg">Restaurantes (${total})</h2>
+            ${
+              total > 0
+                ? `<input id="search-input" value="${escapeHtml(state.searchQuery)}" placeholder="Buscar por nome..." class="border border-neutral-300 rounded-lg px-3 py-1.5 text-sm w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-brand-purple transition" />`
+                : ''
+            }
+          </div>
+          <div id="restaurant-list">${state.loading ? skeletonCardsHtml(3) : restaurantListHtml()}</div>
+        </section>
+      </main>
+
+      ${state.qrRestaurant ? qrModalHtml() : ''}
+    </div>
+  `
+}
+
+function filteredRestaurants() {
+  const q = state.searchQuery.trim().toLowerCase()
+  if (!q) return state.restaurants
+  return state.restaurants.filter((r) => r.name.toLowerCase().includes(q))
+}
+
+function restaurantStatusPill(isActive) {
+  return isActive
+    ? '<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>Ativo</span>'
+    : '<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-500"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>Inativo</span>'
+}
+
+function restaurantListHtml() {
+  if (state.restaurants.length === 0) {
+    return emptyStateHtml('🍽️', 'Nenhum restaurante cadastrado ainda. Cadastre o primeiro acima.')
+  }
+  const list = filteredRestaurants()
+  if (list.length === 0) {
+    return emptyStateHtml('🔍', `Nenhum restaurante encontrado para "${state.searchQuery}".`)
+  }
+  return `
+    <div class="space-y-3">
+      ${list
+        .map(
+          (r) => `
+        <div class="card-hover fade-slide-in flex flex-col sm:flex-row sm:items-center gap-4 border border-neutral-200 rounded-xl px-4 py-4">
+          <div class="w-11 h-11 rounded-full bg-brand-purple/10 text-brand-purple font-bold flex items-center justify-center text-lg shrink-0">
+            ${escapeHtml(r.name.trim().charAt(0).toUpperCase() || '?')}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <p class="font-semibold text-neutral-900 truncate">${escapeHtml(r.name)}</p>
+              ${restaurantStatusPill(r.is_active)}
+            </div>
+            <div class="mt-1.5 space-y-1 text-xs">
+              <div class="flex items-center gap-1.5 text-neutral-500">
+                <span>🔗</span>
+                <a href="${escapeHtml(menuUrl(r.slug))}" target="_blank" rel="noreferrer" class="underline truncate hover:text-brand-purple transition">Ver cardápio público</a>
+                <button data-copy-id="${r.id}" data-copy-kind="menu" title="Copiar link do cardápio" class="text-neutral-400 hover:text-brand-purple transition shrink-0">⧉</button>
+              </div>
+              <div class="flex items-center gap-1.5 text-neutral-500">
+                <span>🧑‍🍳</span>
+                <a href="${escapeHtml(panelUrl(r.access_token))}" target="_blank" rel="noreferrer" class="underline truncate text-brand-purple hover:opacity-80 transition">Abrir painel do restaurante</a>
+                <button data-copy-id="${r.id}" data-copy-kind="panel" title="Copiar link do painel" class="text-neutral-400 hover:text-brand-purple transition shrink-0">⧉</button>
+              </div>
+            </div>
+          </div>
+          <div class="flex sm:flex-col gap-2 shrink-0">
+            <button data-action="qr" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-purple/10 text-brand-purple font-medium rounded-lg px-3 py-1.5 hover:bg-brand-purple/20 transition">QR Code</button>
+            <button data-action="toggle" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-neutral-100 text-neutral-600 font-medium rounded-lg px-3 py-1.5 hover:bg-neutral-200 transition">${r.is_active ? 'Desativar' : 'Ativar'}</button>
+            <button data-action="regen" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-red/10 text-brand-red font-medium rounded-lg px-3 py-1.5 hover:bg-brand-red/20 transition">Regenerar link</button>
+          </div>
+        </div>
+      `
+        )
+        .join('')}
+    </div>
+  `
+}
+
+function qrModalHtml() {
+  const r = state.qrRestaurant
+  return `
+    <div id="qr-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div id="qr-box" class="modal-box bg-white rounded-2xl p-6 max-w-xs w-full text-center space-y-4">
+        <h3 class="font-semibold">${escapeHtml(r.name)}</h3>
+        ${
+          state.qrDataUrl
+            ? `<img src="${state.qrDataUrl}" alt="QR Code de ${escapeHtml(r.name)}" class="mx-auto rounded-lg border border-neutral-100" />`
+            : `<div class="py-12 flex flex-col items-center gap-2 text-neutral-400">
+                <div class="w-8 h-8 border-2 border-brand-purple/30 border-t-brand-purple rounded-full animate-spin"></div>
+                <p class="text-sm">Gerando QR Code...</p>
+              </div>`
+        }
+        <div class="flex items-center gap-1.5 justify-center text-xs text-neutral-500">
+          <span class="truncate max-w-[200px]">${escapeHtml(menuUrl(r.slug))}</span>
+          <button id="qr-copy-btn" title="Copiar link" class="text-neutral-400 hover:text-brand-purple transition shrink-0">⧉</button>
+        </div>
+        <div class="flex gap-2">
+          ${
+            state.qrDataUrl
+              ? `<a href="${state.qrDataUrl}" download="qrcode-${escapeHtml(r.slug)}.png" class="flex-1 bg-brand-purple text-white text-sm font-semibold rounded-lg py-2 hover:opacity-90 transition">Baixar PNG</a>`
+              : ''
+          }
+          <button id="qr-close-btn" class="flex-1 bg-neutral-100 text-neutral-600 text-sm font-semibold rounded-lg py-2 hover:bg-neutral-200 transition">Fechar</button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function bindEvents() {
+  if (!state.authenticated) {
+    document.getElementById('login-form').addEventListener('submit', handleLogin)
+    return
+  }
+
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    sessionStorage.removeItem(ADMIN_SESSION_KEY)
+    location.reload()
+  })
+
+  document.getElementById('name-input').addEventListener('input', (e) => {
+    state.nameDraft = e.target.value
+  })
+
+  document.getElementById('create-form').addEventListener('submit', handleCreate)
+
+  const searchInput = document.getElementById('search-input')
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      state.searchQuery = e.target.value
+      document.getElementById('restaurant-list').innerHTML = restaurantListHtml()
+      bindRestaurantListEvents()
+    })
+  }
+
+  bindRestaurantListEvents()
+
+  const overlay = document.getElementById('qr-overlay')
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeQrModal()
+    })
+    document.getElementById('qr-close-btn').addEventListener('click', closeQrModal)
+    const copyBtn = document.getElementById('qr-copy-btn')
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => copyLinkWithFeedback(menuUrl(state.qrRestaurant.slug)))
+    }
+  }
+}
+
+function bindRestaurantListEvents() {
+  document.querySelectorAll('[data-action]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id')
+      const restaurant = state.restaurants.find((r) => r.id === id)
+      const action = btn.getAttribute('data-action')
+      if (action === 'qr') openQrModal(restaurant)
+      if (action === 'toggle') toggleActive(restaurant)
+      if (action === 'regen') regenerateToken(restaurant)
+    })
+  })
+
+  document.querySelectorAll('[data-copy-id]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const restaurant = state.restaurants.find((r) => r.id === btn.getAttribute('data-copy-id'))
+      if (!restaurant) return
+      const kind = btn.getAttribute('data-copy-kind')
+      const link = kind === 'panel' ? panelUrl(restaurant.access_token) : menuUrl(restaurant.slug)
+      copyLinkWithFeedback(link)
+    })
+  })
+}
+
+async function copyLinkWithFeedback(link) {
+  const ok = await copyToClipboard(link)
+  showToast(ok ? 'Link copiado!' : 'Não deu para copiar — copie manualmente.', ok ? 'success' : 'error')
+}
+
+function handleLogin(e) {
+  e.preventDefault()
+  // Gate simples de MVP: senha comparada no cliente contra PEDEAI_CONFIG.ADMIN_PASSWORD.
+  // Não é autenticação real — ver aviso de segurança no README/migrations.
+  // Antes de produção, migrar para Supabase Auth.
+  const password = document.getElementById('password-input').value
+  const expected = window.PEDEAI_CONFIG.ADMIN_PASSWORD
+  if (expected && password === expected) {
+    sessionStorage.setItem(ADMIN_SESSION_KEY, 'true')
+    state.authenticated = true
+    state.loginError = ''
+    render()
+    loadRestaurants()
+  } else {
+    state.loginError = 'Senha incorreta.'
+    render()
+  }
+}
+
+async function loadRestaurants() {
+  state.loading = true
+  render()
+  const { data, error } = await supabaseClient
+    .from('restaurants')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) {
+    state.formError = error.message
+    showToast('Erro ao carregar restaurantes.', 'error')
+  } else {
+    state.restaurants = data
+  }
+  state.loading = false
+  render()
+}
+
+async function handleCreate(e) {
+  e.preventDefault()
+  const name = state.nameDraft.trim()
+  if (!name) return
+  state.creating = true
+  state.formError = ''
+  render()
+
+  const slug = slugify(name)
+  const { error } = await supabaseClient.from('restaurants').insert({ name, slug })
+
+  if (error) {
+    state.formError = error.message
+  } else {
+    state.nameDraft = ''
+    showToast(`"${name}" cadastrado!`, 'success')
+  }
+  state.creating = false
+  await loadRestaurants()
+}
+
+async function toggleActive(r) {
+  const { error } = await supabaseClient.from('restaurants').update({ is_active: !r.is_active }).eq('id', r.id)
+  if (error) showToast('Erro ao atualizar restaurante.', 'error')
+  else showToast(r.is_active ? `"${r.name}" desativado.` : `"${r.name}" ativado.`, 'success')
+  loadRestaurants()
+}
+
+async function regenerateToken(r) {
+  const confirmed = await showConfirm({
+    title: 'Regenerar link do painel',
+    message: `O link atual do painel de "${r.name}" deixará de funcionar e um novo será gerado. Continuar?`,
+    confirmLabel: 'Regenerar',
+    danger: true,
+  })
+  if (!confirmed) return
+  const newToken = crypto.randomUUID().replace(/-/g, '')
+  const { error } = await supabaseClient.from('restaurants').update({ access_token: newToken }).eq('id', r.id)
+  if (error) showToast('Erro ao regenerar link.', 'error')
+  else showToast('Novo link gerado.', 'success')
+  loadRestaurants()
+}
+
+function openQrModal(r) {
+  state.qrRestaurant = r
+  state.qrDataUrl = null
+  render()
+  generateMenuQrCode(r.slug).then((dataUrl) => {
+    if (state.qrRestaurant && state.qrRestaurant.id === r.id) {
+      state.qrDataUrl = dataUrl
+      render()
+    }
+  })
+}
+
+function closeQrModal() {
+  state.qrRestaurant = null
+  state.qrDataUrl = null
+  render()
+}
+
+render()
+if (state.authenticated) loadRestaurants()

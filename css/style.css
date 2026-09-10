@@ -1,0 +1,176 @@
+/* style.css — sistema de design compartilhado, além dos utilitários do Tailwind (CDN). */
+
+:root {
+  --brand-orange: #ff6b35;
+  --brand-red: #e63946;
+  --brand-purple: #7c3aed;
+  --brand-blue: #2563eb;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d4 transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #fafafa; /* neutral-50 */
+  color: #171717; /* neutral-900 */
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
+
+/* Destaque tipográfico do "AI" na marca — usado em qualquer lugar que renderize o nome */
+.brand-ai {
+  color: var(--brand-purple);
+  font-weight: 800;
+}
+
+/* ---- Cartões com leve elevação ao passar o mouse ---- */
+.card-hover {
+  transition: box-shadow 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 6px 20px rgba(23, 23, 23, 0.08);
+  transform: translateY(-1px);
+  border-color: #e5e5e5;
+}
+
+/* ---- Botões de quantidade (carrinho) ---- */
+.qty-btn {
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.qty-btn:active {
+  transform: scale(0.9);
+}
+
+/* ---- Toasts ---- */
+#toast-container {
+  pointer-events: none;
+}
+.toast-item {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.96);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.toast-item.toast-in {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.toast-item.toast-out {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.96);
+}
+
+/* ---- Modais (confirmação, QR, formulário, chat) ---- */
+@keyframes modal-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-box-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.modal-overlay {
+  animation: modal-overlay-in 0.15s ease;
+}
+.modal-box {
+  animation: modal-box-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- Indicador de digitação do garçom IA ---- */
+.typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.35;
+  animation: typing-bounce 1.1s infinite ease-in-out;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.35; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* ---- Entrada suave de itens de lista ---- */
+@keyframes fade-slide-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-slide-in {
+  animation: fade-slide-in 0.2s ease both;
+}
+
+/* ---- Placeholder de imagem ausente ---- */
+.img-placeholder {
+  background: linear-gradient(135deg, #f5f5f5, #e5e5e5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a3a3a3;
+}
+
+/* ---- Ergonomia mobile (crítico na página do cardápio: é aberta pelo QR Code no celular) ---- */
+
+/* Remove o delay de 300ms no tap e o flash cinza padrão do Android/iOS ao tocar
+   em botões/links — sem isso, toda interação parece "atrasada" no celular. */
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS dá zoom automático ao focar em campo de texto com fonte menor que 16px.
+   O !important é proposital: precisa vencer utilitários do Tailwind (text-sm
+   etc.) aplicados inline nos inputs, sem precisar caçar cada um deles. */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Containers de scroll "internos" (mensagens do chat, lista do carrinho
+   aberta): sem isso, ao chegar no topo/fim do scroll interno o dedo continua
+   arrastando e rola o fundo da página junto — comportamento clássico e
+   incômodo em bottom sheets no mobile. */
+.scroll-contain {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Respiro extra em elementos fixos na borda inferior da tela, para não ficarem
+   colados no home indicator (iPhone) ou na barra de gestos (Android). */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

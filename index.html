@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PedeAí — Cardápio digital com IA</title>
+    <meta
+      name="description"
+      content="Pede aí. A IA sugere. Cardápio digital com QR Code e garçom IA para restaurantes."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              // Identidade PedeAí: quente (laranja/vermelho) + tecnológico (roxo/azul)
+              brand: {
+                orange: '#FF6B35',
+                red: '#E63946',
+                purple: '#7C3AED',
+                blue: '#2563EB',
+              },
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-purple/10 to-brand-orange/10 px-4">
+      <div class="max-w-md w-full text-center space-y-6">
+        <div class="flex justify-center" id="logo-slot"></div>
+        <p class="text-neutral-600">
+          Cardápio digital com QR Code e garçom IA para restaurantes.
+        </p>
+        <div class="bg-white rounded-2xl shadow-xl p-6 space-y-3 text-left">
+          <p class="text-sm font-semibold text-neutral-700">Três áreas, cada uma na sua pasta</p>
+          <ul class="text-sm text-neutral-500 space-y-1 list-disc list-inside">
+            <li>Não precisa de Node, npm ou build — é HTML/CSS/JS puro.</li>
+            <li>Abra qualquer <code>index.html</code> com a extensão Live Server do VS Code.</li>
+            <li><code>admin/</code> — você cadastra restaurantes e gera QR Codes.</li>
+            <li><code>restaurante/</code> — painel de cada restaurante (link com token, gerado pelo admin).</li>
+            <li><code>cliente/</code> — cardápio público, acessado pelo QR Code da mesa.</li>
+          </ul>
+        </div>
+        <a
+          href="admin/index.html"
+          class="inline-block bg-brand-purple text-white font-semibold rounded-lg px-6 py-3 hover:opacity-90 transition"
+        >
+          Acessar área do admin
+        </a>
+      </div>
+    </div>
+
+    <script src="js/logo.js"></script>
+    <script>
+      document.getElementById('logo-slot').innerHTML = renderLogo({ size: 'lg', showSlogan: true })
+    </script>
+  </body>
+</html>
