@@ -10,6 +10,7 @@ const numero = queryParams.get('mesa')
 
 let restaurant = null
 let products = []
+let categories = []
 let cart = []
 let cartOpen = false
 let placing = false
@@ -64,6 +65,17 @@ async function init() {
     .order('name')
   products = prods || []
 
+  // Categorias (seções do cardápio) criadas pelo restaurante — ver
+  // restaurante/painel.js. Se não houver nenhuma, o cardápio cai numa lista
+  // simples, sem cabeçalhos de seção.
+  const { data: cats } = await supabaseClient
+    .from('categories')
+    .select('*')
+    .eq('restaurant_id', restaurant.id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+  categories = cats || []
+
   chatMessages = [
     {
       role: 'assistant',
@@ -92,12 +104,8 @@ function pageHtml() {
         ${numero ? `<p class="text-sm text-white/80 flex items-center gap-1 mt-0.5"><span>🪑</span>Mesa ${escapeHtml(numero)}</p>` : ''}
       </header>
 
-      <main class="max-w-2xl mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-3">
-        ${
-          products.length === 0
-            ? emptyStateHtml('🍽️', 'Cardápio ainda não tem itens disponíveis. Volte daqui a pouco!')
-            : products.map(productCardHtml).join('')
-        }
+      <main class="max-w-2xl mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-6">
+        ${menuContentHtml()}
       </main>
 
       <!-- Botão flutuante do garçom IA — coração da proposta "Pede AI" -->
@@ -114,6 +122,60 @@ function pageHtml() {
       ${cart.length > 0 || placed ? cartBarHtml() : ''}
       ${chatOpen ? chatModalHtml() : ''}
     </div>
+  `
+}
+
+// Agrupa os produtos disponíveis pelas categorias do restaurante (mesma regra
+// usada na prévia do painel, ver restaurante/painel.js). Sem categorias
+// cadastradas, retorna null — o chamador cai numa lista simples sem seções.
+// Produto sem categoria (ou cuja categoria foi excluída) entra em "Outros".
+function buildMenuGroups() {
+  if (categories.length === 0) return null
+  const groups = categories
+    .map((c) => ({ id: c.id, name: c.name, items: products.filter((p) => p.category_id === c.id) }))
+    .filter((g) => g.items.length > 0)
+  const uncategorized = products.filter((p) => !p.category_id || !categories.some((c) => c.id === p.category_id))
+  if (uncategorized.length > 0) groups.push({ id: null, name: 'Outros', items: uncategorized })
+  return groups
+}
+
+function menuContentHtml() {
+  if (products.length === 0) {
+    return emptyStateHtml('🍽️', 'Cardápio ainda não tem itens disponíveis. Volte daqui a pouco!')
+  }
+
+  const groups = buildMenuGroups()
+  if (!groups) {
+    return `<div class="space-y-3">${products.map(productCardHtml).join('')}</div>`
+  }
+
+  return `${categoryNavHtml(groups)}${groups.map(menuSectionHtml).join('')}`
+}
+
+// Barra de "pílulas" pra pular direto pra uma seção — só compensa mostrar
+// quando há mais de uma seção; com uma só, seria repetir o título à toa.
+function categoryNavHtml(groups) {
+  if (groups.length <= 1) return ''
+  return `
+    <nav class="scroll-contain sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 bg-neutral-50/95 backdrop-blur border-b border-neutral-200 overflow-x-auto">
+      <div class="flex gap-2 w-max">
+        ${groups
+          .map(
+            (g) =>
+              `<a href="#secao-${g.id || 'outros'}" class="text-xs font-semibold whitespace-nowrap bg-white border border-neutral-200 text-neutral-600 rounded-full px-3.5 py-2 hover:border-brand-purple hover:text-brand-purple transition">${escapeHtml(g.name)}</a>`
+          )
+          .join('')}
+      </div>
+    </nav>
+  `
+}
+
+function menuSectionHtml(g) {
+  return `
+    <section id="secao-${g.id || 'outros'}" class="space-y-3 scroll-mt-16">
+      <h2 class="text-sm font-bold uppercase tracking-wide text-neutral-500">${escapeHtml(g.name)}</h2>
+      <div class="space-y-3">${g.items.map(productCardHtml).join('')}</div>
+    </section>
   `
 }
 

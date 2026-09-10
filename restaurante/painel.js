@@ -18,6 +18,10 @@ let realtimeChannel = null
 
 let ordersState = []
 let productsState = []
+let categoriesState = []
+let newCategoryName = ''
+let renamingCategoryId = null
+let renamingCategoryDraft = ''
 let editingProduct = null
 let productFormError = ''
 let savingProduct = false
@@ -97,6 +101,7 @@ function renderTabContent() {
   } else {
     container.innerHTML = productsTabHtml()
     bindProductsTabEvents()
+    loadCategories()
     loadProducts()
   }
 }
@@ -190,7 +195,7 @@ function unsubscribeOrders() {
   }
 }
 
-// ---- Produtos ----
+// ---- Aba de produtos (categorias + lista) ----
 
 function productsTabHtml() {
   return `
@@ -199,10 +204,151 @@ function productsTabHtml() {
         <h2 class="font-semibold text-lg">Produtos</h2>
         <button id="new-product-btn" class="bg-brand-orange text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90 active:scale-[0.99] transition">+ Novo produto</button>
       </div>
-      <div id="products-list" class="space-y-3">${skeletonCardsHtml(2)}</div>
+      <div id="categories-manager">${categoriesManagerHtml()}</div>
+      <div id="products-list" class="space-y-5">${skeletonCardsHtml(2)}</div>
     </div>
   `
 }
+
+// ---- Categorias (seções do cardápio) ----
+
+function categoriesManagerHtml() {
+  return `
+    <div class="bg-white border border-neutral-200 rounded-xl p-4 space-y-3">
+      <p class="text-sm font-semibold text-neutral-700">Categorias (seções do cardápio)</p>
+      <div class="flex flex-wrap gap-2">
+        ${categoriesState.map(categoryChipHtml).join('')}
+      </div>
+      <form id="new-category-form" class="flex gap-2">
+        <input
+          id="new-category-input"
+          value="${escapeHtml(newCategoryName)}"
+          placeholder="Nova categoria (ex: Bebidas)"
+          class="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+        />
+        <button type="submit" class="bg-brand-purple text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition shrink-0">+ Adicionar</button>
+      </form>
+      ${
+        categoriesState.length === 0
+          ? '<p class="text-xs text-neutral-400">Sem categorias ainda — produtos aparecem numa lista única, sem seções, até você criar a primeira.</p>'
+          : ''
+      }
+    </div>
+  `
+}
+
+function categoryChipHtml(c) {
+  if (renamingCategoryId === c.id) {
+    return `
+      <form data-rename-form="${c.id}" class="flex items-center gap-1 bg-neutral-100 rounded-full pl-3 pr-1 py-1">
+        <input data-rename-input value="${escapeHtml(renamingCategoryDraft)}" class="bg-transparent text-sm w-28 focus:outline-none" />
+        <button type="submit" title="Salvar" class="text-emerald-600 text-sm w-7 h-7 flex items-center justify-center hover:bg-emerald-50 rounded-full transition">✓</button>
+        <button type="button" data-cancel-rename="${c.id}" title="Cancelar" class="text-neutral-400 text-sm w-7 h-7 flex items-center justify-center hover:bg-neutral-200 rounded-full transition">✕</button>
+      </form>
+    `
+  }
+  return `
+    <span class="inline-flex items-center gap-0.5 bg-neutral-100 text-neutral-700 text-sm rounded-full pl-3 pr-1 py-1">
+      ${escapeHtml(c.name)}
+      <button data-edit-category="${c.id}" title="Renomear" class="text-neutral-400 hover:text-brand-purple w-7 h-7 flex items-center justify-center rounded-full transition">✎</button>
+      <button data-delete-category="${c.id}" title="Excluir" class="text-neutral-400 hover:text-brand-red w-7 h-7 flex items-center justify-center rounded-full transition">✕</button>
+    </span>
+  `
+}
+
+function renderCategoriesManager() {
+  const el = document.getElementById('categories-manager')
+  if (el) el.innerHTML = categoriesManagerHtml()
+}
+
+async function loadCategories() {
+  const { data, error } = await restaurantClient
+    .from('categories')
+    .select('*')
+    .eq('restaurant_id', restaurant.id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+  if (error) showToast('Erro ao carregar categorias.', 'error')
+  categoriesState = data || []
+  renderCategoriesManager()
+  refreshProductsListDisplay()
+}
+
+async function handleCategoriesManagerSubmit(e) {
+  e.preventDefault()
+
+  if (e.target.id === 'new-category-form') {
+    const name = newCategoryName.trim()
+    if (!name) return
+    const { error } = await restaurantClient
+      .from('categories')
+      .insert({ restaurant_id: restaurant.id, name, sort_order: categoriesState.length })
+    if (error) showToast('Erro ao criar categoria.', 'error')
+    else showToast('Categoria criada!', 'success')
+    newCategoryName = ''
+    await loadCategories()
+    return
+  }
+
+  const renameId = e.target.getAttribute('data-rename-form')
+  if (renameId) {
+    const name = renamingCategoryDraft.trim()
+    renamingCategoryId = null
+    if (!name) {
+      renderCategoriesManager()
+      return
+    }
+    const { error } = await restaurantClient.from('categories').update({ name }).eq('id', renameId)
+    if (error) showToast('Erro ao renomear categoria.', 'error')
+    await loadCategories()
+  }
+}
+
+function handleCategoriesManagerClick(e) {
+  const editBtn = e.target.closest('[data-edit-category]')
+  if (editBtn) {
+    const cat = categoriesState.find((c) => c.id === editBtn.getAttribute('data-edit-category'))
+    if (!cat) return
+    renamingCategoryId = cat.id
+    renamingCategoryDraft = cat.name
+    renderCategoriesManager()
+    return
+  }
+
+  const cancelBtn = e.target.closest('[data-cancel-rename]')
+  if (cancelBtn) {
+    renamingCategoryId = null
+    renderCategoriesManager()
+    return
+  }
+
+  const deleteBtn = e.target.closest('[data-delete-category]')
+  if (deleteBtn) {
+    const cat = categoriesState.find((c) => c.id === deleteBtn.getAttribute('data-delete-category'))
+    if (cat) deleteCategory(cat)
+  }
+}
+
+function handleCategoriesManagerInput(e) {
+  if (e.target.id === 'new-category-input') newCategoryName = e.target.value
+  if (e.target.hasAttribute('data-rename-input')) renamingCategoryDraft = e.target.value
+}
+
+async function deleteCategory(c) {
+  const confirmed = await showConfirm({
+    title: 'Excluir categoria',
+    message: `Remover a categoria "${c.name}"? Os produtos dela voltam a ficar sem categoria (aparecem em "Outros").`,
+    confirmLabel: 'Excluir',
+    danger: true,
+  })
+  if (!confirmed) return
+  const { error } = await restaurantClient.from('categories').delete().eq('id', c.id)
+  if (error) showToast('Erro ao excluir categoria.', 'error')
+  else showToast('Categoria excluída.', 'success')
+  await loadCategories()
+}
+
+// ---- Produtos ----
 
 function productImageHtml(p) {
   if (p.image_url) {
@@ -211,13 +357,8 @@ function productImageHtml(p) {
   return `<div class="img-placeholder w-16 h-16 rounded-lg shrink-0 text-2xl">🍽️</div>`
 }
 
-function renderProductsList() {
-  if (productsState.length === 0) {
-    return emptyStateHtml('🍽️', 'Nenhum produto cadastrado ainda. Clique em "+ Novo produto" para começar.')
-  }
-  return productsState
-    .map(
-      (p) => `
+function productRowHtml(p) {
+  return `
     <div class="fade-slide-in card-hover bg-white border border-neutral-200 rounded-xl p-4 flex gap-4 ${p.is_available ? '' : 'opacity-60'}">
       ${productImageHtml(p)}
       <div class="flex-1 min-w-0">
@@ -235,8 +376,49 @@ function renderProductsList() {
       </div>
     </div>
   `
+}
+
+// Agrupa produtos pela categoria (mesma lógica usada no cardápio público, ver
+// cliente/cardapio.js) — serve de prévia pro restaurante de como vai ficar.
+function buildProductGroups() {
+  if (categoriesState.length === 0) return null
+  const groups = categoriesState.map((c) => ({
+    id: c.id,
+    name: c.name,
+    items: productsState.filter((p) => p.category_id === c.id),
+  }))
+  const uncategorized = productsState.filter(
+    (p) => !p.category_id || !categoriesState.some((c) => c.id === p.category_id)
+  )
+  if (uncategorized.length > 0) groups.push({ id: null, name: 'Outros', items: uncategorized })
+  return groups.filter((g) => g.items.length > 0)
+}
+
+function renderProductsList() {
+  if (productsState.length === 0) {
+    return emptyStateHtml('🍽️', 'Nenhum produto cadastrado ainda. Clique em "+ Novo produto" para começar.')
+  }
+
+  const groups = buildProductGroups()
+  if (!groups) {
+    return `<div class="space-y-3">${productsState.map(productRowHtml).join('')}</div>`
+  }
+
+  return groups
+    .map(
+      (g) => `
+        <div class="space-y-3">
+          <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400">${escapeHtml(g.name)} <span class="text-neutral-300 normal-case">(${g.items.length})</span></p>
+          ${g.items.map(productRowHtml).join('')}
+        </div>
+      `
     )
     .join('')
+}
+
+function refreshProductsListDisplay() {
+  const list = document.getElementById('products-list')
+  if (list) list.innerHTML = renderProductsList()
 }
 
 function bindProductsTabEvents() {
@@ -251,6 +433,13 @@ function bindProductsTabEvents() {
     if (action === 'toggle') toggleProductAvailable(product)
     if (action === 'delete') deleteProduct(product)
   })
+
+  // Delegado no container: sobrevive às re-renderizações internas do gerenciador
+  // de categorias (só o innerHTML muda, o #categories-manager em si não).
+  const categoriesManager = document.getElementById('categories-manager')
+  categoriesManager.addEventListener('submit', handleCategoriesManagerSubmit)
+  categoriesManager.addEventListener('click', handleCategoriesManagerClick)
+  categoriesManager.addEventListener('input', handleCategoriesManagerInput)
 }
 
 async function loadProducts() {
@@ -261,8 +450,7 @@ async function loadProducts() {
     .order('created_at', { ascending: false })
   if (error) showToast('Erro ao carregar produtos.', 'error')
   productsState = data || []
-  const list = document.getElementById('products-list')
-  if (list) list.innerHTML = renderProductsList()
+  refreshProductsListDisplay()
 }
 
 async function toggleProductAvailable(p) {
@@ -312,6 +500,14 @@ function productFormHtml() {
         <textarea id="pf-description" placeholder="Descrição" rows="2" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple transition">${escapeHtml(p ? p.description || '' : '')}</textarea>
         <input required type="number" step="0.01" min="0" id="pf-price" value="${p ? p.price : ''}" placeholder="Preço (R$)" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple transition" />
         <input id="pf-ingredients" value="${escapeHtml(p && p.ingredients ? p.ingredients.join(', ') : '')}" placeholder="Ingredientes (separados por vírgula)" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple transition" />
+        <select id="pf-category" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple transition">
+          <option value="">Sem categoria (aparece em "Outros")</option>
+          ${categoriesState
+            .map(
+              (c) => `<option value="${c.id}" ${p && p.category_id === c.id ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+            )
+            .join('')}
+        </select>
         <div class="flex items-center gap-3">
           <div id="pf-image-preview" class="w-14 h-14 rounded-lg shrink-0 overflow-hidden ${imagePreviewUrl ? '' : 'img-placeholder text-xl'}">
             ${imagePreviewUrl ? `<img src="${escapeHtml(imagePreviewUrl)}" class="w-full h-full object-cover" />` : '🍽️'}
@@ -381,6 +577,7 @@ async function handleProductFormSubmit(e) {
       .value.split(',')
       .map((i) => i.trim())
       .filter(Boolean)
+    const category_id = document.getElementById('pf-category').value || null
     const imageFile = document.getElementById('pf-image').files[0]
 
     let image_url = editingProduct ? editingProduct.image_url : null
@@ -402,6 +599,7 @@ async function handleProductFormSubmit(e) {
       description: description || null,
       price,
       ingredients,
+      category_id,
       image_url,
     }
 
