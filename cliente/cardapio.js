@@ -438,15 +438,21 @@ async function placeOrder() {
   renderPage()
   try {
     const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
-    const { data: order, error: orderError } = await supabaseClient
+
+    // Gera o id do pedido no navegador em vez de pedir pro Postgres devolver
+    // a linha inserida (.select()) — o cliente anônimo não tem o token do
+    // restaurante, então a policy de leitura de "orders" (só por token) nega
+    // o RETURNING mesmo quando o insert em si é permitido, e o Postgres trata
+    // isso como falha de RLS. Sem pedir a linha de volta, esse problema não
+    // existe: já sabemos o id porque fomos nós que o geramos.
+    const orderId = crypto.randomUUID()
+    const { error: orderError } = await supabaseClient
       .from('orders')
-      .insert({ restaurant_id: restaurant.id, table_number: numero ? Number(numero) : null, total })
-      .select()
-      .single()
+      .insert({ id: orderId, restaurant_id: restaurant.id, table_number: numero ? Number(numero) : null, total })
     if (orderError) throw orderError
 
     const items = cart.map((i) => ({
-      order_id: order.id,
+      order_id: orderId,
       product_id: i.product.id,
       product_name: i.product.name,
       quantity: i.quantity,
@@ -468,7 +474,7 @@ async function placeOrder() {
   } catch (err) {
     placing = false
     renderPage()
-    showToast('Erro ao enviar pedido: ' + (err instanceof Error ? err.message : String(err)), 'error', 5000)
+    showToast('Erro ao enviar pedido: ' + errorMessage(err), 'error', 5000)
   }
 }
 

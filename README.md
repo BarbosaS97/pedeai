@@ -63,13 +63,13 @@ cliente/
   cardapio.js
 css/style.css                 estilos base (além dos utilitários do Tailwind via CDN)
 js/                            módulos compartilhados pelas três áreas acima
-  util.js                       helpers (escapeHtml, formatBRL, loadingHtml, notFoundHtml)
+  util.js                       helpers (escapeHtml, formatBRL, errorMessage, loadingHtml, notFoundHtml)
   logo.js                       marca "PedeAí" com destaque tipográfico no "AI"
   slug.js                       geração de slug a partir do nome do restaurante
   supabase-client.js            clientes Supabase (público + com token do restaurante)
   qrcode-helper.js              URL do cardápio, URL do painel e geração de QR Code no cliente
 supabase/
-  migrations/                  4 migrations SQL (extensões, produtos, pedidos/storage, categorias)
+  migrations/                  5 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
 ```
 
@@ -118,9 +118,10 @@ hospedagem estática).
 Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https://supabase.com/dashboard) do projeto (`thwnhgpjysykkoblbtrd`):
 
 1. **Migrations** → menu **SQL Editor** → **New query**. Abra cada arquivo de
-   `supabase/migrations/` (nessa ordem: `0001`, `0002`, `0003`, `0004`), cole
-   o conteúdo inteiro do arquivo e clique **Run**. Rode um de cada vez, na
-   ordem — cada uma depende de tabelas/extensões criadas na anterior.
+   `supabase/migrations/` (nessa ordem: `0001`, `0002`, `0003`, `0004`,
+   `0005`), cole o conteúdo inteiro do arquivo e clique **Run**. Rode um de
+   cada vez, na ordem — cada uma depende de tabelas/extensões criadas na
+   anterior.
 2. **Secret da DeepSeek** → menu **Edge Functions** → **Manage secrets** →
    adicione `DEEPSEEK_API_KEY` com sua chave. Esse secret nunca vai para o
    frontend.
@@ -154,6 +155,7 @@ supabase functions deploy ai-waiter
 - **`DEEPSEEK_API_KEY`** só existe como secret do Supabase, usada dentro das Edge Functions — nunca aparece em nenhum arquivo do frontend.
 - **`config.js` é público** (fica no navegador de qualquer visitante): só a `anon key` do Supabase e a senha de admin do MVP ficam ali. Nunca coloque a `service_role key` ou a chave da DeepSeek nesse arquivo.
 - **Sem embeddings**: o garçom IA não usa busca vetorial — a DeepSeek não tem endpoint de embeddings, então o cardápio completo do restaurante é enviado no prompt (ver nota no topo de `ai-waiter/index.ts`). A coluna `embedding` e a função `match_products` (migration `0002`) ficam no banco só para uso futuro, se um dia você quiser plugar um provedor de embeddings.
+- **Pegadinha de RLS + RETURNING**: se algum `insert()` do cliente anônimo (`orders`, `order_items`) passar a usar `.select()` de novo, o Postgres volta a rejeitar o insert inteiro com "new row violates row-level security policy" — não porque o insert em si seja proibido, mas porque devolver a linha (`RETURNING`) exige que a policy de **leitura** também libere, e o cliente anônimo não tem o token do restaurante pra isso. Ver o comentário em `placeOrder()` (`cliente/cardapio.js`) e a migration `0005`.
 
 ## Identidade visual
 

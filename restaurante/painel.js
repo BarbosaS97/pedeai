@@ -614,7 +614,7 @@ async function handleProductFormSubmit(e) {
     showToast(isNew ? 'Produto cadastrado!' : 'Produto atualizado!', 'success')
     loadProducts()
   } catch (err) {
-    productFormError = err instanceof Error ? err.message : String(err)
+    productFormError = errorMessage(err)
     savingProduct = false
     renderProductFormModal()
   }
