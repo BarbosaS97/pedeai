@@ -19,6 +19,7 @@ let chatOpen = false
 let chatMessages = []
 let chatInput = ''
 let chatLoading = false
+let expandedProduct = null
 
 // O garçom IA responde em texto simples por instrução do prompt (ver
 // ai-waiter/index.ts), mas modelos de linguagem às vezes escapam essa regra e
@@ -89,9 +90,10 @@ async function init() {
 function renderPage() {
   root.innerHTML = pageHtml()
   bindPageEvents()
-  // Trava o scroll do fundo da página enquanto o chat (bottom sheet) está
-  // aberto — sem isso, no celular dá pra arrastar a página por trás do chat.
-  document.body.style.overflow = chatOpen ? 'hidden' : ''
+  // Trava o scroll do fundo da página enquanto algum bottom sheet (chat ou
+  // detalhe do produto) está aberto — sem isso, no celular dá pra arrastar a
+  // página por trás do modal.
+  document.body.style.overflow = chatOpen || expandedProduct ? 'hidden' : ''
   if (chatOpen) scrollChatToBottom()
 }
 
@@ -112,7 +114,7 @@ function pageHtml() {
       <button
         id="chat-fab"
         class="fixed right-4 bg-brand-purple text-white rounded-full shadow-lg hover:shadow-xl px-5 py-3.5 font-semibold text-sm transition active:scale-95 ${
-          chatOpen ? 'hidden' : ''
+          chatOpen || expandedProduct ? 'hidden' : ''
         }"
         style="bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));"
       >
@@ -120,6 +122,7 @@ function pageHtml() {
       </button>
 
       ${cart.length > 0 || placed ? cartBarHtml() : ''}
+      ${expandedProduct ? productDetailModalHtml() : ''}
       ${chatOpen ? chatModalHtml() : ''}
     </div>
   `
@@ -188,14 +191,58 @@ function productImageHtml(p) {
 
 function productCardHtml(p) {
   return `
-    <div class="fade-slide-in card-hover bg-white border border-neutral-200 rounded-xl p-3.5 sm:p-4 flex gap-3 sm:gap-4">
+    <div data-expand="${p.id}" class="fade-slide-in card-hover bg-white border border-neutral-200 rounded-xl p-3.5 sm:p-4 flex gap-3 sm:gap-4 cursor-pointer active:bg-neutral-50 transition">
       ${productImageHtml(p)}
       <div class="flex-1 min-w-0">
-        <p class="font-semibold leading-snug">${escapeHtml(p.name)}</p>
+        <div class="flex items-start justify-between gap-2">
+          <p class="font-semibold leading-snug">${escapeHtml(p.name)}</p>
+          <span class="text-neutral-300 shrink-0 mt-0.5" aria-hidden="true">›</span>
+        </div>
         ${p.description ? `<p class="text-sm text-neutral-500 line-clamp-2 mt-0.5">${escapeHtml(p.description)}</p>` : ''}
         <div class="flex items-center justify-between mt-2 gap-2">
           <span class="font-semibold text-brand-orange">R$ ${formatBRL(p.price)}</span>
           <button data-add="${p.id}" class="text-sm bg-brand-purple text-white rounded-lg px-3.5 py-2 hover:opacity-90 active:scale-95 transition shrink-0">Adicionar</button>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+// Modal de detalhe do produto — abre ao tocar no card (fora do botão
+// "Adicionar"), pra ler a descrição inteira e os ingredientes sem o corte do
+// line-clamp da lista.
+function productDetailModalHtml() {
+  const p = expandedProduct
+  return `
+    <div id="detail-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+      <div id="detail-box" class="modal-box bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90dvh] overflow-y-auto scroll-contain safe-bottom">
+        <div class="relative">
+          ${
+            p.image_url
+              ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="w-full h-44 sm:h-52 object-cover" />`
+              : `<div class="img-placeholder w-full h-36 text-5xl">🍽️</div>`
+          }
+          <button id="detail-close" title="Fechar" class="absolute top-3 right-3 bg-white/95 hover:bg-white text-neutral-600 rounded-full w-9 h-9 flex items-center justify-center shadow transition">✕</button>
+        </div>
+        <div class="p-5 space-y-3">
+          <div>
+            <h3 class="text-lg font-bold leading-snug">${escapeHtml(p.name)}</h3>
+            <p class="text-brand-orange font-semibold mt-0.5">R$ ${formatBRL(p.price)}</p>
+          </div>
+          ${p.description ? `<p class="text-sm text-neutral-600 leading-relaxed">${escapeHtml(p.description)}</p>` : ''}
+          ${
+            p.ingredients && p.ingredients.length > 0
+              ? `
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-1.5">Ingredientes</p>
+              <div class="flex flex-wrap gap-1.5">
+                ${p.ingredients.map((i) => `<span class="text-xs bg-neutral-100 text-neutral-600 rounded-full px-2.5 py-1">${escapeHtml(i)}</span>`).join('')}
+              </div>
+            </div>
+          `
+              : ''
+          }
+          <button data-add="${p.id}" data-close-after-add class="w-full bg-brand-purple text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition mt-1">Adicionar ao pedido</button>
         </div>
       </div>
     </div>
@@ -294,8 +341,30 @@ function bindPageEvents() {
   })
 
   document.querySelectorAll('[data-add]').forEach((btn) => {
-    btn.addEventListener('click', () => addToCart(btn.getAttribute('data-add')))
+    btn.addEventListener('click', () => {
+      // Botão "Adicionar ao pedido" dentro do modal de detalhe: fecha o modal
+      // junto (fica em um render só, em vez de dois).
+      if (btn.hasAttribute('data-close-after-add')) expandedProduct = null
+      addToCart(btn.getAttribute('data-add'))
+    })
   })
+
+  document.querySelectorAll('[data-expand]').forEach((card) => {
+    card.addEventListener('click', (e) => {
+      // Clique no botão "Adicionar" (que fica dentro do card) não deve abrir
+      // o detalhe — só o resto do card.
+      if (e.target.closest('[data-add]')) return
+      openProductDetail(card.getAttribute('data-expand'))
+    })
+  })
+
+  const detailOverlay = document.getElementById('detail-overlay')
+  if (detailOverlay) {
+    detailOverlay.addEventListener('click', (e) => {
+      if (e.target === detailOverlay) closeProductDetail()
+    })
+    document.getElementById('detail-close').addEventListener('click', closeProductDetail)
+  }
 
   const cartToggle = document.getElementById('cart-toggle')
   if (cartToggle) {
@@ -334,6 +403,18 @@ function bindPageEvents() {
     // Sem autofocus agressivo no celular: abrir o teclado sozinho ao abrir o
     // chat é intrusivo. O cliente toca no campo quando quiser digitar.
   }
+}
+
+function openProductDetail(productId) {
+  const product = products.find((p) => p.id === productId)
+  if (!product) return
+  expandedProduct = product
+  renderPage()
+}
+
+function closeProductDetail() {
+  expandedProduct = null
+  renderPage()
 }
 
 function addToCart(productId) {
