@@ -27,7 +27,15 @@ let todayOrders = []
 let historyOpen = false
 let initialLoadDone = false
 const seenOrderIds = new Set()
-const retriedForItems = new Set()
+const itemsRetryCount = new Map()
+
+// Nó DOM de cada card, indexado por id do pedido. Reaproveitado entre
+// re-renderizações (reconcileList) para só tocar no DOM do que realmente
+// mudou — sem isso, qualquer evento do Realtime (inclusive de um pedido que
+// não tem nada a ver) recriava a lista inteira e a tela "piscava" a cada
+// poucos segundos.
+const pendingNodes = new Map()
+const preparingNodes = new Map()
 
 let audioCtx = null
 let soundUnlocked = false
@@ -57,12 +65,9 @@ async function init() {
   await fetchTodayOrders()
   subscribeRealtime()
 
-  // Recalcula os badges de tempo/cor periodicamente, sem precisar de evento
-  // algum — só o relógio passando já muda a cor de um card.
-  setInterval(() => {
-    renderColumns()
-    if (historyOpen) renderHistoryList()
-  }, 20000)
+  // Atualiza só o texto/cor do tempo decorrido periodicamente — nunca
+  // reconstrói os cards (ver updateElapsedBadges), então não pisca.
+  setInterval(updateElapsedBadges, 20000)
 }
 
 // ---- Estrutura fixa da tela (renderizada uma vez) ----
@@ -164,14 +169,19 @@ async function fetchTodayOrders() {
 
 // O cardápio (cliente/cardapio.js) insere o pedido e os itens em duas
 // chamadas separadas. Se o Realtime nos acordar bem entre as duas, o card
-// aparece sem itens por um instante — tenta de novo uma vez, pouco depois.
+// aparece sem itens por um instante — tenta de novo (até 3x, pouco depois),
+// pra nunca deixar um pedido "travado" sem detalhes na tela.
 function scheduleItemsRetryIfNeeded(orders) {
   const now = Date.now()
-  const pendingRetry = orders.filter(
-    (o) => o.order_items.length === 0 && now - new Date(o.created_at).getTime() < 10000 && !retriedForItems.has(o.id)
-  )
-  if (pendingRetry.length === 0) return
-  pendingRetry.forEach((o) => retriedForItems.add(o.id))
+  const needsRetry = orders.some((o) => {
+    if (o.order_items.length > 0) return false
+    if (now - new Date(o.created_at).getTime() >= 20000) return false
+    return (itemsRetryCount.get(o.id) || 0) < 3
+  })
+  if (!needsRetry) return
+  orders.forEach((o) => {
+    if (o.order_items.length === 0) itemsRetryCount.set(o.id, (itemsRetryCount.get(o.id) || 0) + 1)
+  })
   setTimeout(fetchTodayOrders, 1500)
 }
 
@@ -229,6 +239,13 @@ async function markReady(orderId) {
 }
 
 // ---- Colunas ----
+//
+// Reconciliação com chave por id de pedido, em vez de jogar tudo fora e
+// reconstruir a lista a cada fetch/evento do Realtime: um card só é
+// recriado (e só então reanima com fade-slide-in) se for novo na coluna ou
+// se seu conteúdo (itens/observações/mesa/cliente) realmente mudou. Cards
+// inalterados nem são tocados — é o que evita a tela inteira "piscar"
+// toda vez que qualquer pedido muda de status em qualquer coluna.
 
 function renderColumns() {
   const pendingList = document.getElementById('pending-list')
@@ -238,18 +255,100 @@ function renderColumns() {
   const pending = pendingOrders()
   const preparing = preparingOrders()
 
-  pendingList.innerHTML = pending.length
-    ? pending.map((o) => orderCardHtml(o, 'pending')).join('')
-    : emptyStateHtml('🍽️', 'Nenhum pedido novo agora.')
-
-  preparingList.innerHTML = preparing.length
-    ? preparing.map((o) => orderCardHtml(o, 'preparing')).join('')
-    : emptyStateHtml('👨‍🍳', 'Nada em preparo no momento.')
+  reconcileList(pendingList, pendingNodes, pending, 'pending')
+  reconcileList(preparingList, preparingNodes, preparing, 'preparing')
 
   document.getElementById('pending-count').textContent = pending.length
   document.getElementById('preparing-count').textContent = preparing.length
   const historyCountEl = document.getElementById('history-count')
   if (historyCountEl) historyCountEl.textContent = historyOrders().length
+
+  updateElapsedBadges()
+}
+
+function htmlToElement(html) {
+  const template = document.createElement('template')
+  template.innerHTML = html.trim()
+  return template.content.firstElementChild
+}
+
+// Tudo que, se mudar, exige recriar o card. Tempo decorrido fica de fora de
+// propósito — esse é atualizado à parte, sem recriar nada (updateElapsedBadges).
+function cardSignature(order) {
+  const items = (order.order_items || [])
+    .map((i) => `${i.id}:${i.quantity}:${i.product_name}:${i.notes || ''}`)
+    .join('|')
+  return [order.table_number, order.customer_name, items].join('~')
+}
+
+function reconcileList(listEl, nodesMap, orders, stage) {
+  if (orders.length === 0) {
+    nodesMap.clear()
+    listEl.innerHTML =
+      stage === 'pending'
+        ? emptyStateHtml('🍽️', 'Nenhum pedido novo agora.')
+        : emptyStateHtml('👨‍🍳', 'Nada em preparo no momento.')
+    return
+  }
+
+  // Saindo do estado vazio (empty state) para o primeiro card.
+  if (nodesMap.size === 0) listEl.innerHTML = ''
+
+  const seenIds = new Set()
+  let previous = null
+
+  orders.forEach((order) => {
+    seenIds.add(order.id)
+    const signature = cardSignature(order)
+    let node = nodesMap.get(order.id)
+
+    if (!node) {
+      node = htmlToElement(orderCardHtml(order, stage))
+      node.dataset.signature = signature
+      nodesMap.set(order.id, node)
+    } else if (node.dataset.signature !== signature) {
+      const fresh = htmlToElement(orderCardHtml(order, stage))
+      fresh.dataset.signature = signature
+      node.replaceWith(fresh)
+      node = fresh
+      nodesMap.set(order.id, node)
+    }
+
+    // Garante a posição certa (fila ordenada por tempo de espera) sem
+    // recriar nós que já estão no lugar certo.
+    if (previous === null) {
+      if (listEl.firstElementChild !== node) listEl.insertBefore(node, listEl.firstElementChild)
+    } else if (previous.nextElementSibling !== node) {
+      previous.after(node)
+    }
+    previous = node
+  })
+
+  nodesMap.forEach((node, id) => {
+    if (!seenIds.has(id)) {
+      node.remove()
+      nodesMap.delete(id)
+    }
+  })
+}
+
+// Só troca o texto/classes do selo de tempo decorrido de cada card já
+// existente — nenhum innerHTML de lista é tocado, então isso nunca pisca.
+function updateElapsedBadges() {
+  updateElapsedBadgesForMap(pendingNodes, pendingOrders(), 'pending')
+  updateElapsedBadgesForMap(preparingNodes, preparingOrders(), 'preparing')
+}
+
+function updateElapsedBadgesForMap(nodesMap, orders, stage) {
+  orders.forEach((order) => {
+    const node = nodesMap.get(order.id)
+    const badge = node && node.querySelector('[data-elapsed-badge]')
+    if (!badge) return
+    const baseTime = stage === 'pending' ? order.created_at : order.updated_at
+    const minutes = elapsedMinutes(baseTime)
+    badge.textContent = elapsedLabel(minutes)
+    badge.className = `text-sm font-bold px-3 py-1.5 rounded-full border shrink-0 ${elapsedColorClasses(minutes, stage)}`
+  })
 }
 
 function elapsedMinutes(fromIso) {
@@ -288,9 +387,9 @@ function orderCardHtml(order, stage) {
           <p class="text-lg font-semibold text-neutral-700 mt-1.5 truncate">${order.table_number ? `Mesa ${escapeHtml(order.table_number)}` : 'Balcão'}</p>
           ${order.customer_name ? `<p class="text-sm text-neutral-500 truncate">👤 ${escapeHtml(order.customer_name)}</p>` : ''}
         </div>
-        <span class="text-sm font-bold px-3 py-1.5 rounded-full border shrink-0 ${colorClasses}">${elapsedLabel(minutes)}</span>
+        <span data-elapsed-badge class="text-sm font-bold px-3 py-1.5 rounded-full border shrink-0 ${colorClasses}">${elapsedLabel(minutes)}</span>
       </div>
-      <ul class="space-y-2.5 mb-4">
+      <ul class="space-y-3 mb-4">
         ${
           items.length
             ? items
@@ -299,7 +398,7 @@ function orderCardHtml(order, stage) {
           <li class="text-xl leading-snug">
             <span class="font-extrabold text-neutral-900">${item.quantity}×</span>
             <span class="text-neutral-800">${escapeHtml(item.product_name)}</span>
-            ${item.notes ? `<div class="text-base font-bold text-brand-red mt-0.5">⚠️ ${escapeHtml(item.notes)}</div>` : ''}
+            ${item.notes ? `<div class="text-base font-bold text-brand-red bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 mt-1 inline-block">⚠️ ${escapeHtml(item.notes)}</div>` : ''}
           </li>
         `
                 )
