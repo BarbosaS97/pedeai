@@ -912,11 +912,6 @@ async function placeOrder() {
   }
 }
 
-function focusChatInput() {
-  const input = document.getElementById('chat-input')
-  if (input && !input.disabled) input.focus()
-}
-
 function clampQuantity(value) {
   const n = Math.trunc(Number(value))
   if (!Number.isFinite(n) || n < 1 || n > MAX_ITEM_QUANTITY) return null
@@ -994,13 +989,18 @@ function skipStagger() {
   if (!notingOrder) return
   notingOrder = false
   renderPage()
-  focusChatInput()
 }
 
 async function sendChatMessage(e) {
   e.preventDefault()
   const mensagem = chatInput.trim()
   if (!mensagem) return
+
+  // Fecha o teclado ao enviar, pra sobrar mais tela pra ver a resposta (e os
+  // cartões de ação) sem o teclado ocupando metade da tela no celular. Pra
+  // digitar de novo, é só tocar no campo — não refocamos automaticamente.
+  const inputBeforeSend = document.getElementById('chat-input')
+  if (inputBeforeSend) inputBeforeSend.blur()
 
   // Só os últimos turnos vão pro modelo — mantém o prompt (e o custo por
   // mensagem) limitado mesmo numa conversa longa.
@@ -1009,7 +1009,6 @@ async function sendChatMessage(e) {
   chatInput = ''
   chatLoading = true
   renderPage()
-  focusChatInput()
 
   let respostaTexto
   let cards = []
@@ -1057,11 +1056,9 @@ async function sendChatMessage(e) {
       staggerTimeoutId = null
       notingOrder = false
       renderPage()
-      focusChatInput()
     }, staggerMs)
   } else {
     renderPage()
-    focusChatInput()
   }
 }
 
