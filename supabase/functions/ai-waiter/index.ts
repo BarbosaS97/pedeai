@@ -68,6 +68,11 @@ interface Produto {
   name: string
   description: string | null
   price: number
+  // Nome da categoria (ex: "Bebidas", "Entradas") ou null se o produto não
+  // tem categoria. Usado pro modelo saber o que é "do mesmo tipo" de algo já
+  // no carrinho, na hora de recomendar um item complementar — ver
+  // buildSystemPrompt().
+  category: string | null
 }
 
 interface ResolvedCartItem {
@@ -195,12 +200,18 @@ function buildSystemPrompt(
   nomeCliente?: string
 ): string {
   const cardapio = produtos
-    .map((p) => `- id:${p.id} | ${p.name} | R$ ${p.price.toFixed(2)}${p.description ? ` — ${p.description}` : ''}`)
+    .map(
+      (p) =>
+        `- id:${p.id} | ${p.name} | R$ ${p.price.toFixed(2)}${p.category ? ` | categoria: ${p.category}` : ''}${p.description ? ` — ${p.description}` : ''}`
+    )
     .join('\n')
 
   const carrinhoTexto = carrinho.length
     ? carrinho
-        .map((i) => `- ${i.quantidade}x ${i.produto.name}${i.observacao ? ` (obs: ${i.observacao})` : ''}`)
+        .map(
+          (i) =>
+            `- ${i.quantidade}x ${i.produto.name}${i.produto.category ? ` (categoria: ${i.produto.category})` : ''}${i.observacao ? ` (obs: ${i.observacao})` : ''}`
+        )
         .join('\n') + `\nSubtotal já calculado: R$ ${subtotalCarrinho.toFixed(2)} (use este número pronto — não recalcule)`
     : '(vazio)'
 
@@ -251,6 +262,23 @@ QUANDO NÃO AGIR (acoes: [], só texto em "resposta"):
 - Pergunta sobre o carrinho ("o que eu pedi", "quanto tá dando"): liste os itens e o subtotal JÁ
   CALCULADO que está em "Carrinho atual" — seguindo o formato de FORMATAÇÃO DA RESPOSTA abaixo.
 
+RECOMENDAÇÃO PRA "ACOMPANHAR"/COMPLETAR O PEDIDO: cada produto do cardápio abaixo vem com sua
+categoria (ex: "categoria: Bebidas"). Quando o cliente pedir algo pra "acompanhar", "completar",
+"junto com o que já pedi", "mais alguma coisa" (ou frase parecida, SEM nomear um produto
+específico), ele quer um item que combine com o carrinho, não mais um item igual ao que já tem:
+- Olhe as categorias dos itens já em "Carrinho atual" e NÃO sugira produto da MESMA categoria de
+  nenhum deles nessas perguntas — ex: se já tem uma bebida no carrinho, "o que tem pra acompanhar"
+  não deve sugerir outra bebida. Prefira uma categoria complementar (entrada + prato principal,
+  prato + bebida, prato + sobremesa, bebida + petisco/entrada), usando os nomes de categoria reais
+  do cardápio pra decidir o que faz sentido.
+- Essa regra vale só pra pedido "vago" (sem produto nomeado). Se o cliente pedir um produto
+  específico que por acaso é da mesma categoria de algo no carrinho (ex: já tem um suco e pede "e
+  bota mais um suco de uva"), isso é um pedido explícito — atenda normalmente, sem essa restrição.
+- Se toda opção disponível no cardápio pra sugerir for da mesma categoria de algo que já está no
+  carrinho (nenhuma categoria complementar com item disponível), não gere ação e responda
+  exatamente: "Só tenho opções parecidas com o que você já escolheu. Quer que eu sugira algo para
+  repetir ou prefere trocar?"
+
 FORMATAÇÃO DA RESPOSTA (importante — o chat mostra texto puro, sem negrito/marcação, então a
 organização vem só de quebra de linha e espaçamento; capriche pra ficar fácil de ler no celular):
 - Resposta simples (confirmar uma ação, tirar uma dúvida rápida): uma frase corrida basta.
@@ -293,6 +321,19 @@ Cliente: "quero um suco" (cardápio tem Suco de Laranja e Suco de Uva)
 
 Cliente: "quero um hambúrguer" (não existe no cardápio)
 → resposta: "Não temos hambúrguer no cardápio, mas a Coxinha e o Bolinho de Bacalhau são bem pedidos — quer um deles?" | acoes: []
+
+Cliente: "o que tem aí mais barato pra acompanhar?" (carrinho já tem Suco de Laranja, categoria
+Bebidas; cardápio tem Pastel de Queijo e Coxinha, categoria Entradas, e mais um Refrigerante,
+categoria Bebidas)
+→ resposta: "Já que você pegou um suco, uma entrada combina bem — a Coxinha é a mais em conta. Quer
+que eu coloque?" | acoes: []
+(errado seria sugerir o Refrigerante aqui — é bebida igual ao que já está no carrinho, não
+"acompanha")
+
+Cliente: "quero mais alguma coisa" (carrinho só tem itens de Entradas, e o cardápio só tem mais
+opções de Entradas disponíveis, nada de outra categoria)
+→ resposta: "Só tenho opções parecidas com o que você já escolheu. Quer que eu sugira algo para
+repetir ou prefere trocar?" | acoes: []
 
 Cardápio disponível:
 ${cardapio || '(cardápio ainda sem itens disponíveis — avise o cliente)'}
@@ -403,7 +444,7 @@ Deno.serve(async (req) => {
     // ações que o modelo devolver.
     const { data: produtosData, error: produtosError } = await supabase
       .from('products')
-      .select('id, name, description, price')
+      .select('id, name, description, price, category_id')
       .eq('restaurant_id', restaurant.id)
       .eq('is_available', true)
       .order('name')
@@ -411,7 +452,29 @@ Deno.serve(async (req) => {
 
     if (produtosError) throw produtosError
 
-    const produtos: Produto[] = produtosData ?? []
+    // Nome da categoria de cada produto (ex: "Bebidas", "Entradas") — sem
+    // isso o modelo não tem como saber que "Suco de Laranja" e "Refrigerante
+    // Lata" são do mesmo tipo, e recomendava bebida "pra acompanhar" bebida.
+    const { data: categoriasData, error: categoriasError } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('restaurant_id', restaurant.id)
+
+    if (categoriasError) throw categoriasError
+
+    const categoriaPorId = new Map<string, string>(
+      (categoriasData ?? []).map((c: { id: string; name: string }) => [c.id, c.name])
+    )
+
+    const produtos: Produto[] = (produtosData ?? []).map(
+      (p: { id: string; name: string; description: string | null; price: number; category_id: string | null }) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        category: p.category_id ? categoriaPorId.get(p.category_id) ?? null : null,
+      })
+    )
     const produtoPorId = new Map(produtos.map((p) => [p.id, p]))
     const produtoPorNome = new Map(produtos.map((p) => [p.name.trim().toLowerCase(), p]))
 
