@@ -619,9 +619,9 @@ function chatModalHtml() {
           <div class="flex items-center gap-1 shrink-0">
             ${
               cartCount > 0
-                ? `<button id="chat-view-cart" title="Ver carrinho" class="relative text-white/90 hover:text-white hover:bg-white/10 transition w-9 h-9 flex items-center justify-center rounded-full text-lg">
+                ? `<button id="chat-view-cart" title="Ver carrinho" class="relative bg-white/20 hover:bg-white/30 text-white transition w-12 h-12 flex items-center justify-center rounded-full text-[26px] shadow-sm">
                     🛒
-                    <span class="absolute top-0.5 right-0.5 bg-brand-orange text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 px-0.5 flex items-center justify-center leading-none">${cartCount}</span>
+                    <span class="absolute -top-1 -right-1 bg-brand-orange text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] px-1 flex items-center justify-center leading-none border-2 border-brand-purple">${cartCount}</span>
                   </button>`
                 : ''
             }
@@ -682,7 +682,7 @@ function chatMessageHtml(m, isNew) {
   if (m.role === 'user') {
     return `
       <div class="flex justify-end ${entrance}">
-        <div class="max-w-[80%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed bg-brand-purple text-white shadow-sm">${escapeHtml(m.content)}</div>
+        <div class="max-w-[80%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-brand-purple text-white shadow-sm">${escapeHtml(m.content)}</div>
       </div>
     `
   }
@@ -690,7 +690,7 @@ function chatMessageHtml(m, isNew) {
     <div class="flex items-end gap-2 ${entrance}">
       ${chatAvatarHtml('w-7 h-7')}
       <div class="flex flex-col items-start gap-1.5 max-w-[80%] min-w-0">
-        <div class="rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed bg-white text-neutral-800 shadow-sm border border-neutral-100">${escapeHtml(m.content)}</div>
+        <div class="rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-white text-neutral-800 shadow-sm border border-neutral-100">${escapeHtml(m.content)}</div>
         ${m.actionCards && m.actionCards.length > 0 ? actionCardsHtml(m.actionCards, isNew) : ''}
       </div>
     </div>
