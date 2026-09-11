@@ -19,6 +19,33 @@ const ELAPSED_THRESHOLDS = {
   preparing: { yellow: 10, red: 18 },
 }
 
+// Senha só de UI (mesmo espírito do gate de admin/index.html — não é
+// autenticação real, é só pra evitar que alguém zere a fila sem querer,
+// encostando na tela por engano). Trocar aqui se precisar de outra senha.
+const KITCHEN_RESET_PASSWORD = '123'
+
+// Ícones em SVG em vez de emoji: emoji renderiza de formas bem diferentes
+// (às vezes preto e branco, às vezes faltando o glifo) dependendo do tablet
+// Android barato que costuma ficar fixado na cozinha — SVG é consistente em
+// qualquer aparelho e some totalmente se um dia quisermos reestilizar.
+const ICONS = {
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+  flame: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2s-6 5.8-6 11.2A6 6 0 0 0 12 21a6 6 0 0 0 6-6.8c0-1.6-.6-2.9-1.5-3.9.1 1.5-.8 2.4-1.7 2.4C15.6 10.5 14 8.6 14 6.4c0-1.2-.6-2.4-2-4.4Z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
+  volume: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a9 9 0 0 1 0 12"/></svg>',
+  volumeMuted: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M17 10l4 4M21 10l-4 4"/></svg>',
+  refresh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16"/><path d="M3 21v-5h5"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  arrowRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>',
+  tray: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="10" width="18" height="9" rx="1.5"/><path d="M3 10 7 4h10l4 6"/></svg>',
+  archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/><path d="M10 13h4"/></svg>',
+  warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+}
+
+function icon(name, cls = 'w-5 h-5') {
+  return (ICONS[name] || '').replace('<svg ', `<svg class="${cls}" `)
+}
+
 let restaurantClient = null
 let restaurant = null
 
@@ -81,17 +108,26 @@ function renderShell() {
   root.innerHTML = `
     <div class="h-screen flex flex-col bg-neutral-100">
       <header class="bg-white border-b border-neutral-200 px-6 py-3 flex items-center justify-between gap-4 flex-wrap shrink-0">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-4">
           ${renderLogo({ size: 'sm' })}
-          <p class="text-sm text-neutral-500">${escapeHtml(restaurant.name)} · Cozinha</p>
+          <div class="h-8 w-px bg-neutral-200 hidden sm:block"></div>
+          <p class="text-sm text-neutral-500">${escapeHtml(restaurant.name)} <span class="text-neutral-300">·</span> Cozinha</p>
         </div>
-        <div class="flex items-center gap-3">
-          <span class="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>ao vivo
+
+        <div id="queue-summary" class="flex items-center gap-2 text-sm font-bold text-neutral-700 bg-neutral-100 rounded-full px-4 py-2"></div>
+
+        <div class="flex items-center gap-2">
+          <span class="flex items-center gap-1.5 text-xs text-emerald-600 font-semibold mr-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>Atualização automática
           </span>
-          <button id="sound-toggle-btn" class="text-sm font-semibold px-3 py-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition">🔈 Ativar som</button>
-          <button id="history-btn" class="text-sm font-semibold px-4 py-2 rounded-lg bg-neutral-900 text-white hover:opacity-90 transition">
-            🕘 Histórico <span id="history-count" class="ml-1 opacity-70">0</span>
+          <button id="sound-toggle-btn" class="flex items-center gap-2 text-sm font-semibold px-3 py-2 rounded-lg bg-neutral-100 hover:bg-neutral-200 transition">
+            <span class="w-5 h-5">${icon('volume')}</span>Ativar som
+          </button>
+          <button id="reset-btn" class="flex items-center gap-2 text-sm font-semibold px-3 py-2 rounded-lg border-2 border-red-200 text-brand-red hover:bg-red-50 transition">
+            <span class="w-5 h-5">${icon('refresh')}</span>Zerar dia
+          </button>
+          <button id="history-btn" class="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg bg-neutral-900 text-white hover:opacity-90 transition">
+            <span class="w-5 h-5">${icon('clock')}</span>Histórico <span id="history-count" class="opacity-70">0</span>
           </button>
         </div>
       </header>
@@ -99,7 +135,7 @@ function renderShell() {
       <main class="flex-1 flex gap-4 p-4 overflow-hidden">
         <section id="col-pending" class="flex-1 flex flex-col bg-amber-50 border-2 border-amber-200 rounded-2xl overflow-hidden min-w-0">
           <div class="px-5 py-4 bg-amber-100 border-b-2 border-amber-200 flex items-center justify-between shrink-0">
-            <h2 class="text-xl font-extrabold text-amber-800">🔔 Pedidos novos</h2>
+            <h2 class="flex items-center gap-2 text-xl font-extrabold text-amber-800"><span class="w-6 h-6 shrink-0">${icon('bell', 'w-6 h-6')}</span>Pedidos novos</h2>
             <span id="pending-count" class="text-lg font-extrabold text-amber-800 bg-white/70 rounded-full w-9 h-9 flex items-center justify-center shrink-0">0</span>
           </div>
           <div id="pending-list" class="flex-1 overflow-y-auto scroll-contain p-4">${skeletonCardsHtml(2)}</div>
@@ -107,7 +143,7 @@ function renderShell() {
 
         <section id="col-preparing" class="flex-1 flex flex-col bg-blue-50 border-2 border-blue-200 rounded-2xl overflow-hidden min-w-0">
           <div class="px-5 py-4 bg-blue-100 border-b-2 border-blue-200 flex items-center justify-between shrink-0">
-            <h2 class="text-xl font-extrabold text-blue-800">🔥 Em preparo</h2>
+            <h2 class="flex items-center gap-2 text-xl font-extrabold text-blue-800"><span class="w-6 h-6 shrink-0">${icon('flame', 'w-6 h-6')}</span>Em preparo</h2>
             <span id="preparing-count" class="text-lg font-extrabold text-blue-800 bg-white/70 rounded-full w-9 h-9 flex items-center justify-center shrink-0">0</span>
           </div>
           <div id="preparing-list" class="flex-1 overflow-y-auto scroll-contain p-4">${skeletonCardsHtml(2)}</div>
@@ -119,6 +155,7 @@ function renderShell() {
   document.getElementById('col-pending').addEventListener('click', handleColumnClick)
   document.getElementById('col-preparing').addEventListener('click', handleColumnClick)
   document.getElementById('sound-toggle-btn').addEventListener('click', handleSoundToggleClick)
+  document.getElementById('reset-btn').addEventListener('click', openResetModal)
   document.getElementById('history-btn').addEventListener('click', openHistory)
 }
 
@@ -139,12 +176,32 @@ function startOfTodayIso() {
   return d.toISOString()
 }
 
+function resetStorageKey() {
+  return `pedeai_kitchen_reset_${restaurant.id}`
+}
+
+// A fila só zera quando alguém aperta "Zerar dia" e confirma a senha — nunca
+// sozinha à meia-noite. Isso importa pra restaurante que funciona virada a
+// noite (a numeração não pode picar no meio do turno só porque o relógio
+// virou dia). Sem nenhum reset manual ainda feito neste aparelho, cai no
+// início do dia de hoje, só pra não puxar o histórico inteiro da vida do
+// restaurante na primeira vez que a tela é aberta.
+function getQueueStartIso() {
+  try {
+    const stored = localStorage.getItem(resetStorageKey())
+    if (stored) return stored
+  } catch {
+    // localStorage indisponível (modo privado etc.) — cai no padrão abaixo.
+  }
+  return startOfTodayIso()
+}
+
 async function fetchTodayOrders() {
   const { data, error } = await restaurantClient
     .from('orders')
     .select('*, order_items(*)')
     .eq('restaurant_id', restaurant.id)
-    .gte('created_at', startOfTodayIso())
+    .gte('created_at', getQueueStartIso())
     .order('created_at', { ascending: true })
 
   if (error) {
@@ -211,6 +268,17 @@ function historyOrders() {
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
 }
 
+// Visão geral da fila (pending + preparing juntos): quantos pedidos ainda
+// faltam e até qual código eles vão. É o "aviso visual" que deixa o
+// cozinheiro saber, enquanto prepara o #9, que já tem pedido até o #15
+// esperando — sem precisar rolar as duas colunas contando um por um.
+function activeQueueSummary() {
+  const active = todayOrders.filter((o) => o.status === 'pending' || o.status === 'preparing')
+  if (active.length === 0) return null
+  const codes = active.map((o) => codeForOrder(o.id))
+  return { count: active.length, min: Math.min(...codes), max: Math.max(...codes) }
+}
+
 // ---- Ações ----
 
 async function markPreparing(orderId) {
@@ -268,6 +336,16 @@ function renderColumns() {
   const historyCountEl = document.getElementById('history-count')
   if (historyCountEl) historyCountEl.textContent = historyOrders().length
 
+  const summaryEl = document.getElementById('queue-summary')
+  if (summaryEl) {
+    const summary = activeQueueSummary()
+    summaryEl.innerHTML = summary
+      ? summary.min === summary.max
+        ? `Fila: pedido #${summary.max}`
+        : `Fila: ${summary.count} pedido${summary.count > 1 ? 's' : ''} · #${summary.min} a #${summary.max}`
+      : 'Fila vazia'
+  }
+
   updateElapsedBadges()
 }
 
@@ -291,8 +369,8 @@ function reconcileList(listEl, nodesMap, orders, stage) {
     nodesMap.clear()
     listEl.innerHTML =
       stage === 'pending'
-        ? emptyStateHtml('🍽️', 'Nenhum pedido novo agora.')
-        : emptyStateHtml('👨‍🍳', 'Nada em preparo no momento.')
+        ? emptyStateHtml(icon('tray', 'w-10 h-10'), 'Nenhum pedido novo agora.')
+        : emptyStateHtml(icon('flame', 'w-10 h-10'), 'Nada em preparo no momento.')
     return
   }
 
@@ -382,7 +460,8 @@ function orderCardHtml(order, stage) {
   const colorClasses = elapsedColorClasses(minutes, stage)
   const clockTime = new Date(baseTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   const items = (order.order_items || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-  const actionLabel = stage === 'pending' ? '▶️ Preparar' : '✅ Pronto'
+  const actionLabel = stage === 'pending' ? 'PREPARAR' : 'PRONTO'
+  const actionIcon = stage === 'pending' ? 'arrowRight' : 'check'
   const actionClasses = stage === 'pending' ? 'bg-brand-blue' : 'bg-emerald-600'
 
   return `
@@ -390,8 +469,8 @@ function orderCardHtml(order, stage) {
       <div class="flex items-start justify-between gap-3 mb-3">
         <div class="min-w-0">
           <p class="text-3xl font-extrabold text-neutral-900 leading-none">#${code}</p>
-          <p class="text-lg font-semibold text-neutral-700 mt-1.5 truncate">${order.table_number ? `Mesa ${escapeHtml(order.table_number)}` : 'Balcão'}</p>
-          ${order.customer_name ? `<p class="text-sm text-neutral-500 truncate">👤 ${escapeHtml(order.customer_name)}</p>` : ''}
+          <p class="text-lg font-semibold text-neutral-700 mt-2 truncate">${order.table_number ? `Mesa ${escapeHtml(order.table_number)}` : 'Balcão'}</p>
+          ${order.customer_name ? `<p class="text-sm text-neutral-500 truncate mt-0.5">${escapeHtml(order.customer_name)}</p>` : ''}
         </div>
         <div class="flex flex-col items-end gap-1 shrink-0">
           <span data-elapsed-badge class="text-sm font-bold px-3 py-1.5 rounded-full border ${colorClasses}">${elapsedLabel(minutes)}</span>
@@ -407,7 +486,7 @@ function orderCardHtml(order, stage) {
           <li class="text-xl leading-snug py-3">
             <span class="font-extrabold text-neutral-900">${item.quantity}×</span>
             <span class="text-neutral-800">${escapeHtml(item.product_name)}</span>
-            ${item.notes ? `<div class="text-base font-bold text-brand-red bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 mt-1.5 inline-block">⚠️ ${escapeHtml(item.notes)}</div>` : ''}
+            ${item.notes ? `<div class="flex items-start gap-1.5 text-base font-bold text-brand-red bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5 mt-1.5"><span class="w-4 h-4 shrink-0 mt-0.5">${icon('warning', 'w-4 h-4')}</span><span>ATENÇÃO: ${escapeHtml(item.notes)}</span></div>` : ''}
           </li>
         `
                 )
@@ -415,8 +494,8 @@ function orderCardHtml(order, stage) {
             : `<li class="text-sm text-neutral-400 italic py-3">Carregando itens...</li>`
         }
       </ul>
-      <button data-action="${stage === 'pending' ? 'prepare' : 'ready'}" data-id="${order.id}" class="w-full text-white text-xl font-bold rounded-xl py-4 active:scale-[0.98] hover:opacity-90 transition ${actionClasses}">
-        ${actionLabel}
+      <button data-action="${stage === 'pending' ? 'prepare' : 'ready'}" data-id="${order.id}" class="w-full flex items-center justify-center gap-2 text-white text-xl font-bold rounded-xl py-4 active:scale-[0.98] hover:opacity-90 transition ${actionClasses}">
+        <span class="w-6 h-6">${icon(actionIcon, 'w-6 h-6')}</span>${actionLabel}
       </button>
     </div>
   `
@@ -450,7 +529,7 @@ function historyOverlayHtml() {
     <div id="history-overlay" class="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
       <div class="modal-box bg-white rounded-2xl p-6 max-w-5xl w-full max-h-[90vh] flex flex-col">
         <div class="flex items-center justify-between mb-4 shrink-0">
-          <h2 class="text-xl font-bold">Histórico de hoje</h2>
+          <h2 class="text-xl font-bold">Histórico</h2>
           <button id="history-close-btn" class="bg-neutral-100 hover:bg-neutral-200 rounded-lg px-4 py-2 font-semibold transition">← Voltar</button>
         </div>
         <div class="overflow-y-auto scroll-contain flex-1" id="history-list-body">
@@ -464,7 +543,7 @@ function historyOverlayHtml() {
 function historyRowsHtml() {
   const rows = historyOrders()
   if (rows.length === 0) {
-    return emptyStateHtml('🗂️', 'Nenhum pedido concluído ainda hoje.')
+    return emptyStateHtml(icon('archive', 'w-10 h-10'), 'Nenhum pedido concluído ainda hoje.')
   }
   return `
     <table class="w-full text-sm">
@@ -505,6 +584,76 @@ function historyRowHtml(order) {
   `
 }
 
+// ---- Zerar dia (reinicia a numeração no #1) ----
+
+function openResetModal() {
+  document.body.insertAdjacentHTML('beforeend', resetModalHtml())
+  const overlay = document.getElementById('reset-overlay')
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeResetModal()
+  })
+  document.getElementById('reset-cancel-btn').addEventListener('click', closeResetModal)
+  document.getElementById('reset-form').addEventListener('submit', handleResetSubmit)
+  document.getElementById('reset-password-input').focus()
+}
+
+function closeResetModal() {
+  const el = document.getElementById('reset-overlay')
+  if (el) el.remove()
+}
+
+function resetModalHtml() {
+  const activeCount = todayOrders.filter((o) => o.status === 'pending' || o.status === 'preparing').length
+  return `
+    <div id="reset-overlay" class="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+      <form id="reset-form" class="modal-box bg-white rounded-2xl p-6 max-w-sm w-full space-y-4">
+        <div>
+          <h2 class="text-lg font-bold">Zerar numeração do dia</h2>
+          <p class="text-sm text-neutral-500 mt-1">A fila e o histórico atuais somem da tela e o próximo pedido volta a ser #1. Use no começo de cada dia de trabalho.</p>
+        </div>
+        ${
+          activeCount > 0
+            ? `<div class="flex items-start gap-2 text-sm font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                <span class="w-5 h-5 shrink-0">${icon('warning', 'w-5 h-5')}</span>
+                <span>Ainda há ${activeCount} pedido${activeCount > 1 ? 's' : ''} em andamento. ${activeCount > 1 ? 'Eles vão sumir' : 'Ele vai sumir'} da tela até serem finalizados outra hora.</span>
+              </div>`
+            : ''
+        }
+        <div>
+          <input id="reset-password-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Senha" class="w-full border border-neutral-300 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple transition" />
+          <p id="reset-error" class="text-sm text-brand-red mt-1.5 hidden">Senha incorreta.</p>
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button type="button" id="reset-cancel-btn" class="flex-1 bg-neutral-100 text-neutral-700 font-semibold rounded-lg py-2.5 hover:bg-neutral-200 transition">Cancelar</button>
+          <button type="submit" class="flex-1 bg-brand-red text-white font-semibold rounded-lg py-2.5 hover:opacity-90 transition">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  `
+}
+
+function handleResetSubmit(e) {
+  e.preventDefault()
+  const input = document.getElementById('reset-password-input')
+  if (input.value !== KITCHEN_RESET_PASSWORD) {
+    document.getElementById('reset-error').classList.remove('hidden')
+    input.value = ''
+    input.focus()
+    return
+  }
+
+  try {
+    localStorage.setItem(resetStorageKey(), new Date().toISOString())
+  } catch {
+    // localStorage indisponível — o reset ainda funciona pra esta sessão via
+    // fetchTodayOrders() abaixo, só não sobrevive a um recarregamento de página.
+  }
+
+  closeResetModal()
+  fetchTodayOrders()
+  showToast('Numeração zerada — o próximo pedido começa em #1.', 'success')
+}
+
 // ---- Som de alerta ----
 // Gerado por Web Audio (sem arquivo de áudio externo). Navegadores bloqueiam
 // autoplay sem interação prévia, então o AudioContext só é criado/desbloqueado
@@ -514,7 +663,7 @@ function handleSoundToggleClick() {
   ensureAudioUnlocked()
   playNewOrderChime()
   const btn = document.getElementById('sound-toggle-btn')
-  btn.textContent = '🔊 Som ativado'
+  btn.innerHTML = `<span class="w-5 h-5">${icon('volume', 'w-5 h-5')}</span>Som ativado`
   btn.disabled = true
   btn.classList.add('opacity-60', 'cursor-default')
 }
