@@ -15,6 +15,10 @@ function chatAvatarHtml(sizeClass) {
   return `<img src="${CHAT_AVATAR_URL}" alt="Ari" loading="eager" class="${sizeClass} rounded-full object-cover shrink-0 bg-brand-purple/20" />`
 }
 
+// Ícones de contorno simples (sem emoji) usados no formulário de boas-vindas.
+const ICON_PERSON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
+const ICON_PHONE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`
+
 let restaurant = null
 let products = []
 let categories = []
@@ -190,44 +194,65 @@ function renderPage() {
 
 function welcomeScreenHtml() {
   return `
-    <div class="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-br from-brand-purple/10 via-neutral-50 to-brand-orange/10 px-6 py-10">
-      <div class="w-full max-w-sm space-y-6 fade-slide-in">
-        <div class="flex justify-center">${renderLogo({ size: 'lg', showSlogan: true })}</div>
-        <p class="text-center text-sm text-neutral-600 leading-relaxed">
-          Escolha seus pratos, converse com nosso garçom de IA e faça seu pedido direto pelo celular.
-        </p>
-        <form id="welcome-form" class="bg-white rounded-2xl shadow-lg p-6 space-y-4">
-          <div>
-            <label for="welcome-name" class="text-xs font-semibold text-neutral-500 mb-1 block">Primeiro nome</label>
-            <input
-              id="welcome-name"
-              value="${escapeHtml(welcomeNameDraft)}"
-              placeholder="Ex: Ana"
-              autocomplete="given-name"
-              autofocus
-              class="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
-            />
+    <div class="relative min-h-[100dvh] overflow-hidden bg-neutral-50 flex flex-col">
+      <div class="absolute -top-28 -left-24 w-72 h-72 rounded-full bg-brand-purple/25 blur-3xl" aria-hidden="true"></div>
+      <div class="absolute -bottom-32 -right-20 w-80 h-80 rounded-full bg-brand-orange/25 blur-3xl" aria-hidden="true"></div>
+
+      <div class="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
+        <div class="w-full max-w-sm fade-slide-in">
+          <div class="flex justify-center">${renderLogo({ size: 'md' })}</div>
+
+          <div class="text-center mt-7">
+            <div class="relative w-28 h-28 mx-auto">
+              <div class="absolute inset-0 rounded-full bg-gradient-to-br from-brand-purple to-brand-orange blur-xl opacity-40"></div>
+              <img
+                src="${CHAT_AVATAR_URL}"
+                alt="Ari"
+                class="relative w-28 h-28 rounded-full object-cover ring-4 ring-white shadow-xl bg-brand-purple/20"
+              />
+            </div>
+            <h1 class="text-2xl font-bold text-neutral-900 mt-4">Oi, eu sou o Ari</h1>
+            <p class="text-sm text-neutral-500 mt-2 leading-relaxed px-2">
+              Seu garçom pessoal no ${escapeHtml(restaurant.name)}. Vou te ajudar a escolher os
+              pratos e montar o pedido, tudo por aqui.
+            </p>
           </div>
-          <div>
-            <label for="welcome-phone" class="text-xs font-semibold text-neutral-500 mb-1 block">Telefone com DDD</label>
-            <input
-              id="welcome-phone"
-              value="${escapeHtml(welcomePhoneDraft)}"
-              placeholder="(11) 91234-5678"
-              inputmode="numeric"
-              autocomplete="tel"
-              class="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
-            />
-          </div>
-          <button
-            type="submit"
-            id="welcome-submit"
-            ${isWelcomeValid() ? '' : 'disabled'}
-            class="w-full bg-brand-purple text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-40"
-          >
-            Iniciar
-          </button>
-        </form>
+
+          <form id="welcome-form" class="bg-white border border-neutral-100 rounded-2xl shadow-xl p-6 space-y-3.5 mt-7">
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400">${ICON_PERSON}</span>
+              <input
+                id="welcome-name"
+                value="${escapeHtml(welcomeNameDraft)}"
+                placeholder="Seu primeiro nome"
+                aria-label="Primeiro nome"
+                autocomplete="given-name"
+                autofocus
+                class="w-full border border-neutral-300 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+              />
+            </div>
+            <div class="relative">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400">${ICON_PHONE}</span>
+              <input
+                id="welcome-phone"
+                value="${escapeHtml(welcomePhoneDraft)}"
+                placeholder="(11) 91234-5678"
+                aria-label="Telefone com DDD"
+                inputmode="numeric"
+                autocomplete="tel"
+                class="w-full border border-neutral-300 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+              />
+            </div>
+            <button
+              type="submit"
+              id="welcome-submit"
+              ${isWelcomeValid() ? '' : 'disabled'}
+              class="w-full bg-gradient-to-r from-brand-purple to-indigo-600 text-white font-semibold rounded-xl py-3.5 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-40"
+            >
+              Iniciar
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   `
@@ -268,10 +293,13 @@ function updateWelcomeSubmitState() {
 function pageHtml() {
   return `
     <div class="min-h-[100dvh] bg-neutral-50 pb-32">
-      <header class="bg-gradient-to-r from-brand-orange to-brand-red text-white px-4 py-5 sm:px-6 sm:py-6 shadow-sm">
-        ${renderLogo({ size: 'sm' })}
-        <h1 class="text-xl sm:text-2xl font-bold mt-2 break-words">${escapeHtml(restaurant.name)}</h1>
-        ${numero ? `<p class="text-sm text-white/80 flex items-center gap-1 mt-0.5"><span>🪑</span>Mesa ${escapeHtml(numero)}</p>` : ''}
+      <header class="relative bg-white border-b border-neutral-200 px-4 sm:px-6 pt-5 pb-4 sm:pt-6 sm:pb-5 overflow-hidden">
+        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-orange via-brand-red to-brand-purple" aria-hidden="true"></div>
+        <div class="flex items-center justify-between gap-3">
+          ${renderLogo({ size: 'sm' })}
+          ${numero ? `<span class="text-xs font-semibold text-neutral-600 bg-neutral-100 rounded-full px-3 py-1.5 shrink-0">Mesa ${escapeHtml(numero)}</span>` : ''}
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-neutral-900 mt-3 break-words">${escapeHtml(restaurant.name)}</h1>
       </header>
 
       <main class="max-w-2xl mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-6">
