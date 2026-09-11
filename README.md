@@ -86,6 +86,20 @@ prompt; o próprio modelo decide o que recomendar. A DeepSeek não tem
 endpoint de embeddings, por isso essa foi a abordagem escolhida (ver nota no
 topo de `ai-waiter/index.ts` e da migration `0002`).
 
+**O garçom IA age no carrinho, não só conversa.** A Edge Function chama a
+DeepSeek em modo JSON (`response_format: json_object`) e recebe de volta, na
+mesma resposta, o texto pro cliente **e** uma lista de ações estruturadas
+(`adicionar`, `remover`, `alterar_quantidade`, `observacao`). Nenhuma ação é
+aplicada às cegas: o servidor revalida cada uma contra o cardápio e o
+carrinho reais (produto existe? quantidade entre 1 e 20? item já está no
+carrinho, no caso de remover/alterar?) antes de devolver — e o frontend
+(`cliente/cardapio.js`, função `applyAiActions`) faz uma segunda validação
+independente antes de mexer no carrinho de verdade. Não existe ação de
+"finalizar pedido" no esquema: o modelo é estruturalmente incapaz de fechar
+um pedido sozinho, só pode orientar o cliente a tocar em "Finalizar pedido".
+Cada ação aplicada aparece no chat como um cartãozinho (entrada animada,
+`prefers-reduced-motion` respeitado) e pulsa o botão do carrinho.
+
 **Categorias (seções do cardápio)**: o restaurante cria categorias livres
 (ex: Entradas, Pratos principais, Bebidas) na aba Produtos do painel
 (`restaurante/painel.js`) e atribui cada produto a uma delas pelo próprio

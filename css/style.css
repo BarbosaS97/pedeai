@@ -174,3 +174,93 @@ textarea {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* ---- Cartões de ação do garçom IA (ele mexeu no carrinho pela conversa) ---- */
+.action-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.45rem 0.7rem;
+  border-radius: 0.65rem;
+  border: 1px solid #e5e5e5;
+  background: #f5f5f5;
+  color: #404040;
+  opacity: 0;
+  animation: action-card-in 0.28s ease both;
+}
+.action-card-icon {
+  font-size: 0.85em;
+  line-height: 1;
+}
+.action-card--add {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+.action-card--remove {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+  animation-name: action-card-in-side;
+}
+.action-card--qty {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+.action-card--note {
+  background: #faf5ff;
+  border-color: #e9d5ff;
+  color: #7c3aed;
+}
+@keyframes action-card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes action-card-in-side {
+  from { opacity: 0; transform: translateX(-10px) scale(0.97); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* ---- Pulso do botão/contador do carrinho quando o chat altera o pedido ---- */
+@keyframes cart-pulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.cart-pulse {
+  animation: cart-pulse 0.4s ease;
+}
+@keyframes badge-bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.badge-bump {
+  animation: badge-bump 0.4s ease;
+}
+
+/* ---- Destaque temporário da linha do carrinho que o chat acabou de mudar ---- */
+@keyframes row-highlight {
+  0% { background-color: rgba(124, 58, 237, 0.12); }
+  100% { background-color: transparent; }
+}
+.row-highlight {
+  animation: row-highlight 1.8s ease;
+}
+
+/* Respeita quem prefere menos movimento: zera duração/atraso de toda
+   animação e transição do site, incluindo os cartões de ação e seus atrasos
+   escalonados — os elementos aparecem, só que sem a coreografia. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

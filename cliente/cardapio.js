@@ -23,6 +23,15 @@ let chatLoading = false
 let expandedProduct = null
 let productNoteDraft = ''
 
+// Garçom IA agindo no carrinho (ver sendChatMessage/applyAiActions): teto de
+// quantidade por ação — espelha o mesmo limite validado no servidor
+// (ai-waiter/index.ts), como segunda camada de defesa.
+const MAX_ITEM_QUANTITY = 20
+let cartJustUpdated = false // dispara o pulso do botão/contador do carrinho por um render
+let recentlyChangedProductIds = new Set() // destaca a linha na próxima vez que o carrinho abrir
+let notingOrder = false // trava o campo do chat por um instante enquanto os cartões de ação entram
+let staggerTimeoutId = null
+
 // Identificação do cliente (nome + telefone), pedida uma vez na tela de
 // boas-vindas antes do cardápio. Guardada no navegador (localStorage) pra não
 // precisar perguntar de novo numa próxima visita no mesmo aparelho.
@@ -428,11 +437,11 @@ function cartBarHtml() {
       id="cart-bar-open"
       class="fixed bottom-0 left-0 right-0 bg-brand-purple text-white shadow-[0_-4px_16px_rgba(0,0,0,0.15)] safe-bottom transition active:opacity-90 ${
         chatOpen || expandedProduct ? 'hidden' : ''
-      }"
+      } ${cartJustUpdated ? 'cart-pulse' : ''}"
     >
       <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-3">
         <span class="flex items-center gap-2 font-semibold text-sm">
-          <span class="bg-white/20 rounded-full w-6 h-6 flex items-center justify-center text-xs shrink-0">${count}</span>
+          <span class="bg-white/20 rounded-full w-6 h-6 flex items-center justify-center text-xs shrink-0 ${cartJustUpdated ? 'badge-bump' : ''}">${count}</span>
           Ver carrinho
         </span>
         <span class="font-bold">R$ ${formatBRL(total)}</span>
@@ -443,8 +452,9 @@ function cartBarHtml() {
 
 function cartItemRowHtml(i) {
   const lineTotal = i.product.price * i.quantity
+  const highlight = recentlyChangedProductIds.has(i.product.id) ? 'row-highlight' : ''
   return `
-    <div class="fade-slide-in flex gap-3 pb-3 border-b border-neutral-100 last:border-b-0 last:pb-0">
+    <div class="fade-slide-in flex gap-3 pb-3 border-b border-neutral-100 last:border-b-0 last:pb-0 rounded-lg px-1 -mx-1 ${highlight}">
       ${productImageHtml(i.product, 'sm')}
       <div class="flex-1 min-w-0">
         <div data-edit-item="${i.product.id}" class="cursor-pointer">
@@ -470,6 +480,13 @@ function cartItemRowHtml(i) {
 
 function cartSheetHtml() {
   const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
+  const itemsHtml =
+    cart.length === 0
+      ? emptyStateHtml('🛒', 'Seu carrinho está vazio. Toque nos pratos para adicionar.')
+      : cart.map(cartItemRowHtml).join('')
+  // Consumido: o destaque de "linha alterada pelo chat" só aparece uma vez,
+  // na primeira vez que o carrinho é aberto depois da mudança.
+  recentlyChangedProductIds.clear()
   return `
     <div id="cart-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div id="cart-box" class="modal-box bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85dvh] flex flex-col overflow-hidden">
@@ -478,11 +495,7 @@ function cartSheetHtml() {
           <button id="cart-close" title="Fechar" class="text-neutral-400 hover:text-neutral-600 transition text-xl leading-none w-9 h-9 flex items-center justify-center -mr-2">✕</button>
         </div>
         <div class="scroll-contain flex-1 overflow-y-auto px-4 py-3">
-          ${
-            cart.length === 0
-              ? emptyStateHtml('🛒', 'Seu carrinho está vazio. Toque nos pratos para adicionar.')
-              : cart.map(cartItemRowHtml).join('')
-          }
+          ${itemsHtml}
         </div>
         ${
           cart.length > 0
@@ -513,15 +526,7 @@ function chatModalHtml() {
           <button id="chat-close" class="text-neutral-400 hover:text-neutral-600 transition text-xl leading-none w-9 h-9 flex items-center justify-center -mr-2">✕</button>
         </div>
         <div id="chat-messages" class="scroll-contain flex-1 overflow-y-auto px-4 py-3 space-y-3">
-          ${chatMessages
-            .map(
-              (m) => `
-            <div class="flex fade-slide-in ${m.role === 'user' ? 'justify-end' : 'justify-start'}">
-              <div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'bg-brand-purple text-white' : 'bg-neutral-100 text-neutral-800'}">${escapeHtml(m.content)}</div>
-            </div>
-          `
-            )
-            .join('')}
+          ${chatMessages.map(chatMessageHtml).join('')}
           ${
             chatLoading
               ? `<div class="flex justify-start"><div class="bg-neutral-100 text-neutral-500 rounded-2xl px-4 py-2.5"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`
@@ -541,10 +546,62 @@ function chatModalHtml() {
             : ''
         }
         <form id="chat-form" class="safe-bottom flex gap-2 p-3 border-t border-neutral-100 shrink-0">
-          <input id="chat-input" value="${escapeHtml(chatInput)}" placeholder="Ex: algo vegetariano e picante" autocomplete="off" class="flex-1 min-w-0 border border-neutral-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition" />
-          <button type="submit" ${chatLoading ? 'disabled' : ''} class="bg-brand-purple text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:opacity-90 transition disabled:opacity-50 shrink-0">Enviar</button>
+          <input
+            id="chat-input"
+            value="${escapeHtml(chatInput)}"
+            placeholder="${notingOrder ? 'Anotando seu pedido…' : 'Ex: algo vegetariano e picante'}"
+            autocomplete="off"
+            ${notingOrder ? 'disabled' : ''}
+            class="flex-1 min-w-0 border border-neutral-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition disabled:bg-neutral-50 disabled:text-neutral-400"
+          />
+          <button type="submit" ${chatLoading || notingOrder ? 'disabled' : ''} class="bg-brand-purple text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:opacity-90 transition disabled:opacity-50 shrink-0">Enviar</button>
         </form>
       </div>
+    </div>
+  `
+}
+
+function chatMessageHtml(m) {
+  if (m.role === 'user') {
+    return `
+      <div class="flex justify-end fade-slide-in">
+        <div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-brand-purple text-white">${escapeHtml(m.content)}</div>
+      </div>
+    `
+  }
+  return `
+    <div class="flex flex-col items-start gap-1.5 fade-slide-in">
+      <div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-neutral-100 text-neutral-800">${escapeHtml(m.content)}</div>
+      ${m.actionCards && m.actionCards.length > 0 ? actionCardsHtml(m.actionCards) : ''}
+    </div>
+  `
+}
+
+// Ícone/estilo de cada tipo de ação que o garçom IA executa no carrinho —
+// ver applyAiActions(). Cada cartão entra com um pequeno atraso (animation-
+// delay) em relação ao anterior, dando a sensação de "anotando aos poucos"
+// sem precisar de JS orquestrando a inserção no DOM.
+const ACTION_CARD_META = {
+  add: { icon: '➕', cls: 'action-card--add' },
+  remove: { icon: '➖', cls: 'action-card--remove' },
+  qty: { icon: '🔁', cls: 'action-card--qty' },
+  note: { icon: '📝', cls: 'action-card--note' },
+}
+
+function actionCardsHtml(cards) {
+  return `
+    <div class="flex flex-col gap-1.5 max-w-[85%]">
+      ${cards
+        .map((c, index) => {
+          const meta = ACTION_CARD_META[c.kind] || ACTION_CARD_META.add
+          return `
+            <div class="action-card ${meta.cls}" style="animation-delay:${index * 220}ms">
+              <span class="action-card-icon" aria-hidden="true">${meta.icon}</span>
+              <span>${escapeHtml(c.label)}</span>
+            </div>
+          `
+        })
+        .join('')}
     </div>
   `
 }
@@ -637,6 +694,12 @@ function bindPageEvents() {
     document.getElementById('chat-form').addEventListener('submit', sendChatMessage)
     // Sem autofocus agressivo no celular: abrir o teclado sozinho ao abrir o
     // chat é intrusivo. O cliente toca no campo quando quiser digitar.
+
+    // Animação "opcionalmente interrompível": tocar em qualquer lugar do chat
+    // enquanto os cartões de ação ainda estão entrando pula direto pro fim.
+    if (notingOrder) {
+      document.getElementById('chat-box').addEventListener('click', skipStagger)
+    }
   }
 }
 
@@ -745,20 +808,107 @@ async function placeOrder() {
   }
 }
 
+function focusChatInput() {
+  const input = document.getElementById('chat-input')
+  if (input && !input.disabled) input.focus()
+}
+
+function clampQuantity(value) {
+  const n = Math.trunc(Number(value))
+  if (!Number.isFinite(n) || n < 1 || n > MAX_ITEM_QUANTITY) return null
+  return n
+}
+
+// Aplica as ações que o garçom IA decidiu (já validadas pela Edge Function)
+// no carrinho local e devolve um cartãozinho descritivo por ação aplicada,
+// pra mostrar no chat. Segunda camada de validação, totalmente independente
+// da que já rodou no servidor: só mexe no carrinho se o produto realmente
+// existir no cardápio carregado e a quantidade for sensata — mesmo que a
+// resposta da API venha adulterada, o carrinho nunca fica com item fantasma.
+function applyAiActions(acoes) {
+  const cards = []
+  for (const acao of acoes) {
+    if (!acao || typeof acao !== 'object') continue
+    const product = products.find((p) => p.id === acao.produto_id)
+    if (!product) continue
+
+    if (acao.tipo === 'adicionar') {
+      const quantidade = clampQuantity(acao.quantidade)
+      if (!quantidade) continue
+      const existing = cart.find((i) => i.product.id === product.id)
+      if (existing) existing.quantity += quantidade
+      else cart.push({ product, quantity: quantidade, notes: '' })
+      recentlyChangedProductIds.add(product.id)
+      cards.push({ kind: 'add', label: `+${quantidade} ${product.name}` })
+      continue
+    }
+
+    if (acao.tipo === 'remover') {
+      const existing = cart.find((i) => i.product.id === product.id)
+      if (!existing) continue
+      cart = cart.filter((i) => i.product.id !== product.id)
+      cards.push({ kind: 'remove', label: `Removido: ${product.name}` })
+      continue
+    }
+
+    if (acao.tipo === 'alterar_quantidade') {
+      const existing = cart.find((i) => i.product.id === product.id)
+      if (!existing) continue
+      const quantidade = clampQuantity(acao.quantidade)
+      const antes = existing.quantity
+      if (!quantidade) {
+        cart = cart.filter((i) => i.product.id !== product.id)
+        cards.push({ kind: 'remove', label: `Removido: ${product.name}` })
+        continue
+      }
+      existing.quantity = quantidade
+      recentlyChangedProductIds.add(product.id)
+      cards.push({ kind: 'qty', label: `${product.name}: ${antes} → ${quantidade}` })
+      continue
+    }
+
+    if (acao.tipo === 'observacao') {
+      const existing = cart.find((i) => i.product.id === product.id)
+      if (!existing) continue
+      const observacao = typeof acao.observacao === 'string' ? acao.observacao.trim().slice(0, 140) : ''
+      existing.notes = observacao
+      recentlyChangedProductIds.add(product.id)
+      cards.push({
+        kind: 'note',
+        label: observacao ? `${product.name}: "${observacao}"` : `${product.name}: observação removida`,
+      })
+    }
+  }
+  return cards
+}
+
+function skipStagger() {
+  if (staggerTimeoutId) {
+    clearTimeout(staggerTimeoutId)
+    staggerTimeoutId = null
+  }
+  if (!notingOrder) return
+  notingOrder = false
+  renderPage()
+  focusChatInput()
+}
+
 async function sendChatMessage(e) {
   e.preventDefault()
   const mensagem = chatInput.trim()
   if (!mensagem) return
 
-  const historico = chatMessages.slice()
+  // Só os últimos turnos vão pro modelo — mantém o prompt (e o custo por
+  // mensagem) limitado mesmo numa conversa longa.
+  const historico = chatMessages.slice(-12).map((m) => ({ role: m.role, content: m.content }))
   chatMessages.push({ role: 'user', content: mensagem })
   chatInput = ''
   chatLoading = true
   renderPage()
-  // Mantém o foco no campo depois de reenviar (o DOM foi todo recriado),
-  // pra dar pra digitar a próxima mensagem sem tocar de novo no campo.
-  const input = document.getElementById('chat-input')
-  if (input) input.focus()
+  focusChatInput()
+
+  let respostaTexto
+  let cards = []
 
   try {
     const anonKey = window.PEDEAI_CONFIG.SUPABASE_ANON_KEY
@@ -769,27 +919,45 @@ async function sendChatMessage(e) {
         apikey: anonKey,
         Authorization: `Bearer ${anonKey}`,
       },
-      // nome_cliente vai no corpo pro dia em que o prompt da Edge Function
-      // (supabase/functions/ai-waiter/index.ts) passar a usá-lo pra
-      // personalizar as respostas — hoje ele é só ignorado no backend. A
-      // saudação inicial (buildInitialChatMessage) já usa o nome agora.
-      body: JSON.stringify({ restaurante_slug: restaurant.slug, mensagem, historico, nome_cliente: customerName || undefined }),
+      body: JSON.stringify({
+        restaurante_slug: restaurant.slug,
+        mensagem,
+        historico,
+        nome_cliente: customerName || undefined,
+        // O garçom IA precisa saber o que já está no carrinho pra entender
+        // "tira a coxinha", "muda a limonada pra três" etc.
+        carrinho: cart.map((i) => ({ produto_id: i.product.id, quantidade: i.quantity, observacao: i.notes || null })),
+      }),
     })
     const data = await res.json()
-    chatMessages.push({
-      role: 'assistant',
-      content: stripMarkdown(data.resposta) || 'Desculpa, não consegui responder agora.',
-    })
+    respostaTexto = stripMarkdown(data.resposta) || 'Desculpa, não consegui responder agora.'
+    const acoes = Array.isArray(data.acoes) ? data.acoes : []
+    cards = applyAiActions(acoes)
   } catch {
-    chatMessages.push({ role: 'assistant', content: 'Ops, tive um problema para responder. Tenta de novo?' })
-  } finally {
-    chatLoading = false
+    respostaTexto = 'Ops, tive um problema para responder. Tenta de novo?'
+  }
+
+  chatMessages.push({ role: 'assistant', content: respostaTexto, actionCards: cards })
+  chatLoading = false
+
+  if (cards.length > 0) {
+    // Pulsa o botão/contador do carrinho só nesta renderização — o flag volta
+    // pra false logo em seguida, então re-renders futuros (digitar, abrir o
+    // carrinho etc.) não repetem a animação à toa.
+    cartJustUpdated = true
+    notingOrder = true
     renderPage()
-    // Idem: renderPage() recria o input do zero, então o foco (que já estava
-    // lá, o usuário acabou de mandar uma mensagem) se perde de novo — restaura
-    // pra dar pra continuar digitando sem tocar de novo no campo.
-    const inputAfterReply = document.getElementById('chat-input')
-    if (inputAfterReply) inputAfterReply.focus()
+    cartJustUpdated = false
+    const staggerMs = Math.min(cards.length * 220 + 300, 1600)
+    staggerTimeoutId = setTimeout(() => {
+      staggerTimeoutId = null
+      notingOrder = false
+      renderPage()
+      focusChatInput()
+    }, staggerMs)
+  } else {
+    renderPage()
+    focusChatInput()
   }
 }
 
