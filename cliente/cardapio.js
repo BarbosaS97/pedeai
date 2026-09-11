@@ -18,6 +18,9 @@ function chatAvatarHtml(sizeClass) {
 // Ícones de contorno simples (sem emoji) usados no formulário de boas-vindas.
 const ICON_PERSON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
 const ICON_PHONE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`
+const ICON_TABLE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8h20"/><path d="M5 8v11M19 8v11"/><path d="M2 8l2.5-5h15L22 8"/></svg>`
+const ICON_CART = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2l2.6 12.6a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 8H6"/></svg>`
+const ICON_CHEVRON_RIGHT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`
 
 let restaurant = null
 let products = []
@@ -36,6 +39,11 @@ let chatInput = ''
 let chatLoading = false
 let expandedProduct = null
 let productNoteDraft = ''
+// Balãozinho de dica perto do botão do Ari, só pra chamar atenção na
+// primeira olhada no cardápio — some sozinho depois de um tempo, ou assim
+// que o cliente interage com o chat/carrinho/detalhe de produto.
+let chatHintVisible = true
+let chatHintTimeoutId = null
 
 // Garçom IA agindo no carrinho (ver sendChatMessage/applyAiActions): teto de
 // quantidade por ação — espelha o mesmo limite validado no servidor
@@ -126,6 +134,42 @@ function buildInitialChatMessage() {
   return `Pede aí${greeting}! Eu sou o Ari, garçom do ${restaurant.name}. O que você tá com vontade de comer hoje?`
 }
 
+// ---- Balão de dica do Ari (chama atenção pro chat na primeira olhada) ----
+
+function chatHintHtml() {
+  return `
+    <div
+      id="chat-hint"
+      class="fade-slide-in fixed right-4 z-10 max-w-[15rem] bg-white text-neutral-800 rounded-2xl rounded-br-md shadow-xl border border-neutral-100 pl-4 pr-8 py-3 cursor-pointer"
+      style="bottom: calc(6.5rem + 3.5rem + env(safe-area-inset-bottom, 0px));"
+    >
+      <button id="chat-hint-close" title="Fechar" class="absolute top-1.5 right-1.5 text-neutral-300 hover:text-neutral-500 transition w-6 h-6 flex items-center justify-center text-sm leading-none">✕</button>
+      <p class="font-semibold text-sm text-brand-purple">Fale com o Ari</p>
+      <p class="text-xs text-neutral-500 mt-0.5 leading-relaxed">Posso te ajudar a escolher algo delicioso!</p>
+    </div>
+  `
+}
+
+// Some sozinho depois de um tempo — chamado só quando a tela do cardápio de
+// fato aparece (depois da tela de boas-vindas, se houver uma).
+function startChatHintTimer() {
+  if (chatHintTimeoutId !== null || !chatHintVisible) return
+  chatHintTimeoutId = setTimeout(() => {
+    chatHintTimeoutId = null
+    dismissChatHint()
+  }, 6000)
+}
+
+function dismissChatHint() {
+  if (chatHintTimeoutId !== null) {
+    clearTimeout(chatHintTimeoutId)
+    chatHintTimeoutId = null
+  }
+  if (!chatHintVisible) return
+  chatHintVisible = false
+  renderPage()
+}
+
 function mesaUnavailableHtml() {
   return `
     <div class="min-h-[100dvh] flex items-center justify-center text-center px-6 bg-neutral-50">
@@ -207,6 +251,7 @@ async function init() {
   }
 
   renderPage()
+  if (!showWelcome) startChatHintTimer()
 }
 
 function renderPage() {
@@ -316,6 +361,7 @@ function bindWelcomeEvents() {
     chatMessages = [{ role: 'assistant', content: buildInitialChatMessage() }]
     showWelcome = false
     renderPage()
+    startChatHintTimer()
   })
 }
 
@@ -329,13 +375,17 @@ function updateWelcomeSubmitState() {
 function pageHtml() {
   return `
     <div class="min-h-[100dvh] bg-neutral-50 pb-32">
-      <header class="relative bg-white border-b border-neutral-200 px-4 sm:px-6 pt-5 pb-4 sm:pt-6 sm:pb-5 overflow-hidden">
-        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-orange via-brand-red to-brand-purple" aria-hidden="true"></div>
+      <header class="relative bg-gradient-to-br from-brand-orange to-brand-red px-4 sm:px-6 pt-5 pb-5 sm:pt-6 sm:pb-6 overflow-hidden">
         <div class="flex items-center justify-between gap-3">
-          ${renderLogo({ size: 'sm' })}
-          ${numero ? `<span class="text-xs font-semibold text-neutral-600 bg-neutral-100 rounded-full px-3 py-1.5 shrink-0">Mesa ${escapeHtml(numero)}</span>` : ''}
+          ${renderLogo({ size: 'sm', light: true })}
+          ${
+            numero
+              ? `<span class="flex items-center gap-1.5 text-xs font-semibold text-white bg-black/25 backdrop-blur rounded-full px-3 py-1.5 shrink-0"><span class="shrink-0">${ICON_TABLE}</span>Mesa ${escapeHtml(numero)}</span>`
+              : ''
+          }
         </div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-neutral-900 mt-3 break-words">${escapeHtml(restaurant.name)}</h1>
+        <p class="text-white/85 text-sm font-medium mt-3.5 truncate">${escapeHtml(restaurant.name)}</p>
+        <h1 class="text-xl sm:text-2xl font-bold text-white mt-0.5 break-words">O que você deseja hoje?</h1>
       </header>
 
       <main class="max-w-2xl mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-6">
@@ -353,6 +403,8 @@ function pageHtml() {
         ${chatAvatarHtml('w-8 h-8 ring-2 ring-white/40')}
         <span>Falar com o Ari</span>
       </button>
+
+      ${chatHintVisible && !chatOpen && !expandedProduct && !cartOpen ? chatHintHtml() : ''}
 
       ${cart.length > 0 ? cartBarHtml() : ''}
       ${expandedProduct ? productDetailModalHtml() : ''}
@@ -394,12 +446,16 @@ function menuContentHtml() {
 function categoryNavHtml(groups) {
   if (groups.length <= 1) return ''
   return `
-    <nav class="scroll-contain sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 bg-neutral-50/95 backdrop-blur border-b border-neutral-200 overflow-x-auto">
+    <nav id="category-nav" class="scroll-contain sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 bg-neutral-50/95 backdrop-blur border-b border-neutral-200 overflow-x-auto">
       <div class="flex gap-2 w-max">
         ${groups
           .map(
-            (g) =>
-              `<a href="#secao-${g.id || 'outros'}" class="text-xs font-semibold whitespace-nowrap bg-white border border-neutral-200 text-neutral-600 rounded-full px-3.5 py-2 hover:border-brand-purple hover:text-brand-purple transition">${escapeHtml(g.name)}</a>`
+            (g, idx) =>
+              `<a href="#secao-${g.id || 'outros'}" data-category-pill class="text-xs font-semibold whitespace-nowrap rounded-full px-3.5 py-2 transition ${
+                idx === 0
+                  ? 'bg-brand-purple border border-brand-purple text-white'
+                  : 'bg-white border border-neutral-200 text-neutral-600 hover:border-brand-purple hover:text-brand-purple'
+              }">${escapeHtml(g.name)}</a>`
           )
           .join('')}
       </div>
@@ -437,7 +493,7 @@ function productCardHtml(p) {
         ${p.description ? `<p class="text-sm text-neutral-500 line-clamp-2 mt-0.5">${escapeHtml(p.description)}</p>` : ''}
         <div class="flex items-center justify-between mt-2 gap-2">
           <span class="font-semibold text-brand-orange">R$ ${formatBRL(p.price)}</span>
-          <button data-add="${p.id}" class="text-sm bg-brand-purple text-white rounded-lg px-3.5 py-2 hover:opacity-90 active:scale-95 transition shrink-0">Adicionar</button>
+          <button data-add="${p.id}" class="text-sm font-medium bg-brand-purple text-white rounded-full px-4 py-2 hover:opacity-90 active:scale-95 transition shrink-0">+ Adicionar</button>
         </div>
       </div>
     </div>
@@ -515,11 +571,17 @@ function cartBarHtml() {
       } ${cartJustUpdated ? 'cart-pulse' : ''}"
     >
       <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-3">
-        <span class="flex items-center gap-2 font-semibold text-sm">
-          <span class="bg-white/20 rounded-full w-6 h-6 flex items-center justify-center text-xs shrink-0 ${cartJustUpdated ? 'badge-bump' : ''}">${count}</span>
+        <span class="flex items-center gap-3 font-semibold text-sm">
+          <span class="relative shrink-0">
+            ${ICON_CART}
+            <span class="absolute -top-2 -right-2 bg-brand-orange text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center leading-none border-2 border-brand-purple ${cartJustUpdated ? 'badge-bump' : ''}">${count}</span>
+          </span>
           Ver carrinho
         </span>
-        <span class="font-bold">R$ ${formatBRL(total)}</span>
+        <span class="flex items-center gap-1.5 font-bold">
+          R$ ${formatBRL(total)}
+          ${ICON_CHEVRON_RIGHT}
+        </span>
       </div>
     </button>
   `
@@ -732,12 +794,43 @@ function actionCardsHtml(cards, animate) {
 function bindPageEvents() {
   document.getElementById('chat-fab').addEventListener('click', () => {
     chatOpen = true
+    dismissChatHint()
     renderPage()
   })
+
+  const chatHint = document.getElementById('chat-hint')
+  if (chatHint) {
+    chatHint.addEventListener('click', (e) => {
+      if (e.target.closest('#chat-hint-close')) {
+        dismissChatHint()
+        return
+      }
+      chatOpen = true
+      dismissChatHint()
+    })
+  }
 
   document.querySelectorAll('[data-add]').forEach((btn) => {
     btn.addEventListener('click', () => addToCart(btn.getAttribute('data-add')))
   })
+
+  // Pílula tocada vira a "ativa" (preenchida) e as outras voltam ao estado
+  // neutro — só troca classes no DOM, sem re-render nem estado próprio: o
+  // scroll até a seção já acontece sozinho, é o comportamento nativo do
+  // navegador pra link com "#âncora".
+  const categoryNav = document.getElementById('category-nav')
+  if (categoryNav) {
+    categoryNav.addEventListener('click', (e) => {
+      const pill = e.target.closest('[data-category-pill]')
+      if (!pill) return
+      categoryNav.querySelectorAll('[data-category-pill]').forEach((el) => {
+        el.classList.remove('bg-brand-purple', 'border-brand-purple', 'text-white')
+        el.classList.add('bg-white', 'border-neutral-200', 'text-neutral-600')
+      })
+      pill.classList.remove('bg-white', 'border-neutral-200', 'text-neutral-600')
+      pill.classList.add('bg-brand-purple', 'border-brand-purple', 'text-white')
+    })
+  }
 
   document.querySelectorAll('[data-expand]').forEach((card) => {
     card.addEventListener('click', (e) => {
