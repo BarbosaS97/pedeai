@@ -21,7 +21,6 @@ const ELAPSED_THRESHOLDS = {
 
 let restaurantClient = null
 let restaurant = null
-let realtimeChannel = null
 
 let todayOrders = []
 let historyOpen = false
@@ -63,11 +62,17 @@ async function init() {
 
   renderShell()
   await fetchTodayOrders()
-  subscribeRealtime()
 
-  // Atualiza só o texto/cor do tempo decorrido periodicamente — nunca
-  // reconstrói os cards (ver updateElapsedBadges), então não pisca.
-  setInterval(updateElapsedBadges, 20000)
+  // Poll em vez de Supabase Realtime: o RLS de "orders"/"order_items"
+  // (current_restaurant_token(), migration 0001) só libera leitura pra quem
+  // manda o header x-restaurant-token, e esse header só existe em requests
+  // REST normais — o serviço de Realtime não o recebe, então o canal
+  // "inscreve" com sucesso mas nunca vê eventos de pedidos feitos por outro
+  // cliente (confirmado testando: o pedido só aparece depois de um F5). Poll
+  // a cada 4s resolve sem abrir mão dessa proteção — cada tick já reconcilia
+  // o DOM sem piscar (ver reconcileList) e também cobre a atualização do
+  // selo de tempo decorrido, então não precisa de um timer separado pra isso.
+  setInterval(fetchTodayOrders, 4000)
 }
 
 // ---- Estrutura fixa da tela (renderizada uma vez) ----
@@ -375,6 +380,7 @@ function orderCardHtml(order, stage) {
   const baseTime = stage === 'pending' ? order.created_at : order.updated_at
   const minutes = elapsedMinutes(baseTime)
   const colorClasses = elapsedColorClasses(minutes, stage)
+  const clockTime = new Date(baseTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   const items = (order.order_items || []).slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
   const actionLabel = stage === 'pending' ? '▶️ Preparar' : '✅ Pronto'
   const actionClasses = stage === 'pending' ? 'bg-brand-blue' : 'bg-emerald-600'
@@ -387,23 +393,26 @@ function orderCardHtml(order, stage) {
           <p class="text-lg font-semibold text-neutral-700 mt-1.5 truncate">${order.table_number ? `Mesa ${escapeHtml(order.table_number)}` : 'Balcão'}</p>
           ${order.customer_name ? `<p class="text-sm text-neutral-500 truncate">👤 ${escapeHtml(order.customer_name)}</p>` : ''}
         </div>
-        <span data-elapsed-badge class="text-sm font-bold px-3 py-1.5 rounded-full border shrink-0 ${colorClasses}">${elapsedLabel(minutes)}</span>
+        <div class="flex flex-col items-end gap-1 shrink-0">
+          <span data-elapsed-badge class="text-sm font-bold px-3 py-1.5 rounded-full border ${colorClasses}">${elapsedLabel(minutes)}</span>
+          <span class="text-xs text-neutral-400">${clockTime}</span>
+        </div>
       </div>
-      <ul class="space-y-3 mb-4">
+      <ul class="divide-y divide-neutral-100 mb-4 border-t border-b border-neutral-100">
         ${
           items.length
             ? items
                 .map(
                   (item) => `
-          <li class="text-xl leading-snug">
+          <li class="text-xl leading-snug py-3">
             <span class="font-extrabold text-neutral-900">${item.quantity}×</span>
             <span class="text-neutral-800">${escapeHtml(item.product_name)}</span>
-            ${item.notes ? `<div class="text-base font-bold text-brand-red bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 mt-1 inline-block">⚠️ ${escapeHtml(item.notes)}</div>` : ''}
+            ${item.notes ? `<div class="text-base font-bold text-brand-red bg-red-50 border border-red-200 rounded-lg px-2.5 py-1 mt-1.5 inline-block">⚠️ ${escapeHtml(item.notes)}</div>` : ''}
           </li>
         `
                 )
                 .join('')
-            : `<li class="text-sm text-neutral-400 italic">Carregando itens...</li>`
+            : `<li class="text-sm text-neutral-400 italic py-3">Carregando itens...</li>`
         }
       </ul>
       <button data-action="${stage === 'pending' ? 'prepare' : 'ready'}" data-id="${order.id}" class="w-full text-white text-xl font-bold rounded-xl py-4 active:scale-[0.98] hover:opacity-90 transition ${actionClasses}">
@@ -494,23 +503,6 @@ function historyRowHtml(order) {
       <td class="py-2 pr-3 font-semibold whitespace-nowrap">${totalMin} min</td>
     </tr>
   `
-}
-
-// ---- Tempo real ----
-
-function subscribeRealtime() {
-  realtimeChannel = restaurantClient
-    .channel(`kitchen-orders-${restaurant.id}`)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurant.id}` },
-      () => fetchTodayOrders()
-    )
-    // order_items não tem restaurant_id pra filtrar na assinatura; o RLS
-    // (order_items_select_by_token) já restringe o que este client consegue
-    // de fato buscar de volta na re-consulta feita logo abaixo.
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => fetchTodayOrders())
-    .subscribe()
 }
 
 // ---- Som de alerta ----

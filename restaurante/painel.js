@@ -14,7 +14,7 @@ const accessToken = new URLSearchParams(location.search).get('token')
 let restaurantClient = null
 let restaurant = null
 let activeTab = 'orders'
-let realtimeChannel = null
+let ordersPollTimer = null
 
 let ordersState = []
 let productsState = []
@@ -189,21 +189,22 @@ async function updateOrderStatus(orderId, status) {
 }
 
 function subscribeOrders() {
-  // Realtime: novos pedidos aparecem na hora, sem recarregar a página.
-  realtimeChannel = restaurantClient
-    .channel(`orders-${restaurant.id}`)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurant.id}` },
-      () => loadOrders()
-    )
-    .subscribe()
+  // Não dá pra usar Supabase Realtime (postgres_changes) aqui: o RLS de
+  // "orders" (current_restaurant_token(), migration 0001) só libera leitura
+  // pra quem manda o header x-restaurant-token — e esse header só existe em
+  // requests REST normais (PostgREST), o serviço de Realtime não o recebe.
+  // Na prática, o canal "inscreve" com sucesso mas nunca recebe eventos de
+  // pedidos de outros clientes, porque a política nega a visibilidade da
+  // linha do ponto de vista do Realtime. Poll simples resolve sem abrir mão
+  // dessa proteção (deixar "orders" público quebraria a garantia de que só
+  // quem tem o token vê nome/telefone dos clientes).
+  ordersPollTimer = setInterval(loadOrders, 4000)
 }
 
 function unsubscribeOrders() {
-  if (realtimeChannel) {
-    restaurantClient.removeChannel(realtimeChannel)
-    realtimeChannel = null
+  if (ordersPollTimer) {
+    clearInterval(ordersPollTimer)
+    ordersPollTimer = null
   }
 }
 
