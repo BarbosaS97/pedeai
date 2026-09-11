@@ -9,6 +9,11 @@ const slug = queryParams.get('slug')
 const numero = queryParams.get('mesa')
 
 const CUSTOMER_STORAGE_KEY = 'pedeai_customer'
+const CHAT_AVATAR_URL = '../images/avatar-chat.png'
+
+function chatAvatarHtml(sizeClass) {
+  return `<img src="${CHAT_AVATAR_URL}" alt="Ari" loading="eager" class="${sizeClass} rounded-full object-cover shrink-0 bg-brand-purple/20" />`
+}
 
 let restaurant = null
 let products = []
@@ -31,6 +36,11 @@ let cartJustUpdated = false // dispara o pulso do botão/contador do carrinho po
 let recentlyChangedProductIds = new Set() // destaca a linha na próxima vez que o carrinho abrir
 let notingOrder = false // trava o campo do chat por um instante enquanto os cartões de ação entram
 let staggerTimeoutId = null
+// Quantas mensagens do chat já foram exibidas ao menos uma vez. O chat é
+// redesenhado do zero a cada mudança de estado (padrão do app inteiro), e sem
+// isso TODA mensagem antiga replay a animação de entrada a cada re-render —
+// é o que causava o efeito de "adicionou duas vezes"/piscada ao usar o chat.
+let chatRenderedCount = 0
 
 // Identificação do cliente (nome + telefone), pedida uma vez na tela de
 // boas-vindas antes do cardápio. Guardada no navegador (localStorage) pra não
@@ -104,7 +114,7 @@ function isWelcomeValid() {
 
 function buildInitialChatMessage() {
   const greeting = customerName ? `, ${customerName}` : ''
-  return `Pede aí${greeting}! Eu sou o garçom IA do ${restaurant.name}. O que você tá com vontade de comer hoje?`
+  return `Pede aí${greeting}! Eu sou o Ari, garçom do ${restaurant.name}. O que você tá com vontade de comer hoje?`
 }
 
 async function init() {
@@ -268,15 +278,16 @@ function pageHtml() {
         ${menuContentHtml()}
       </main>
 
-      <!-- Botão flutuante do garçom IA — coração da proposta "Pede AI" -->
+      <!-- Botão flutuante do Ari — coração da proposta "Pede AI" -->
       <button
         id="chat-fab"
-        class="fixed right-4 bg-brand-purple text-white rounded-full shadow-lg hover:shadow-xl px-5 py-3.5 font-semibold text-sm transition active:scale-95 ${
+        class="fixed right-4 bg-brand-purple text-white rounded-full shadow-lg hover:shadow-xl pl-2 pr-4 py-2 font-semibold text-sm transition active:scale-95 flex items-center gap-2 ${
           chatOpen || expandedProduct || cartOpen ? 'hidden' : ''
         }"
         style="bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));"
       >
-        💬 Garçom IA
+        ${chatAvatarHtml('w-8 h-8 ring-2 ring-white/40')}
+        <span>Falar com o Ari</span>
       </button>
 
       ${cart.length > 0 ? cartBarHtml() : ''}
@@ -518,48 +529,53 @@ function cartSheetHtml() {
 }
 
 function chatModalHtml() {
+  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0)
+  // Mensagens que já apareceram em algum render anterior não repetem a
+  // animação de entrada — só as recém-adicionadas nesta rodada animam.
+  if (chatRenderedCount > chatMessages.length) chatRenderedCount = 0
+  const messagesHtml = chatMessages
+    .map((m, idx) => chatMessageHtml(m, idx >= chatRenderedCount))
+    .join('')
+  chatRenderedCount = chatMessages.length
+
   return `
     <div id="chat-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div id="chat-box" class="modal-box bg-neutral-50 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[85dvh] sm:h-[32rem] flex flex-col overflow-hidden shadow-2xl">
+      <div id="chat-box" class="modal-box bg-neutral-50 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[88dvh] sm:h-[34rem] flex flex-col overflow-hidden shadow-2xl">
         <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand-purple to-indigo-600 text-white shrink-0">
-          <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-base shrink-0">🧑‍🍳</div>
-            <div class="leading-tight">
-              <p class="font-semibold text-sm">Garçom IA</p>
+          <div class="flex items-center gap-2.5 min-w-0">
+            ${chatAvatarHtml('w-10 h-10 ring-2 ring-white/25')}
+            <div class="leading-tight min-w-0">
+              <p class="font-semibold text-sm truncate">Ari do PedeAí</p>
               <p class="text-[11px] text-white/75 flex items-center gap-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                 Sempre disponível
               </p>
             </div>
           </div>
-          <button id="chat-close" title="Fechar" class="text-white/80 hover:text-white hover:bg-white/10 transition text-xl leading-none w-9 h-9 flex items-center justify-center rounded-full -mr-1.5">✕</button>
+          <div class="flex items-center gap-1 shrink-0">
+            ${
+              cartCount > 0
+                ? `<button id="chat-view-cart" title="Ver carrinho" class="relative text-white/90 hover:text-white hover:bg-white/10 transition w-9 h-9 flex items-center justify-center rounded-full text-lg">
+                    🛒
+                    <span class="absolute top-0.5 right-0.5 bg-brand-orange text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 px-0.5 flex items-center justify-center leading-none">${cartCount}</span>
+                  </button>`
+                : ''
+            }
+            <button id="chat-close" title="Fechar" class="text-white/80 hover:text-white hover:bg-white/10 transition text-xl leading-none w-9 h-9 flex items-center justify-center rounded-full">✕</button>
+          </div>
         </div>
         <div id="chat-messages" class="scroll-contain flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          ${chatMessages.map(chatMessageHtml).join('')}
+          ${messagesHtml}
           ${
             chatLoading
               ? `<div class="flex items-end gap-2 fade-slide-in">
-                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-purple to-indigo-500 text-white flex items-center justify-center text-xs shrink-0 shadow-sm">🧑‍🍳</div>
+                  ${chatAvatarHtml('w-7 h-7')}
                   <div class="bg-white border border-neutral-100 shadow-sm text-neutral-400 rounded-2xl rounded-bl-md px-4 py-3"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
                 </div>`
               : ''
           }
         </div>
-        ${
-          products.length > 0
-            ? `
-          <div class="chip-scroll-fade scroll-contain shrink-0 px-3 py-2.5 flex gap-2 overflow-x-auto bg-white border-t border-neutral-100">
-            ${products
-              .slice(0, 5)
-              .map(
-                (p) =>
-                  `<button data-add="${p.id}" class="text-xs font-medium bg-white border border-neutral-200 text-neutral-600 whitespace-nowrap rounded-full pl-2.5 pr-3.5 py-2 hover:border-brand-purple hover:text-brand-purple transition shrink-0 shadow-sm flex items-center gap-1"><span class="text-brand-orange font-bold">+</span>${escapeHtml(p.name)}</button>`
-              )
-              .join('')}
-          </div>
-        `
-            : ''
-        }
+        ${chatSuggestionsHtml()}
         <form id="chat-form" class="safe-bottom flex gap-2 p-3 bg-white border-t border-neutral-100 shrink-0">
           <input
             id="chat-input"
@@ -576,29 +592,53 @@ function chatModalHtml() {
   `
 }
 
-function chatMessageHtml(m) {
+// Sugestões de resposta rápida — mudam um pouco dependendo se já tem algo no
+// carrinho, pra sempre serem relevantes. Tocar numa delas envia a frase como
+// se o cliente tivesse digitado.
+function chatSuggestionsHtml() {
+  const suggestions =
+    cart.length > 0
+      ? ['O que tem no meu carrinho?', 'Pode recomendar uma sobremesa?', 'Quero adicionar mais um item']
+      : ['O que vocês recomendam?', 'Tem opção vegetariana?', 'Quero uma bebida']
+  const busy = notingOrder || chatLoading
+  return `
+    <div class="chip-scroll-fade scroll-contain shrink-0 px-3 py-2.5 flex gap-2 overflow-x-auto bg-white border-t border-neutral-100">
+      ${suggestions
+        .map(
+          (s) =>
+            `<button data-suggest="${escapeHtml(s)}" ${busy ? 'disabled' : ''} class="text-xs font-medium bg-white border border-neutral-200 text-neutral-600 whitespace-nowrap rounded-full px-3.5 py-2 hover:border-brand-purple hover:text-brand-purple transition shrink-0 shadow-sm disabled:opacity-50">${escapeHtml(s)}</button>`
+        )
+        .join('')}
+    </div>
+  `
+}
+
+function chatMessageHtml(m, isNew) {
+  const entrance = isNew ? 'fade-slide-in' : ''
   if (m.role === 'user') {
     return `
-      <div class="flex justify-end fade-slide-in">
+      <div class="flex justify-end ${entrance}">
         <div class="max-w-[80%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed bg-brand-purple text-white shadow-sm">${escapeHtml(m.content)}</div>
       </div>
     `
   }
   return `
-    <div class="flex items-end gap-2 fade-slide-in">
-      <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-purple to-indigo-500 text-white flex items-center justify-center text-xs shrink-0 shadow-sm">🧑‍🍳</div>
+    <div class="flex items-end gap-2 ${entrance}">
+      ${chatAvatarHtml('w-7 h-7')}
       <div class="flex flex-col items-start gap-1.5 max-w-[80%] min-w-0">
         <div class="rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed bg-white text-neutral-800 shadow-sm border border-neutral-100">${escapeHtml(m.content)}</div>
-        ${m.actionCards && m.actionCards.length > 0 ? actionCardsHtml(m.actionCards) : ''}
+        ${m.actionCards && m.actionCards.length > 0 ? actionCardsHtml(m.actionCards, isNew) : ''}
       </div>
     </div>
   `
 }
 
-// Ícone/estilo de cada tipo de ação que o garçom IA executa no carrinho —
-// ver applyAiActions(). Cada cartão entra com um pequeno atraso (animation-
-// delay) em relação ao anterior, dando a sensação de "anotando aos poucos"
-// sem precisar de JS orquestrando a inserção no DOM.
+// Ícone/estilo de cada tipo de ação que o Ari executa no carrinho — ver
+// applyAiActions(). Cada cartão entra com um pequeno atraso (animation-delay)
+// em relação ao anterior, dando a sensação de "anotando aos poucos" sem
+// precisar de JS orquestrando a inserção no DOM. "animate" só é true na
+// primeira vez que a mensagem é exibida — evita repetir a entrada a cada
+// re-render (ver chatRenderedCount em chatModalHtml).
 const ACTION_CARD_META = {
   add: { icon: '＋', cls: 'action-card--add' },
   remove: { icon: '－', cls: 'action-card--remove' },
@@ -606,14 +646,15 @@ const ACTION_CARD_META = {
   note: { icon: '✎', cls: 'action-card--note' },
 }
 
-function actionCardsHtml(cards) {
+function actionCardsHtml(cards, animate) {
   return `
     <div class="flex flex-col gap-1.5 w-full">
       ${cards
         .map((c, index) => {
           const meta = ACTION_CARD_META[c.kind] || ACTION_CARD_META.add
+          const style = animate ? `animation-delay:${index * 220}ms` : 'animation:none;opacity:1'
           return `
-            <div class="action-card ${meta.cls}" style="animation-delay:${index * 220}ms">
+            <div class="action-card ${meta.cls}" style="${style}">
               <span class="action-card-icon" aria-hidden="true">${meta.icon}</span>
               <span class="flex-1 min-w-0">${escapeHtml(c.label)}</span>
             </div>
@@ -712,6 +753,23 @@ function bindPageEvents() {
     document.getElementById('chat-form').addEventListener('submit', sendChatMessage)
     // Sem autofocus agressivo no celular: abrir o teclado sozinho ao abrir o
     // chat é intrusivo. O cliente toca no campo quando quiser digitar.
+
+    const chatViewCartBtn = document.getElementById('chat-view-cart')
+    if (chatViewCartBtn) {
+      chatViewCartBtn.addEventListener('click', () => {
+        chatOpen = false
+        cartOpen = true
+        renderPage()
+      })
+    }
+
+    document.querySelectorAll('[data-suggest]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (notingOrder || chatLoading) return
+        chatInput = btn.getAttribute('data-suggest')
+        sendChatMessage({ preventDefault: () => {} })
+      })
+    })
 
     // Animação "opcionalmente interrompível": tocar em qualquer lugar do chat
     // enquanto os cartões de ação ainda estão entrando pula direto pro fim.
