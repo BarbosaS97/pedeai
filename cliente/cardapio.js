@@ -520,41 +520,56 @@ function cartSheetHtml() {
 function chatModalHtml() {
   return `
     <div id="chat-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div id="chat-box" class="modal-box bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[85dvh] sm:h-[32rem] flex flex-col overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-100 shrink-0">
-          <span class="font-semibold">💬 Garçom IA</span>
-          <button id="chat-close" class="text-neutral-400 hover:text-neutral-600 transition text-xl leading-none w-9 h-9 flex items-center justify-center -mr-2">✕</button>
+      <div id="chat-box" class="modal-box bg-neutral-50 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[85dvh] sm:h-[32rem] flex flex-col overflow-hidden shadow-2xl">
+        <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand-purple to-indigo-600 text-white shrink-0">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-full bg-white/15 flex items-center justify-center text-base shrink-0">🧑‍🍳</div>
+            <div class="leading-tight">
+              <p class="font-semibold text-sm">Garçom IA</p>
+              <p class="text-[11px] text-white/75 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                Sempre disponível
+              </p>
+            </div>
+          </div>
+          <button id="chat-close" title="Fechar" class="text-white/80 hover:text-white hover:bg-white/10 transition text-xl leading-none w-9 h-9 flex items-center justify-center rounded-full -mr-1.5">✕</button>
         </div>
-        <div id="chat-messages" class="scroll-contain flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        <div id="chat-messages" class="scroll-contain flex-1 overflow-y-auto px-4 py-4 space-y-4">
           ${chatMessages.map(chatMessageHtml).join('')}
           ${
             chatLoading
-              ? `<div class="flex justify-start"><div class="bg-neutral-100 text-neutral-500 rounded-2xl px-4 py-2.5"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div>`
+              ? `<div class="flex items-end gap-2 fade-slide-in">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-purple to-indigo-500 text-white flex items-center justify-center text-xs shrink-0 shadow-sm">🧑‍🍳</div>
+                  <div class="bg-white border border-neutral-100 shadow-sm text-neutral-400 rounded-2xl rounded-bl-md px-4 py-3"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
+                </div>`
               : ''
           }
         </div>
         ${
           products.length > 0
             ? `
-          <div class="scroll-contain shrink-0 px-3 py-2 flex gap-2 overflow-x-auto border-t border-neutral-100">
+          <div class="chip-scroll-fade scroll-contain shrink-0 px-3 py-2.5 flex gap-2 overflow-x-auto bg-white border-t border-neutral-100">
             ${products
               .slice(0, 5)
-              .map((p) => `<button data-add="${p.id}" class="text-xs bg-brand-orange/10 text-brand-orange whitespace-nowrap rounded-lg px-3 py-2 hover:bg-brand-orange/20 transition shrink-0">+ ${escapeHtml(p.name)}</button>`)
+              .map(
+                (p) =>
+                  `<button data-add="${p.id}" class="text-xs font-medium bg-white border border-neutral-200 text-neutral-600 whitespace-nowrap rounded-full pl-2.5 pr-3.5 py-2 hover:border-brand-purple hover:text-brand-purple transition shrink-0 shadow-sm flex items-center gap-1"><span class="text-brand-orange font-bold">+</span>${escapeHtml(p.name)}</button>`
+              )
               .join('')}
           </div>
         `
             : ''
         }
-        <form id="chat-form" class="safe-bottom flex gap-2 p-3 border-t border-neutral-100 shrink-0">
+        <form id="chat-form" class="safe-bottom flex gap-2 p-3 bg-white border-t border-neutral-100 shrink-0">
           <input
             id="chat-input"
             value="${escapeHtml(chatInput)}"
             placeholder="${notingOrder ? 'Anotando seu pedido…' : 'Ex: algo vegetariano e picante'}"
             autocomplete="off"
             ${notingOrder ? 'disabled' : ''}
-            class="flex-1 min-w-0 border border-neutral-300 rounded-lg px-3 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition disabled:bg-neutral-50 disabled:text-neutral-400"
+            class="flex-1 min-w-0 border border-neutral-300 rounded-full px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition disabled:bg-neutral-50 disabled:text-neutral-400"
           />
-          <button type="submit" ${chatLoading || notingOrder ? 'disabled' : ''} class="bg-brand-purple text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:opacity-90 transition disabled:opacity-50 shrink-0">Enviar</button>
+          <button type="submit" ${chatLoading || notingOrder ? 'disabled' : ''} title="Enviar" class="bg-brand-purple text-white rounded-full w-11 h-11 flex items-center justify-center text-base hover:opacity-90 active:scale-95 transition disabled:opacity-50 shrink-0">➤</button>
         </form>
       </div>
     </div>
@@ -565,14 +580,17 @@ function chatMessageHtml(m) {
   if (m.role === 'user') {
     return `
       <div class="flex justify-end fade-slide-in">
-        <div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-brand-purple text-white">${escapeHtml(m.content)}</div>
+        <div class="max-w-[80%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed bg-brand-purple text-white shadow-sm">${escapeHtml(m.content)}</div>
       </div>
     `
   }
   return `
-    <div class="flex flex-col items-start gap-1.5 fade-slide-in">
-      <div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed bg-neutral-100 text-neutral-800">${escapeHtml(m.content)}</div>
-      ${m.actionCards && m.actionCards.length > 0 ? actionCardsHtml(m.actionCards) : ''}
+    <div class="flex items-end gap-2 fade-slide-in">
+      <div class="w-7 h-7 rounded-full bg-gradient-to-br from-brand-purple to-indigo-500 text-white flex items-center justify-center text-xs shrink-0 shadow-sm">🧑‍🍳</div>
+      <div class="flex flex-col items-start gap-1.5 max-w-[80%] min-w-0">
+        <div class="rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed bg-white text-neutral-800 shadow-sm border border-neutral-100">${escapeHtml(m.content)}</div>
+        ${m.actionCards && m.actionCards.length > 0 ? actionCardsHtml(m.actionCards) : ''}
+      </div>
     </div>
   `
 }
@@ -582,22 +600,22 @@ function chatMessageHtml(m) {
 // delay) em relação ao anterior, dando a sensação de "anotando aos poucos"
 // sem precisar de JS orquestrando a inserção no DOM.
 const ACTION_CARD_META = {
-  add: { icon: '➕', cls: 'action-card--add' },
-  remove: { icon: '➖', cls: 'action-card--remove' },
-  qty: { icon: '🔁', cls: 'action-card--qty' },
-  note: { icon: '📝', cls: 'action-card--note' },
+  add: { icon: '＋', cls: 'action-card--add' },
+  remove: { icon: '－', cls: 'action-card--remove' },
+  qty: { icon: '↻', cls: 'action-card--qty' },
+  note: { icon: '✎', cls: 'action-card--note' },
 }
 
 function actionCardsHtml(cards) {
   return `
-    <div class="flex flex-col gap-1.5 max-w-[85%]">
+    <div class="flex flex-col gap-1.5 w-full">
       ${cards
         .map((c, index) => {
           const meta = ACTION_CARD_META[c.kind] || ACTION_CARD_META.add
           return `
             <div class="action-card ${meta.cls}" style="animation-delay:${index * 220}ms">
               <span class="action-card-icon" aria-hidden="true">${meta.icon}</span>
-              <span>${escapeHtml(c.label)}</span>
+              <span class="flex-1 min-w-0">${escapeHtml(c.label)}</span>
             </div>
           `
         })
