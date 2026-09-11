@@ -22,6 +22,11 @@ const ICON_PHONE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" 
 let restaurant = null
 let products = []
 let categories = []
+// null = sem "?mesa=" na URL (fluxo antigo, balcão). 'not_found' = veio
+// "?mesa=" mas não existe nenhuma mesa com esse número pra este
+// restaurante. Objeto = mesa encontrada (checar .ativo antes de liberar o
+// cardápio).
+let mesaInfo = null
 let cart = [] // { product, quantity, notes }
 let cartOpen = false
 let placing = false
@@ -121,6 +126,18 @@ function buildInitialChatMessage() {
   return `Pede aí${greeting}! Eu sou o Ari, garçom do ${restaurant.name}. O que você tá com vontade de comer hoje?`
 }
 
+function mesaUnavailableHtml() {
+  return `
+    <div class="min-h-[100dvh] flex items-center justify-center text-center px-6 bg-neutral-50">
+      <div class="max-w-sm">
+        ${renderLogo({ size: 'md' })}
+        <p class="text-neutral-800 font-semibold mt-4">Esta mesa está temporariamente indisponível.</p>
+        <p class="text-neutral-500 text-sm mt-1">Chame um atendente.</p>
+      </div>
+    </div>
+  `
+}
+
 async function init() {
   if (!slug) {
     root.innerHTML = notFoundHtml('Restaurante não encontrado.')
@@ -141,6 +158,25 @@ async function init() {
   if (restaurant === 'not_found') {
     root.innerHTML = notFoundHtml('Restaurante não encontrado.')
     return
+  }
+
+  // Se o QR Code trouxe uma mesa (?mesa=N, gerado pelo admin — ver
+  // admin/mesas-print.html), confirma que ela existe e está ativa antes de
+  // liberar o resto da página. Sem isso, uma mesa quebrada/removida do salão
+  // continuaria aceitando pedido só porque o QR Code impresso ainda existe.
+  if (numero) {
+    const { data: mesaData } = await supabaseClient
+      .from('mesas')
+      .select('*')
+      .eq('restaurant_id', restaurant.id)
+      .eq('numero', numero)
+      .maybeSingle()
+    mesaInfo = mesaData || 'not_found'
+
+    if (mesaInfo === 'not_found' || !mesaInfo.ativo) {
+      root.innerHTML = mesaUnavailableHtml()
+      return
+    }
   }
 
   const { data: prods } = await supabaseClient
@@ -882,7 +918,11 @@ async function placeOrder() {
     const { error: orderError } = await supabaseClient.from('orders').insert({
       id: orderId,
       restaurant_id: restaurant.id,
-      table_number: numero ? Number(numero) : null,
+      // Texto, não número: uma mesa pode ter sido renomeada pra um rótulo
+      // livre no admin (ex: "8 — Varanda", ver admin/mesas-print.html) — o
+      // pedido guarda esse rótulo exatamente como está (migration 0008
+      // trocou orders.table_number de int pra text por causa disso).
+      table_number: numero || null,
       total,
       customer_name: customerName || null,
       customer_phone: customerPhone || null,

@@ -35,11 +35,12 @@ dinâmicas do app original:
 | Pasta / URL | Equivale a | Descrição |
 | --- | --- | --- |
 | [index.html](index.html) | — | Landing page, com link para o admin |
-| [admin/index.html](admin/index.html) | `/admin` | **Você**: cadastra restaurantes e gera QR Codes/links de painel |
+| [admin/index.html](admin/index.html) | `/admin` | **Você**: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas |
+| `admin/mesas-print.html?restaurant=<id>` | — | Folha A4 com um QR Code por mesa, pronta pra imprimir/salvar como PDF |
 | `restaurante/index.html?token=<access_token>` | `/r/:accessToken` | **Restaurante**: painel de pedidos + produtos |
 | `cozinha/index.html?token=<access_token>` | — | **Cozinha**: tela para tablet fixo — pedidos novos / em preparo + histórico do dia |
 | `cliente/index.html?slug=<slug>` | `/:slug` | **Cliente**: cardápio público |
-| `cliente/index.html?slug=<slug>&mesa=<numero>` | `/:slug/mesa/:numero` | Cardápio público com número da mesa |
+| `cliente/index.html?slug=<slug>&mesa=<numero>` | `/:slug/mesa/:numero` | Cardápio público de uma mesa específica — `numero` precisa bater com uma mesa ativa cadastrada no admin |
 
 `restaurante/` e `cliente/` sempre precisam do parâmetro na URL (`token` e
 `slug`, respectivamente) — os links certos, já prontos, aparecem na tela do
@@ -54,8 +55,11 @@ encontrado" — isso é esperado.
 config.js                     configuração pública (URL/anon key do Supabase, senha do admin, APP_URL)
 index.html                    landing page
 admin/
-  index.html                   sua área: cadastra restaurantes, gera QR Codes e links de painel
+  index.html                   sua área: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas
   admin.js
+  mesas-print.html              folha A4 com um QR Code por mesa (?restaurant=<id>)
+  mesas-print.js
+  mesas-print.css                layout de impressão (unidades físicas, @page, @media print)
 restaurante/
   index.html                   painel do restaurante (?token=...)
   painel.js
@@ -74,7 +78,7 @@ js/                            módulos compartilhados pelas três áreas acima
   supabase-client.js            clientes Supabase (público + com token do restaurante)
   qrcode-helper.js              URL do cardápio, do painel e da cozinha + geração de QR Code no cliente
 supabase/
-  migrations/                  7 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo da cozinha)
+  migrations/                  8 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo da cozinha, mesas)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
 ```
 
@@ -120,6 +124,22 @@ categoria foi excluída) aparece agrupado em "Outros". Sem nenhuma categoria
 criada, o cardápio público continua como lista simples, sem cabeçalhos de
 seção. Tabela `categories` na migration `0004`.
 
+**Mesas e QR Code por mesa**: quem controla os QR Codes impressos é o super
+admin, não o restaurante. No admin (`admin/admin.js`, botão "Mesas" de cada
+restaurante), você digita quantas mesas o salão tem e clica "Gerar" — cria as
+mesas `1`..`N` (dá pra rodar de novo com um número maior só pra adicionar
+mais, sem duplicar as que já existem). Cada mesa pode ser renomeada pra um
+rótulo livre (ex: "8 — Varanda"), ativada/desativada ou excluída. O botão
+"Baixar folha de impressão" abre `admin/mesas-print.html`, que gera uma folha
+A4 com um QR Code por mesa (`cliente/index.html?slug=X&mesa=Y`) — usa
+`window.print()` do próprio navegador pra imprimir ou salvar como PDF, sem
+biblioteca nenhuma. No cardápio, `?mesa=Y` é conferido contra a tabela
+`mesas` (existe? está ativa?) antes de liberar o cardápio — mesa inexistente
+ou desativada mostra uma tela pedindo pra chamar um atendente, sem deixar
+pedir. Tabela `mesas` na migration `0008`, que também muda
+`orders.table_number` de `int` pra `text` (pra caber o rótulo livre da
+mesa, não só um número).
+
 **Fluxo do cliente**: antes do cardápio, uma tela de boas-vindas pede
 primeiro nome e telefone (com máscara e validação) — guardados no
 `localStorage` do navegador, então visitas futuras no mesmo aparelho pulam
@@ -154,12 +174,15 @@ hospedagem estática).
 Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https://supabase.com/dashboard) do projeto (`thwnhgpjysykkoblbtrd`):
 
 1. **Migrations** → menu **SQL Editor** → **New query**. Abra cada arquivo de
-   `supabase/migrations/` (nessa ordem: `0001`, `0002`, `0003`, `0004`,
-   `0005`, `0006`, `0007`), cole o conteúdo inteiro do arquivo e clique **Run**.
-   Rode uma de cada vez, na ordem — cada uma depende de tabelas/extensões
-   criadas na anterior. A tela de cozinha (`cozinha/index.html`) só funciona
-   depois que a `0007` rodar — antes disso, `orders.updated_at` não existe e a
-   consulta da tela falha.
+   `supabase/migrations/` (nessa ordem: `0001` a `0008`), cole o conteúdo
+   inteiro do arquivo e clique **Run**. Rode uma de cada vez, na ordem — cada
+   uma depende de tabelas/extensões criadas na anterior. A tela de cozinha
+   (`cozinha/index.html`) só funciona depois que a `0007` rodar — antes
+   disso, `orders.updated_at` não existe e a consulta da tela falha. O botão
+   "Mesas" do admin e a validação de `?mesa=` no cardápio só funcionam depois
+   da `0008` — antes disso, a tabela `mesas` não existe e qualquer link com
+   `&mesa=` no cardápio mostra a tela de "mesa indisponível" (o erro de query
+   é tratado, mas bloqueia por não conseguir confirmar a mesa).
 2. **Secret da DeepSeek** → menu **Edge Functions** → **Manage secrets** →
    adicione `DEEPSEEK_API_KEY` com sua chave. Esse secret nunca vai para o
    frontend.
@@ -187,7 +210,8 @@ supabase functions deploy ai-waiter
 
 ## Segurança — pontos importantes (MVP sem login)
 
-- **RLS ativo em todas as tabelas** (`restaurants`, `products`, `orders`, `order_items`) e no bucket `products` do Storage.
+- **RLS ativo em todas as tabelas** (`restaurants`, `products`, `orders`, `order_items`, `mesas`) e no bucket `products` do Storage.
+- **`mesas`**: leitura é pública (`using (true)`, mesmo padrão de `restaurants_select_public`/`products_select_public`) — não tem como a RLS diferenciar "o admin lendo" de "um cliente anônimo lendo" neste MVP sem Supabase Auth, então a regra "só mesa ativa aceita pedido" é aplicada na aplicação (`cliente/cardapio.js`), não escondida via RLS. Escrita (gerar/renomear/ativar/excluir mesa) segue o mesmo aviso do próximo item.
 - **Painel do restaurante** (`restaurante/index.html?token=...`) não usa Supabase Auth: o token da URL é enviado em todo request como header `x-restaurant-token`, e as policies de RLS (`current_restaurant_token()`) só liberam escrita nas linhas do restaurante dono do token.
 - **`admin/index.html`**: a senha em `PEDEAI_CONFIG.ADMIN_PASSWORD` é um gate só no frontend — como não há Supabase Auth ainda, a policy de `insert`/`update` em `restaurants` é permissiva para a anon key (comentado em detalhe na migration `0001`). **Antes de produção**, migrar para Supabase Auth (ou mover o cadastro de restaurantes para uma Edge Function com `service_role`).
 - **`DEEPSEEK_API_KEY`** só existe como secret do Supabase, usada dentro das Edge Functions — nunca aparece em nenhum arquivo do frontend.

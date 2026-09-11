@@ -1,0 +1,130 @@
+/* mesas-print.css — folha A4 com QR Code por mesa, pronta pra imprimir/
+   salvar como PDF. Página utilitária, isolada do design system do resto do
+   site (Tailwind) de propósito: layout de impressão precisa de controle
+   fino em unidades físicas (mm/cm), não em utilitários pensados pra tela. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #171717;
+  background: #e5e5e5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.loading,
+.empty {
+  text-align: center;
+  color: #737373;
+  padding: 80px 20px;
+  font-size: 14px;
+}
+
+/* ---- Barra de topo (só na tela, some ao imprimir) ---- */
+.toolbar {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  z-index: 10;
+}
+.toolbar h1 {
+  font-size: 16px;
+  margin: 0;
+  font-weight: 700;
+}
+.toolbar p {
+  font-size: 12px;
+  color: #737373;
+  margin: 2px 0 0;
+}
+.print-btn {
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.print-btn:hover {
+  opacity: 0.9;
+}
+
+/* ---- Folha A4 ---- */
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 16px auto;
+  background: #fff;
+  padding: 12mm;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+}
+
+.sheet {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6mm;
+}
+
+.mesa-card {
+  border: 1.5px dashed #a3a3a3;
+  border-radius: 3mm;
+  padding: 5mm 3mm;
+  text-align: center;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.mesa-number {
+  font-size: 15pt;
+  font-weight: 800;
+  margin: 0 0 3mm;
+  word-break: break-word;
+  line-height: 1.15;
+}
+
+.mesa-qr {
+  width: 45mm;
+  height: 45mm;
+  margin: 0 auto;
+  display: block;
+}
+
+.mesa-restaurant {
+  font-size: 8pt;
+  color: #737373;
+  margin: 3mm 0 0;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .page {
+    box-shadow: none;
+    margin: 0;
+    width: auto;
+    min-height: auto;
+    padding: 0;
+  }
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PedeAí — Folha de QR Codes</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="mesas-print.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <!-- qrcode@1.5.1 é a última versão que publica um bundle global para <script>
+         puro (build/qrcode.min.js); a partir da 1.5.2 o pacote passou a distribuir
+         só módulos CommonJS, que não definem window.QRCode sozinhos. -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  </head>
+  <body>
+    <div id="root"><p class="loading">Carregando...</p></div>
+
+    <script src="../config.js"></script>
+    <script src="../js/util.js"></script>
+    <script src="../js/supabase-client.js"></script>
+    <script src="../js/qrcode-helper.js"></script>
+    <script src="mesas-print.js"></script>
+  </body>
+</html>
