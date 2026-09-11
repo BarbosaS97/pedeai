@@ -87,9 +87,16 @@ endpoint de embeddings, por isso essa foi a abordagem escolhida (ver nota no
 topo de `ai-waiter/index.ts` e da migration `0002`).
 
 **O garçom IA age no carrinho, não só conversa.** A Edge Function chama a
-DeepSeek em modo JSON (`response_format: json_object`) e recebe de volta, na
-mesma resposta, o texto pro cliente **e** uma lista de ações estruturadas
-(`adicionar`, `remover`, `alterar_quantidade`, `observacao`). Nenhuma ação é
+DeepSeek via **function calling** (`tools`/`tool_choice`, não só "modo JSON")
+e recebe de volta, na mesma chamada, o texto pro cliente **e** uma lista de
+ações estruturadas (`adicionar`, `remover`, `alterar_quantidade`,
+`observacao`) — function calling é bem mais confiável em seguir o formato
+exato do que só pedir JSON solto no prompt. Se mesmo assim vier sem um texto
+de resposta utilizável, o servidor tenta de novo uma vez (com um lembrete
+reforçado) antes de cair num fallback genérico — nunca mostra JSON quebrado
+pro cliente. O subtotal do carrinho é **calculado no servidor**, não pelo
+modelo (LLM fazendo soma de vários itens de cabeça erra) — o texto pronto
+("Subtotal: R$ X,XX") já vai no prompt pra ele só citar. Nenhuma ação é
 aplicada às cegas: o servidor revalida cada uma contra o cardápio e o
 carrinho reais (produto existe? quantidade entre 1 e 20? item já está no
 carrinho, no caso de remover/alterar?) antes de devolver — e o frontend
