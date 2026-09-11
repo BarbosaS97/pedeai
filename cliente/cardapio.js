@@ -903,6 +903,14 @@ async function placeOrder() {
     placing = false
     cart = []
     cartOpen = false
+    // Zera a conversa com o Ari junto com o carrinho: sem isso, o "historico"
+    // mandado pra Edge Function (sendChatMessage) continuava com as trocas de
+    // antes do pedido ("beleza, uma coxinha no carrinho!"), e o modelo achava
+    // que os itens do pedido já finalizado ainda estavam no carrinho, mesmo
+    // com o campo "carrinho" (agora vazio) dizendo o contrário — histórico de
+    // chat pesa tanto quanto o estado atual pro modelo. Um pedido novo começa
+    // com o carrinho e a conversa do zero.
+    chatMessages = [{ role: 'assistant', content: 'Pedido enviado! Se quiser pedir mais alguma coisa, é só me chamar. 🙂' }]
     renderPage()
     showToast('Pedido enviado com sucesso!', 'success')
   } catch (err) {
