@@ -69,7 +69,7 @@ js/                            módulos compartilhados pelas três áreas acima
   supabase-client.js            clientes Supabase (público + com token do restaurante)
   qrcode-helper.js              URL do cardápio, URL do painel e geração de QR Code no cliente
 supabase/
-  migrations/                  5 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS)
+  migrations/                  6 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
 ```
 
@@ -93,6 +93,16 @@ formulário do produto. Categoria é opcional — produto sem categoria (ou cuja
 categoria foi excluída) aparece agrupado em "Outros". Sem nenhuma categoria
 criada, o cardápio público continua como lista simples, sem cabeçalhos de
 seção. Tabela `categories` na migration `0004`.
+
+**Fluxo do cliente**: antes do cardápio, uma tela de boas-vindas pede
+primeiro nome e telefone (com máscara e validação) — guardados no
+`localStorage` do navegador, então visitas futuras no mesmo aparelho pulam
+direto pro cardápio. Esses dados também vão junto de cada pedido
+(`orders.customer_name`/`customer_phone`, migration `0006`) e aparecem no
+painel do restaurante, com o telefone como link `tel:` pra ligar direto. O
+carrinho é uma bottom sheet (mesmo padrão do chat) com observação por item
+(`order_items.notes`, já existia desde a migration `0003`, só não era usada),
+controle de quantidade e remoção.
 
 ## Configuração
 
@@ -119,8 +129,8 @@ Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https:
 
 1. **Migrations** → menu **SQL Editor** → **New query**. Abra cada arquivo de
    `supabase/migrations/` (nessa ordem: `0001`, `0002`, `0003`, `0004`,
-   `0005`), cole o conteúdo inteiro do arquivo e clique **Run**. Rode um de
-   cada vez, na ordem — cada uma depende de tabelas/extensões criadas na
+   `0005`, `0006`), cole o conteúdo inteiro do arquivo e clique **Run**. Rode
+   um de cada vez, na ordem — cada uma depende de tabelas/extensões criadas na
    anterior.
 2. **Secret da DeepSeek** → menu **Edge Functions** → **Manage secrets** →
    adicione `DEEPSEEK_API_KEY` com sua chave. Esse secret nunca vai para o

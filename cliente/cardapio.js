@@ -8,18 +8,29 @@ const queryParams = new URLSearchParams(location.search)
 const slug = queryParams.get('slug')
 const numero = queryParams.get('mesa')
 
+const CUSTOMER_STORAGE_KEY = 'pedeai_customer'
+
 let restaurant = null
 let products = []
 let categories = []
-let cart = []
+let cart = [] // { product, quantity, notes }
 let cartOpen = false
 let placing = false
-let placed = false
 let chatOpen = false
 let chatMessages = []
 let chatInput = ''
 let chatLoading = false
 let expandedProduct = null
+let productNoteDraft = ''
+
+// Identificação do cliente (nome + telefone), pedida uma vez na tela de
+// boas-vindas antes do cardápio. Guardada no navegador (localStorage) pra não
+// precisar perguntar de novo numa próxima visita no mesmo aparelho.
+let showWelcome = true
+let customerName = ''
+let customerPhone = ''
+let welcomeNameDraft = ''
+let welcomePhoneDraft = ''
 
 // O garçom IA responde em texto simples por instrução do prompt (ver
 // ai-waiter/index.ts), mas modelos de linguagem às vezes escapam essa regra e
@@ -34,6 +45,57 @@ function stripMarkdown(text) {
     .replace(/_(.+?)_/g, '$1')
     .replace(/`(.+?)`/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
+}
+
+// ---- Identidade do cliente (nome + telefone) ----
+
+function loadStoredCustomer() {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed.name === 'string' && typeof parsed.phone === 'string') return parsed
+  } catch {
+    // localStorage indisponível (modo privado, storage bloqueado etc.) — cai
+    // no fluxo normal de pedir os dados de novo, sem quebrar a página.
+  }
+  return null
+}
+
+function saveCustomer(name, phone) {
+  try {
+    localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ name, phone }))
+  } catch {
+    // Sem storage disponível: segue o pedido normalmente, só não vai lembrar
+    // na próxima visita.
+  }
+}
+
+function maskPhone(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length === 0) return ''
+  if (digits.length <= 2) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
+function isValidName(name) {
+  return name.trim().length >= 2
+}
+
+function isValidPhone(phone) {
+  const digits = phone.replace(/\D/g, '')
+  return digits.length === 10 || digits.length === 11
+}
+
+function isWelcomeValid() {
+  return isValidName(welcomeNameDraft) && isValidPhone(welcomePhoneDraft)
+}
+
+function buildInitialChatMessage() {
+  const greeting = customerName ? `, ${customerName}` : ''
+  return `Pede aí${greeting}! Eu sou o garçom IA do ${restaurant.name}. O que você tá com vontade de comer hoje?`
 }
 
 async function init() {
@@ -77,25 +139,112 @@ async function init() {
     .order('created_at', { ascending: true })
   categories = cats || []
 
-  chatMessages = [
-    {
-      role: 'assistant',
-      content: `Pede aí! Eu sou o garçom IA do ${restaurant.name}. O que você tá com vontade de comer hoje?`,
-    },
-  ]
+  const stored = loadStoredCustomer()
+  if (stored) {
+    customerName = stored.name
+    customerPhone = stored.phone
+    showWelcome = false
+    chatMessages = [{ role: 'assistant', content: buildInitialChatMessage() }]
+  }
 
   renderPage()
 }
 
 function renderPage() {
+  if (showWelcome) {
+    root.innerHTML = welcomeScreenHtml()
+    bindWelcomeEvents()
+    document.body.style.overflow = ''
+    return
+  }
+
   root.innerHTML = pageHtml()
   bindPageEvents()
-  // Trava o scroll do fundo da página enquanto algum bottom sheet (chat ou
-  // detalhe do produto) está aberto — sem isso, no celular dá pra arrastar a
-  // página por trás do modal.
-  document.body.style.overflow = chatOpen || expandedProduct ? 'hidden' : ''
+  // Trava o scroll do fundo da página enquanto algum bottom sheet (chat,
+  // carrinho ou detalhe do produto) está aberto — sem isso, no celular dá pra
+  // arrastar a página por trás do modal.
+  document.body.style.overflow = chatOpen || expandedProduct || cartOpen ? 'hidden' : ''
   if (chatOpen) scrollChatToBottom()
 }
+
+// ---- Tela de boas-vindas ----
+
+function welcomeScreenHtml() {
+  return `
+    <div class="min-h-[100dvh] flex flex-col items-center justify-center bg-gradient-to-br from-brand-purple/10 via-neutral-50 to-brand-orange/10 px-6 py-10">
+      <div class="w-full max-w-sm space-y-6 fade-slide-in">
+        <div class="flex justify-center">${renderLogo({ size: 'lg', showSlogan: true })}</div>
+        <p class="text-center text-sm text-neutral-600 leading-relaxed">
+          Escolha seus pratos, converse com nosso garçom de IA e faça seu pedido direto pelo celular.
+        </p>
+        <form id="welcome-form" class="bg-white rounded-2xl shadow-lg p-6 space-y-4">
+          <div>
+            <label for="welcome-name" class="text-xs font-semibold text-neutral-500 mb-1 block">Primeiro nome</label>
+            <input
+              id="welcome-name"
+              value="${escapeHtml(welcomeNameDraft)}"
+              placeholder="Ex: Ana"
+              autocomplete="given-name"
+              autofocus
+              class="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+            />
+          </div>
+          <div>
+            <label for="welcome-phone" class="text-xs font-semibold text-neutral-500 mb-1 block">Telefone com DDD</label>
+            <input
+              id="welcome-phone"
+              value="${escapeHtml(welcomePhoneDraft)}"
+              placeholder="(11) 91234-5678"
+              inputmode="numeric"
+              autocomplete="tel"
+              class="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+            />
+          </div>
+          <button
+            type="submit"
+            id="welcome-submit"
+            ${isWelcomeValid() ? '' : 'disabled'}
+            class="w-full bg-brand-purple text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-40"
+          >
+            Iniciar
+          </button>
+        </form>
+      </div>
+    </div>
+  `
+}
+
+function bindWelcomeEvents() {
+  document.getElementById('welcome-name').addEventListener('input', (e) => {
+    welcomeNameDraft = e.target.value
+    updateWelcomeSubmitState()
+  })
+
+  document.getElementById('welcome-phone').addEventListener('input', (e) => {
+    const masked = maskPhone(e.target.value)
+    welcomePhoneDraft = masked
+    e.target.value = masked
+    updateWelcomeSubmitState()
+  })
+
+  document.getElementById('welcome-form').addEventListener('submit', (e) => {
+    e.preventDefault()
+    if (!isWelcomeValid()) return
+    customerName = welcomeNameDraft.trim()
+    customerPhone = welcomePhoneDraft
+    saveCustomer(customerName, customerPhone)
+    chatMessages = [{ role: 'assistant', content: buildInitialChatMessage() }]
+    showWelcome = false
+    renderPage()
+  })
+}
+
+function updateWelcomeSubmitState() {
+  const btn = document.getElementById('welcome-submit')
+  if (btn) btn.disabled = !isWelcomeValid()
+}
+
+// ---- Cardápio ----
 
 function pageHtml() {
   return `
@@ -114,15 +263,16 @@ function pageHtml() {
       <button
         id="chat-fab"
         class="fixed right-4 bg-brand-purple text-white rounded-full shadow-lg hover:shadow-xl px-5 py-3.5 font-semibold text-sm transition active:scale-95 ${
-          chatOpen || expandedProduct ? 'hidden' : ''
+          chatOpen || expandedProduct || cartOpen ? 'hidden' : ''
         }"
         style="bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));"
       >
         💬 Garçom IA
       </button>
 
-      ${cart.length > 0 || placed ? cartBarHtml() : ''}
+      ${cart.length > 0 ? cartBarHtml() : ''}
       ${expandedProduct ? productDetailModalHtml() : ''}
+      ${cartOpen ? cartSheetHtml() : ''}
       ${chatOpen ? chatModalHtml() : ''}
     </div>
   `
@@ -149,7 +299,7 @@ function menuContentHtml() {
 
   const groups = buildMenuGroups()
   if (!groups) {
-    return `<div class="space-y-3">${products.map(productCardHtml).join('')}</div>`
+    return `<div class="space-y-3">${products.map((p) => productCardHtml(p)).join('')}</div>`
   }
 
   return `${categoryNavHtml(groups)}${groups.map(menuSectionHtml).join('')}`
@@ -177,16 +327,18 @@ function menuSectionHtml(g) {
   return `
     <section id="secao-${g.id || 'outros'}" class="space-y-3 scroll-mt-16">
       <h2 class="text-sm font-bold uppercase tracking-wide text-neutral-500">${escapeHtml(g.name)}</h2>
-      <div class="space-y-3">${g.items.map(productCardHtml).join('')}</div>
+      <div class="space-y-3">${g.items.map((p) => productCardHtml(p)).join('')}</div>
     </section>
   `
 }
 
-function productImageHtml(p) {
+function productImageHtml(p, size) {
+  const boxClass = size === 'sm' ? 'w-14 h-14' : 'w-[4.5rem] h-[4.5rem] sm:w-20 sm:h-20'
+  const iconClass = size === 'sm' ? 'text-xl' : 'text-2xl sm:text-3xl'
   if (p.image_url) {
-    return `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="w-[4.5rem] h-[4.5rem] sm:w-20 sm:h-20 rounded-lg object-cover shrink-0" />`
+    return `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="${boxClass} rounded-lg object-cover shrink-0" />`
   }
-  return `<div class="img-placeholder w-[4.5rem] h-[4.5rem] sm:w-20 sm:h-20 rounded-lg shrink-0 text-2xl sm:text-3xl">🍽️</div>`
+  return `<div class="img-placeholder ${boxClass} rounded-lg shrink-0 ${iconClass}">🍽️</div>`
 }
 
 function productCardHtml(p) {
@@ -209,10 +361,12 @@ function productCardHtml(p) {
 }
 
 // Modal de detalhe do produto — abre ao tocar no card (fora do botão
-// "Adicionar"), pra ler a descrição inteira e os ingredientes sem o corte do
-// line-clamp da lista.
+// "Adicionar"). Mostra descrição completa, ingredientes e o campo de
+// observação (item já no carrinho? mostra a observação salva, pronta pra
+// editar).
 function productDetailModalHtml() {
   const p = expandedProduct
+  const cartItem = cart.find((i) => i.product.id === p.id)
   return `
     <div id="detail-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div id="detail-box" class="modal-box bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90dvh] overflow-y-auto scroll-contain safe-bottom">
@@ -242,48 +396,109 @@ function productDetailModalHtml() {
           `
               : ''
           }
-          <button data-add="${p.id}" data-close-after-add class="w-full bg-brand-purple text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition mt-1">Adicionar ao pedido</button>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="pf-note" class="text-xs font-semibold uppercase tracking-wide text-neutral-400">Observações</label>
+              <span id="note-counter" class="text-xs text-neutral-400">${productNoteDraft.length}/140</span>
+            </div>
+            <textarea
+              id="pf-note"
+              rows="2"
+              maxlength="140"
+              placeholder="Ex: sem cebola, ponto da carne, tirar o queijo…"
+              class="w-full border border-neutral-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition resize-none"
+            >${escapeHtml(productNoteDraft)}</textarea>
+          </div>
+          <button id="detail-save-btn" class="w-full bg-brand-purple text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition mt-1">
+            ${cartItem ? 'Salvar observação' : 'Adicionar ao pedido'}
+          </button>
         </div>
       </div>
     </div>
   `
 }
 
+// ---- Carrinho ----
+
 function cartBarHtml() {
   const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
+  const count = cart.reduce((sum, i) => sum + i.quantity, 0)
   return `
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] safe-bottom">
-      ${
-        cartOpen && cart.length > 0
-          ? `
-        <div class="scroll-contain max-w-2xl mx-auto px-4 py-3 max-h-56 overflow-y-auto space-y-3 border-b border-neutral-100">
-          ${cart
-            .map(
-              (i) => `
-            <div class="flex items-center justify-between gap-2 text-sm">
-              <span class="truncate pr-2">${escapeHtml(i.product.name)}</span>
-              <div class="flex items-center gap-2.5 shrink-0">
-                <button data-dec="${i.product.id}" class="qty-btn w-9 h-9 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">−</button>
-                <span class="w-5 text-center tabular-nums">${i.quantity}</span>
-                <button data-inc="${i.product.id}" class="qty-btn w-9 h-9 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">+</button>
-              </div>
-            </div>
-          `
-            )
-            .join('')}
+    <button
+      id="cart-bar-open"
+      class="fixed bottom-0 left-0 right-0 bg-brand-purple text-white shadow-[0_-4px_16px_rgba(0,0,0,0.15)] safe-bottom transition active:opacity-90 ${
+        chatOpen || expandedProduct ? 'hidden' : ''
+      }"
+    >
+      <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-3">
+        <span class="flex items-center gap-2 font-semibold text-sm">
+          <span class="bg-white/20 rounded-full w-6 h-6 flex items-center justify-center text-xs shrink-0">${count}</span>
+          Ver carrinho
+        </span>
+        <span class="font-bold">R$ ${formatBRL(total)}</span>
+      </div>
+    </button>
+  `
+}
+
+function cartItemRowHtml(i) {
+  const lineTotal = i.product.price * i.quantity
+  return `
+    <div class="fade-slide-in flex gap-3 pb-3 border-b border-neutral-100 last:border-b-0 last:pb-0">
+      ${productImageHtml(i.product, 'sm')}
+      <div class="flex-1 min-w-0">
+        <div data-edit-item="${i.product.id}" class="cursor-pointer">
+          <div class="flex items-start justify-between gap-2">
+            <p class="font-medium text-sm leading-snug">${escapeHtml(i.product.name)}</p>
+            <button data-remove="${i.product.id}" title="Remover item" class="text-neutral-300 hover:text-brand-red transition shrink-0 w-7 h-7 -mt-1 -mr-1 flex items-center justify-center">🗑</button>
+          </div>
+          <p class="text-xs text-neutral-400">R$ ${formatBRL(i.product.price)} cada</p>
+          ${i.notes ? `<p class="text-xs text-neutral-500 italic mt-0.5">"${escapeHtml(i.notes)}"</p>` : ''}
         </div>
-      `
-          : ''
-      }
-      <div class="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center justify-between mt-2">
+          <div class="flex items-center gap-2">
+            <button data-dec="${i.product.id}" class="qty-btn w-8 h-8 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">−</button>
+            <span class="w-5 text-center text-sm tabular-nums">${i.quantity}</span>
+            <button data-inc="${i.product.id}" class="qty-btn w-8 h-8 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">+</button>
+          </div>
+          <span class="font-semibold text-sm text-brand-orange">R$ ${formatBRL(lineTotal)}</span>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function cartSheetHtml() {
+  const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
+  return `
+    <div id="cart-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+      <div id="cart-box" class="modal-box bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85dvh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-100 shrink-0">
+          <span class="font-semibold">🛒 Seu carrinho</span>
+          <button id="cart-close" title="Fechar" class="text-neutral-400 hover:text-neutral-600 transition text-xl leading-none w-9 h-9 flex items-center justify-center -mr-2">✕</button>
+        </div>
+        <div class="scroll-contain flex-1 overflow-y-auto px-4 py-3">
+          ${
+            cart.length === 0
+              ? emptyStateHtml('🛒', 'Seu carrinho está vazio. Toque nos pratos para adicionar.')
+              : cart.map(cartItemRowHtml).join('')
+          }
+        </div>
         ${
           cart.length > 0
-            ? `<button id="cart-toggle" class="text-sm text-neutral-500 underline hover:text-neutral-700 transition py-2 -my-2">${cart.length} ${cart.length === 1 ? 'item' : 'itens'} · R$ ${formatBRL(total)}</button>`
-            : '<span></span>'
+            ? `
+          <div class="safe-bottom border-t border-neutral-100 p-4 space-y-3 shrink-0">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-neutral-500">Subtotal</span>
+              <span class="font-bold text-lg">R$ ${formatBRL(total)}</span>
+            </div>
+            <button id="place-order-btn" ${placing ? 'disabled' : ''} class="w-full bg-brand-red text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50">
+              ${placing ? 'Enviando...' : 'Finalizar pedido'}
+            </button>
+          </div>
+        `
+            : ''
         }
-        <button id="place-order-btn" ${placing || placed || cart.length === 0 ? 'disabled' : ''} class="bg-brand-red text-white font-semibold rounded-lg px-5 py-3 hover:opacity-90 active:scale-[0.98] transition disabled:opacity-50 whitespace-nowrap">
-          ${placed ? '✓ Pedido enviado!' : placing ? 'Enviando...' : 'Fazer pedido'}
-        </button>
       </div>
     </div>
   `
@@ -341,12 +556,7 @@ function bindPageEvents() {
   })
 
   document.querySelectorAll('[data-add]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // Botão "Adicionar ao pedido" dentro do modal de detalhe: fecha o modal
-      // junto (fica em um render só, em vez de dois).
-      if (btn.hasAttribute('data-close-after-add')) expandedProduct = null
-      addToCart(btn.getAttribute('data-add'))
-    })
+    btn.addEventListener('click', () => addToCart(btn.getAttribute('data-add')))
   })
 
   document.querySelectorAll('[data-expand]').forEach((card) => {
@@ -364,13 +574,38 @@ function bindPageEvents() {
       if (e.target === detailOverlay) closeProductDetail()
     })
     document.getElementById('detail-close').addEventListener('click', closeProductDetail)
+    document.getElementById('pf-note').addEventListener('input', (e) => {
+      productNoteDraft = e.target.value
+      const counter = document.getElementById('note-counter')
+      if (counter) counter.textContent = `${e.target.value.length}/140`
+    })
+    document.getElementById('detail-save-btn').addEventListener('click', () => saveProductFromDetail(expandedProduct.id))
   }
 
-  const cartToggle = document.getElementById('cart-toggle')
-  if (cartToggle) {
-    cartToggle.addEventListener('click', () => {
-      cartOpen = !cartOpen
+  const cartBarOpen = document.getElementById('cart-bar-open')
+  if (cartBarOpen) {
+    cartBarOpen.addEventListener('click', () => {
+      cartOpen = true
       renderPage()
+    })
+  }
+
+  const cartOverlay = document.getElementById('cart-overlay')
+  if (cartOverlay) {
+    cartOverlay.addEventListener('click', (e) => {
+      if (e.target === cartOverlay) closeCartSheet()
+    })
+    document.getElementById('cart-close').addEventListener('click', closeCartSheet)
+
+    document.querySelectorAll('[data-remove]').forEach((btn) => {
+      btn.addEventListener('click', () => removeFromCart(btn.getAttribute('data-remove')))
+    })
+    document.querySelectorAll('[data-edit-item]').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-remove]')) return
+        cartOpen = false
+        openProductDetail(el.getAttribute('data-edit-item'))
+      })
     })
   }
 
@@ -409,11 +644,37 @@ function openProductDetail(productId) {
   const product = products.find((p) => p.id === productId)
   if (!product) return
   expandedProduct = product
+  const cartItem = cart.find((i) => i.product.id === productId)
+  productNoteDraft = cartItem ? cartItem.notes || '' : ''
   renderPage()
 }
 
 function closeProductDetail() {
   expandedProduct = null
+  productNoteDraft = ''
+  renderPage()
+}
+
+function closeCartSheet() {
+  cartOpen = false
+  renderPage()
+}
+
+// Adiciona um item novo (quantidade 1) ou, se o produto já estiver no
+// carrinho, só atualiza a observação — a quantidade se mexe pelos botões +/−
+// dentro do carrinho, não por aqui.
+function saveProductFromDetail(productId) {
+  const product = products.find((p) => p.id === productId)
+  if (!product) return
+  const note = productNoteDraft.trim().slice(0, 140)
+  const existing = cart.find((i) => i.product.id === productId)
+  if (existing) {
+    existing.notes = note
+  } else {
+    cart.push({ product, quantity: 1, notes: note })
+  }
+  expandedProduct = null
+  productNoteDraft = ''
   renderPage()
 }
 
@@ -422,7 +683,7 @@ function addToCart(productId) {
   if (!product) return
   const existing = cart.find((i) => i.product.id === productId)
   if (existing) existing.quantity += 1
-  else cart.push({ product, quantity: 1 })
+  else cart.push({ product, quantity: 1, notes: '' })
   renderPage()
 }
 
@@ -430,6 +691,11 @@ function updateQuantity(productId, delta) {
   cart = cart
     .map((i) => (i.product.id === productId ? { ...i, quantity: i.quantity + delta } : i))
     .filter((i) => i.quantity > 0)
+  renderPage()
+}
+
+function removeFromCart(productId) {
+  cart = cart.filter((i) => i.product.id !== productId)
   renderPage()
 }
 
@@ -446,9 +712,14 @@ async function placeOrder() {
     // isso como falha de RLS. Sem pedir a linha de volta, esse problema não
     // existe: já sabemos o id porque fomos nós que o geramos.
     const orderId = crypto.randomUUID()
-    const { error: orderError } = await supabaseClient
-      .from('orders')
-      .insert({ id: orderId, restaurant_id: restaurant.id, table_number: numero ? Number(numero) : null, total })
+    const { error: orderError } = await supabaseClient.from('orders').insert({
+      id: orderId,
+      restaurant_id: restaurant.id,
+      table_number: numero ? Number(numero) : null,
+      total,
+      customer_name: customerName || null,
+      customer_phone: customerPhone || null,
+    })
     if (orderError) throw orderError
 
     const items = cart.map((i) => ({
@@ -457,20 +728,16 @@ async function placeOrder() {
       product_name: i.product.name,
       quantity: i.quantity,
       unit_price: i.product.price,
+      notes: i.notes || null,
     }))
     const { error: itemsError } = await supabaseClient.from('order_items').insert(items)
     if (itemsError) throw itemsError
 
     placing = false
-    placed = true
     cart = []
+    cartOpen = false
     renderPage()
     showToast('Pedido enviado com sucesso!', 'success')
-    setTimeout(() => {
-      placed = false
-      cartOpen = false
-      renderPage()
-    }, 2500)
   } catch (err) {
     placing = false
     renderPage()
@@ -502,7 +769,11 @@ async function sendChatMessage(e) {
         apikey: anonKey,
         Authorization: `Bearer ${anonKey}`,
       },
-      body: JSON.stringify({ restaurante_slug: restaurant.slug, mensagem, historico }),
+      // nome_cliente vai no corpo pro dia em que o prompt da Edge Function
+      // (supabase/functions/ai-waiter/index.ts) passar a usá-lo pra
+      // personalizar as respostas — hoje ele é só ignorado no backend. A
+      // saudação inicial (buildInitialChatMessage) já usa o nome agora.
+      body: JSON.stringify({ restaurante_slug: restaurant.slug, mensagem, historico, nome_cliente: customerName || undefined }),
     })
     const data = await res.json()
     chatMessages.push({

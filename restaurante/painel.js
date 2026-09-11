@@ -137,6 +137,15 @@ function renderOrdersList() {
             <p class="font-medium">${order.table_number ? `Mesa ${escapeHtml(order.table_number)}` : 'Balcão'}</p>
             <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${meta.badge}">${meta.label}</span>
           </div>
+          ${
+            order.customer_name
+              ? `<p class="text-sm text-neutral-700 mt-0.5">👤 ${escapeHtml(order.customer_name)}${
+                  order.customer_phone
+                    ? ` · <a href="tel:${escapeHtml(order.customer_phone.replace(/\D/g, ''))}" class="text-brand-purple underline">${escapeHtml(order.customer_phone)}</a>`
+                    : ''
+                }</p>`
+              : ''
+          }
           <p class="text-sm text-neutral-600 mt-0.5">R$ ${formatBRL(order.total)}</p>
           <p class="text-xs text-neutral-400">${new Date(order.created_at).toLocaleString('pt-BR')}</p>
         </div>
