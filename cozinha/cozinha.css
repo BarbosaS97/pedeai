@@ -1,0 +1,11 @@
+/* cozinha.css — ajustes específicos da tela de cozinha (tablet fixo na parede).
+   O design system compartilhado vem de css/style.css; aqui só o que é
+   exclusivo desta tela. */
+
+/* Tela cheia, sem bounce/scroll do body — só as colunas rolam internamente
+   (.scroll-contain, já definido em css/style.css). */
+html,
+body {
+  height: 100%;
+  overscroll-behavior: none;
+}

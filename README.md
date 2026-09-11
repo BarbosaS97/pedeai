@@ -37,6 +37,7 @@ dinâmicas do app original:
 | [index.html](index.html) | — | Landing page, com link para o admin |
 | [admin/index.html](admin/index.html) | `/admin` | **Você**: cadastra restaurantes e gera QR Codes/links de painel |
 | `restaurante/index.html?token=<access_token>` | `/r/:accessToken` | **Restaurante**: painel de pedidos + produtos |
+| `cozinha/index.html?token=<access_token>` | — | **Cozinha**: tela para tablet fixo — pedidos novos / em preparo + histórico do dia |
 | `cliente/index.html?slug=<slug>` | `/:slug` | **Cliente**: cardápio público |
 | `cliente/index.html?slug=<slug>&mesa=<numero>` | `/:slug/mesa/:numero` | Cardápio público com número da mesa |
 
@@ -58,6 +59,10 @@ admin/
 restaurante/
   index.html                   painel do restaurante (?token=...)
   painel.js
+cozinha/
+  index.html                   tela de cozinha para tablet fixo (?token=...)
+  cozinha.js
+  cozinha.css                   ajustes específicos desta tela (tela cheia, sem bounce)
 cliente/
   index.html                   cardápio público (?slug=...&mesa=...)
   cardapio.js
@@ -67,9 +72,9 @@ js/                            módulos compartilhados pelas três áreas acima
   logo.js                       marca "PedeAí" com destaque tipográfico no "AI"
   slug.js                       geração de slug a partir do nome do restaurante
   supabase-client.js            clientes Supabase (público + com token do restaurante)
-  qrcode-helper.js              URL do cardápio, URL do painel e geração de QR Code no cliente
+  qrcode-helper.js              URL do cardápio, do painel e da cozinha + geração de QR Code no cliente
 supabase/
-  migrations/                  6 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente)
+  migrations/                  7 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo da cozinha)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
 ```
 
@@ -150,9 +155,11 @@ Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https:
 
 1. **Migrations** → menu **SQL Editor** → **New query**. Abra cada arquivo de
    `supabase/migrations/` (nessa ordem: `0001`, `0002`, `0003`, `0004`,
-   `0005`, `0006`), cole o conteúdo inteiro do arquivo e clique **Run**. Rode
-   um de cada vez, na ordem — cada uma depende de tabelas/extensões criadas na
-   anterior.
+   `0005`, `0006`, `0007`), cole o conteúdo inteiro do arquivo e clique **Run**.
+   Rode uma de cada vez, na ordem — cada uma depende de tabelas/extensões
+   criadas na anterior. A tela de cozinha (`cozinha/index.html`) só funciona
+   depois que a `0007` rodar — antes disso, `orders.updated_at` não existe e a
+   consulta da tela falha.
 2. **Secret da DeepSeek** → menu **Edge Functions** → **Manage secrets** →
    adicione `DEEPSEEK_API_KEY` com sua chave. Esse secret nunca vai para o
    frontend.

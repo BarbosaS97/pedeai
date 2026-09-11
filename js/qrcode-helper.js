@@ -41,3 +41,13 @@ function panelUrl(accessToken) {
     : new URL('../restaurante/', window.location.href).href
   return `${base}index.html?token=${encodeURIComponent(accessToken)}`
 }
+
+// URL da tela de cozinha (tablet fixo): {APP_URL}cozinha/index.html?token=...
+// Mesma lógica de resolução de base que panelUrl().
+function kitchenUrl(accessToken) {
+  const configured = window.PEDEAI_CONFIG.APP_URL
+  const base = configured
+    ? configured.replace(/\/?$/, '/') + 'cozinha/'
+    : new URL('../cozinha/', window.location.href).href
+  return `${base}index.html?token=${encodeURIComponent(accessToken)}`
+}

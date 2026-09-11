@@ -65,7 +65,10 @@ function renderPanel() {
             ${renderLogo({ size: 'sm' })}
             <p class="text-sm text-neutral-500 mt-1">${escapeHtml(restaurant.name)}</p>
           </div>
-          <a href="${escapeHtml(menuUrl(restaurant.slug))}" target="_blank" rel="noreferrer" class="text-xs text-brand-purple underline hover:opacity-80 transition">Ver cardápio público ↗</a>
+          <div class="flex items-center gap-3">
+            <a href="${escapeHtml(kitchenUrl(accessToken))}" target="_blank" rel="noreferrer" class="text-xs text-brand-purple underline hover:opacity-80 transition">👨‍🍳 Abrir cozinha ↗</a>
+            <a href="${escapeHtml(menuUrl(restaurant.slug))}" target="_blank" rel="noreferrer" class="text-xs text-brand-purple underline hover:opacity-80 transition">Ver cardápio público ↗</a>
+          </div>
         </div>
         <nav class="flex gap-2 mt-4">
           <button data-tab="orders" class="px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'orders' ? 'bg-brand-purple text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}">📋 Pedidos</button>
