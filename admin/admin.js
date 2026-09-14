@@ -8,6 +8,8 @@ const state = {
   loginError: '',
   restaurants: [],
   loading: true,
+  leads: [],
+  leadsLoading: true,
   creating: false,
   formError: '',
   nameDraft: '',
@@ -80,6 +82,14 @@ function dashboardHtml() {
             <p class="text-xs text-neutral-400 font-medium">Ativos agora</p>
             <p class="text-2xl font-bold text-emerald-600 mt-1">${active}</p>
           </div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h2 class="font-semibold text-lg">Leads da landing page (${state.leads.length})</h2>
+            <button id="leads-refresh-btn" title="Atualizar" class="text-xs text-brand-purple hover:opacity-80 transition shrink-0">🔄 Atualizar</button>
+          </div>
+          <div id="leads-list">${state.leadsLoading ? skeletonCardsHtml(2) : leadsListHtml()}</div>
         </section>
 
         <section class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
@@ -180,6 +190,51 @@ function restaurantListHtml() {
         .join('')}
     </div>
   `
+}
+
+// ---- Leads da landing page (migration 0010_leads.sql) ----
+
+function leadsListHtml() {
+  if (state.leads.length === 0) {
+    return emptyStateHtml('📭', 'Nenhum lead ainda. Assim que alguém preencher o formulário da landing page, aparece aqui.')
+  }
+  return `
+    <div class="space-y-2">
+      ${state.leads
+        .map(
+          (l) => `
+        <div class="fade-slide-in flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 border border-neutral-200 rounded-lg px-4 py-3">
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-neutral-900 truncate">${escapeHtml(l.name)}</p>
+            <p class="text-xs text-neutral-400">${new Date(l.created_at).toLocaleString('pt-BR')}</p>
+          </div>
+          <div class="flex items-center gap-3 text-sm shrink-0">
+            <a href="tel:${escapeHtml(l.phone.replace(/\D/g, ''))}" class="text-brand-purple hover:underline">${escapeHtml(l.phone)}</a>
+            <a href="mailto:${escapeHtml(l.email)}" class="text-brand-purple hover:underline truncate max-w-[10rem]">${escapeHtml(l.email)}</a>
+          </div>
+        </div>
+      `
+        )
+        .join('')}
+    </div>
+  `
+}
+
+async function loadLeads() {
+  state.leadsLoading = true
+  const { data, error } = await supabaseClient
+    .from('leads')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (error) showToast('Erro ao carregar leads.', 'error')
+  state.leads = data || []
+  state.leadsLoading = false
+  const list = document.getElementById('leads-list')
+  if (list) list.innerHTML = leadsListHtml()
+  const refreshBtn = document.getElementById('leads-refresh-btn')
+  const header = refreshBtn ? refreshBtn.previousElementSibling : null
+  if (header) header.textContent = `Leads da landing page (${state.leads.length})`
 }
 
 function qrModalHtml() {
@@ -456,6 +511,9 @@ function bindEvents() {
 
   document.getElementById('create-form').addEventListener('submit', handleCreate)
 
+  const leadsRefreshBtn = document.getElementById('leads-refresh-btn')
+  if (leadsRefreshBtn) leadsRefreshBtn.addEventListener('click', loadLeads)
+
   const searchInput = document.getElementById('search-input')
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
@@ -535,6 +593,7 @@ function handleLogin(e) {
     state.loginError = ''
     render()
     loadRestaurants()
+    loadLeads()
   } else {
     state.loginError = 'Senha incorreta.'
     render()
@@ -620,4 +679,7 @@ function closeQrModal() {
 }
 
 render()
-if (state.authenticated) loadRestaurants()
+if (state.authenticated) {
+  loadRestaurants()
+  loadLeads()
+}

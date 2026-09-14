@@ -5,11 +5,12 @@
     <link rel="icon" type="image/png" href="images/favicon.png" />
     <link rel="apple-touch-icon" href="images/favicon.png" />
     <link rel="manifest" href="manifest.json" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#FF6B35" />
     <title>SeuAri — Cardápio Digital</title>
     <meta
       name="description"
-      content="SeuAri — Cardápio digital com QR Code e o Ari, garçom IA, para restaurantes."
+      content="Cardápio digital por QR Code com o Ari, um garçom de inteligência artificial que ajuda cada cliente a escolher e montar o pedido sozinho."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,44 +32,177 @@
                 blue: '#2563EB',
               },
             },
-            fontFamily: {
-              sans: ['Inter', 'system-ui', 'sans-serif'],
-            },
+            fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
           },
         },
       }
     </script>
     <link rel="stylesheet" href="css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   </head>
-  <body>
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-purple/10 to-brand-orange/10 px-4">
-      <div class="max-w-md w-full text-center space-y-6">
-        <div class="flex justify-center" id="logo-slot"></div>
-        <p class="text-neutral-600">
-          Cardápio digital com QR Code e garçom IA para restaurantes.
-        </p>
-        <div class="bg-white rounded-2xl shadow-xl p-6 space-y-3 text-left">
-          <p class="text-sm font-semibold text-neutral-700">Três áreas, cada uma na sua pasta</p>
-          <ul class="text-sm text-neutral-500 space-y-1 list-disc list-inside">
-            <li>Não precisa de Node, npm ou build — é HTML/CSS/JS puro.</li>
-            <li>Abra qualquer <code>index.html</code> com a extensão Live Server do VS Code.</li>
-            <li><code>admin/</code> — você cadastra restaurantes e gera QR Codes.</li>
-            <li><code>restaurante/</code> — painel de cada restaurante (link com token, gerado pelo admin).</li>
-            <li><code>cliente/</code> — cardápio público, acessado pelo QR Code da mesa.</li>
-          </ul>
+  <body class="bg-neutral-50">
+    <!-- Página só de conversão: sem login, sem link pro admin/painel/cardápio —
+         o único caminho de ação aqui é abrir o formulário de contato. -->
+
+    <header class="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-2 flex justify-center sm:justify-start">
+      <div id="header-logo-slot"></div>
+    </header>
+
+    <!-- ---- Hero: avatar do Ari + balão de fala + proposta + CTA ---- -->
+    <section class="relative overflow-hidden">
+      <div class="absolute -top-24 -left-20 w-72 h-72 rounded-full bg-brand-purple/20 blur-3xl" aria-hidden="true"></div>
+      <div class="absolute -bottom-24 -right-16 w-80 h-80 rounded-full bg-brand-orange/20 blur-3xl" aria-hidden="true"></div>
+
+      <div class="relative max-w-3xl mx-auto px-4 sm:px-6 pt-8 pb-16 sm:pt-12 sm:pb-24 text-center">
+        <div class="relative inline-block mx-auto mb-10">
+          <div class="relative w-56 h-56 sm:w-64 sm:h-64 mx-auto">
+            <div class="absolute inset-0 rounded-[2.5rem] bg-gradient-to-br from-brand-purple/30 to-brand-orange/30 blur-2xl" aria-hidden="true"></div>
+            <!-- mask-image: a foto (images/avatar.png) é um recorte quadrado —
+                 sem isso, apareceria uma borda reta/"cortada" embaixo, onde a
+                 imagem acaba. O degradê dissolve o final da imagem no fundo da
+                 página em vez de mostrar esse corte. -->
+            <img
+              src="images/avatar.png"
+              alt="Ari, o garçom de inteligência artificial do SeuAri"
+              class="relative w-full h-full object-cover rounded-[2.5rem]"
+              style="mask-image: linear-gradient(to bottom, black 60%, transparent 96%); -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 96%)"
+            />
+          </div>
+
+          <!-- Balão de fala "saindo" do Ari — mesmo estilo do balão de resposta
+               do chat de verdade (cliente/cardapio.js), pra já soar familiar. -->
+          <div class="absolute -top-3 sm:-top-5 -right-4 sm:right-0 sm:translate-x-[35%] max-w-[12.5rem] sm:max-w-[14rem] bg-white text-left rounded-2xl rounded-bl-md shadow-xl border border-neutral-100 px-4 py-3 fade-slide-in">
+            <p class="text-sm font-medium text-neutral-800 leading-snug">
+              "Sou o Ari, eu ajudo o seu cliente a escolher o pedido."
+            </p>
+          </div>
         </div>
-        <a
-          href="admin/index.html"
-          class="inline-block bg-brand-purple text-white font-semibold rounded-lg px-6 py-3 hover:opacity-90 transition"
+
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-neutral-900 leading-tight tracking-tight">
+          O cardápio digital que <span class="text-brand-purple">vende</span> pelo seu restaurante
+        </h1>
+        <p class="text-neutral-600 mt-4 text-base sm:text-lg max-w-xl mx-auto leading-relaxed">
+          Cardápio por QR Code com o Ari, um garçom de inteligência artificial que sugere pratos,
+          tira dúvidas e ajuda cada cliente a montar o pedido sozinho — 24 horas por dia.
+        </p>
+
+        <button
+          id="cta-hero"
+          class="mt-8 inline-flex items-center gap-2 bg-brand-purple text-white font-semibold rounded-full px-7 py-3.5 text-base shadow-lg hover:opacity-90 active:scale-[0.98] transition"
         >
-          Acessar área do admin
-        </a>
+          Quero um Ari no meu restaurante
+        </button>
+        <p class="text-xs text-neutral-400 mt-3">Sem compromisso — é só deixar seus dados.</p>
+      </div>
+    </section>
+
+    <!-- ---- Benefícios ---- -->
+    <section class="max-w-5xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+      <div class="grid sm:grid-cols-3 gap-4 sm:gap-6">
+        <div class="bg-white border border-neutral-200 rounded-2xl p-6 text-center">
+          <div class="text-3xl mb-3">📱</div>
+          <p class="font-semibold text-neutral-900">Cardápio por QR Code</p>
+          <p class="text-sm text-neutral-500 mt-1.5 leading-relaxed">
+            O cliente escaneia na mesa e já vê o cardápio completo, sem baixar nenhum aplicativo.
+          </p>
+        </div>
+        <div class="bg-white border border-neutral-200 rounded-2xl p-6 text-center">
+          <div class="text-3xl mb-3">🤖</div>
+          <p class="font-semibold text-neutral-900">O Ari ajuda a vender</p>
+          <p class="text-sm text-neutral-500 mt-1.5 leading-relaxed">
+            Sugestões, dúvidas e montagem do pedido pelo chat — sem esperar garçom ficar livre.
+          </p>
+        </div>
+        <div class="bg-white border border-neutral-200 rounded-2xl p-6 text-center">
+          <div class="text-3xl mb-3">⚡</div>
+          <p class="font-semibold text-neutral-900">Pedido em tempo real</p>
+          <p class="text-sm text-neutral-500 mt-1.5 leading-relaxed">
+            Cada pedido cai direto no seu painel, pronto pra você confirmar e preparar.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- CTA final ---- -->
+    <section class="bg-gradient-to-br from-brand-purple to-indigo-600 py-14 sm:py-20 px-4 sm:px-6 text-center">
+      <div class="max-w-xl mx-auto">
+        <h2 class="text-2xl sm:text-3xl font-bold text-white">Pronto pra ter seu próprio Ari?</h2>
+        <p class="text-white/80 mt-3">Deixe seus dados que a gente entra em contato pra te mostrar como funciona.</p>
+        <button
+          id="cta-bottom"
+          class="mt-6 bg-white text-brand-purple font-semibold rounded-full px-7 py-3.5 hover:opacity-90 active:scale-[0.98] transition"
+        >
+          Fazer contato
+        </button>
+      </div>
+    </section>
+
+    <footer class="py-10 px-4 text-center">
+      <div id="footer-logo-slot" class="flex justify-center mb-2"></div>
+      <p class="text-xs text-neutral-400">SeuAri — Cardápio Digital.</p>
+    </footer>
+
+    <!-- ---- Modal: formulário de contato (nome, telefone, email) ---- -->
+    <div id="lead-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 hidden">
+      <div class="modal-box bg-white rounded-2xl p-6 max-w-sm w-full">
+        <div id="lead-form-wrap">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="font-bold text-lg text-neutral-900">Vamos conversar</h3>
+              <p class="text-sm text-neutral-500 mt-0.5">Deixe seus dados que a gente entra em contato.</p>
+            </div>
+            <button id="lead-close-btn" title="Fechar" type="button" class="text-neutral-400 hover:text-neutral-600 transition text-xl leading-none w-8 h-8 flex items-center justify-center -mr-1 -mt-1 shrink-0">✕</button>
+          </div>
+          <form id="lead-form" class="space-y-3 mt-4">
+            <input
+              required
+              id="lead-name"
+              placeholder="Seu nome"
+              autocomplete="name"
+              class="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+            />
+            <input
+              required
+              id="lead-phone"
+              placeholder="(11) 91234-5678"
+              inputmode="numeric"
+              autocomplete="tel"
+              class="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+            />
+            <input
+              required
+              type="email"
+              id="lead-email"
+              placeholder="seuemail@exemplo.com"
+              autocomplete="email"
+              class="w-full border border-neutral-300 rounded-lg px-3.5 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+            />
+            <p id="lead-error" class="text-brand-red text-sm hidden">⚠️ Confira os dados preenchidos.</p>
+            <button
+              type="submit"
+              id="lead-submit-btn"
+              class="w-full bg-brand-purple text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50"
+            >
+              Enviar
+            </button>
+          </form>
+        </div>
+        <div id="lead-success" class="hidden text-center py-3">
+          <div class="text-4xl mb-3">✅</div>
+          <h3 class="font-bold text-lg text-neutral-900">Recebemos seus dados!</h3>
+          <p class="text-sm text-neutral-500 mt-1.5 leading-relaxed">Em breve alguém do nosso time entra em contato com você.</p>
+          <button id="lead-success-close" type="button" class="mt-5 w-full bg-neutral-100 text-neutral-700 font-semibold rounded-lg py-3 hover:bg-neutral-200 transition">
+            Fechar
+          </button>
+        </div>
       </div>
     </div>
 
+    <script src="config.js"></script>
+    <script src="js/util.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/logo.js"></script>
-    <script>
-      document.getElementById('logo-slot').innerHTML = renderLogo({ size: 'lg', showSlogan: true })
-    </script>
+    <script src="js/supabase-client.js"></script>
+    <script src="landing.js"></script>
   </body>
 </html>

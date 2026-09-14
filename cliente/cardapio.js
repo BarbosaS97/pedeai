@@ -11,13 +11,11 @@ const numero = queryParams.get('mesa')
 const CUSTOMER_STORAGE_KEY = 'pedeai_customer'
 const CHAT_AVATAR_URL = '../images/avatar.png'
 
-// A foto do Ari é um retrato vertical (1024x1536, rosto no terço de cima) —
-// object-cover com posição padrão (centro) cortaria bem no meio do rosto.
-// "50% 10%" mantém a cabeça inteira enquadrada em qualquer tamanho de avatar.
-const AVATAR_OBJECT_POSITION = 'object-position: 50% 10%'
-
+// A foto do Ari (images/avatar.png) já é um recorte quadrado bem próximo do
+// rosto — object-cover simples é suficiente, sem precisar de object-position
+// customizado pra evitar cortar a cabeça.
 function chatAvatarHtml(sizeClass) {
-  return `<img src="${CHAT_AVATAR_URL}" alt="Ari" loading="eager" style="${AVATAR_OBJECT_POSITION}" class="${sizeClass} rounded-full object-cover shrink-0 bg-brand-purple/20" />`
+  return `<img src="${CHAT_AVATAR_URL}" alt="Ari" loading="eager" class="${sizeClass} rounded-full object-cover shrink-0 bg-brand-purple/20" />`
 }
 
 // Ícones de contorno simples (sem emoji) usados no formulário de boas-vindas.
@@ -317,7 +315,6 @@ function welcomeScreenHtml() {
               <img
                 src="${CHAT_AVATAR_URL}"
                 alt="Ari"
-                style="${AVATAR_OBJECT_POSITION}"
                 class="relative w-28 h-28 rounded-full object-cover ring-4 ring-white shadow-xl bg-brand-purple/20"
               />
             </div>
