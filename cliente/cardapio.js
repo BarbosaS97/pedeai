@@ -1249,8 +1249,11 @@ async function sendChatMessage(e) {
   // Fecha o teclado ao enviar, pra sobrar mais tela pra ver a resposta (e os
   // cartões de ação) sem o teclado ocupando metade da tela no celular. Pra
   // digitar de novo, é só tocar no campo — não refocamos automaticamente.
+  // assumeKeyboardClosed() evita o "pulo" visual de esperar o evento
+  // assíncrono do teclado fechando de verdade (ver comentário na definição).
   const inputBeforeSend = document.getElementById('chat-input')
   if (inputBeforeSend) inputBeforeSend.blur()
+  assumeKeyboardClosed()
 
   // Só os últimos turnos vão pro modelo — mantém o prompt (e o custo por
   // mensagem) limitado mesmo numa conversa longa.
@@ -1358,6 +1361,20 @@ function syncVisualViewport() {
   const keyboardLikelyOpen = tallestViewportSeen - currentHeight > 150
   document.documentElement.classList.toggle('keyboard-open', keyboardLikelyOpen)
 }
+// Chamado quando NÓS mesmos fechamos o teclado programaticamente (ver
+// sendChatMessage → blur()): assume o estado "fechado" na hora, em vez de
+// esperar o evento assíncrono do visualViewport (que só chega depois que o
+// teclado termina de animar, ~200-300ms depois). Sem isso, o renderPage()
+// que roda logo após o blur() ainda desenha o chat no tamanho "teclado
+// aberto", e ele só encolhe de volta pro tamanho normal um instante depois
+// — o "pulo" rápido que dá a impressão de bug.
+function assumeKeyboardClosed() {
+  const root = document.documentElement.style
+  root.setProperty('--vvh', `${tallestViewportSeen}px`)
+  root.setProperty('--vv-top', '0px')
+  document.documentElement.classList.remove('keyboard-open')
+}
+
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', syncVisualViewport)
   window.visualViewport.addEventListener('scroll', syncVisualViewport)
