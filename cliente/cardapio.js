@@ -44,6 +44,10 @@ let chatInput = ''
 let chatLoading = false
 let expandedProduct = null
 let productNoteDraft = ''
+// true quando o modal de detalhe foi aberto a partir de um mini-card do chat
+// (ver bindPageEvents, data-mini-product) — fechar ou adicionar o produto
+// nesse caso deve voltar pro chat, não pro cardápio por trás dele.
+let returnToChatAfterDetail = false
 // Balãozinho de dica perto do botão do Ari, só pra chamar atenção na
 // primeira olhada no cardápio — some sozinho depois de um tempo, ou assim
 // que o cliente interage com o chat/carrinho/detalhe de produto.
@@ -918,6 +922,7 @@ function bindPageEvents() {
       // Clique no botão "Adicionar" (que fica dentro do card) não deve abrir
       // o detalhe — só o resto do card.
       if (e.target.closest('[data-add]')) return
+      returnToChatAfterDetail = false
       openProductDetail(card.getAttribute('data-expand'))
     })
   })
@@ -958,6 +963,7 @@ function bindPageEvents() {
       el.addEventListener('click', (e) => {
         if (e.target.closest('[data-remove]')) return
         cartOpen = false
+        returnToChatAfterDetail = false
         openProductDetail(el.getAttribute('data-edit-item'))
       })
     })
@@ -995,11 +1001,13 @@ function bindPageEvents() {
     // Mini-card de produto recomendado (ver recommendedProductsHtml): sem
     // botão de adicionar — tocar em qualquer parte fecha o chat e abre o
     // mesmo modal de detalhe do produto usado no cardápio, nunca adiciona
-    // direto ao carrinho.
+    // direto ao carrinho. Ao fechar (ou adicionar) o detalhe, volta pro chat
+    // em vez de cair no cardápio por trás — ver returnToChatAfterDetail.
     document.querySelectorAll('[data-mini-product]').forEach((card) => {
       card.addEventListener('click', () => {
         const productId = card.getAttribute('data-mini-product')
         chatOpen = false
+        returnToChatAfterDetail = true
         openProductDetail(productId)
       })
     })
@@ -1041,6 +1049,10 @@ function openProductDetail(productId) {
 function closeProductDetail() {
   expandedProduct = null
   productNoteDraft = ''
+  if (returnToChatAfterDetail) {
+    returnToChatAfterDetail = false
+    chatOpen = true
+  }
   renderPage()
 }
 
@@ -1064,6 +1076,10 @@ function saveProductFromDetail(productId) {
   }
   expandedProduct = null
   productNoteDraft = ''
+  if (returnToChatAfterDetail) {
+    returnToChatAfterDetail = false
+    chatOpen = true
+  }
   renderPage()
 }
 
@@ -1311,21 +1327,25 @@ function scrollChatToBottom() {
   if (el) el.scrollTop = el.scrollHeight
 }
 
-// iOS Safari não encolhe `dvh` quando o teclado abre (ele só reflete a
-// UI do navegador, não o teclado) — então uma folha fixa com altura em dvh
-// (o chat, ver chatModalHtml) pode ficar com o rodapé (campo de texto +
-// botão enviar) escondido atrás do teclado. window.visualViewport reflete a
-// área realmente visível (já descontando o teclado); guardamos a altura dele
-// numa custom property e o CSS/Tailwind arbitrário usam essa variável em vez
-// de depender só de dvh.
-function syncVisualViewportHeight() {
+// iOS Safari não encolhe `dvh` quando o teclado abre (ele só reflete a UI do
+// navegador, não o teclado), e ainda por cima rola a página pra "levantar" o
+// campo focado acima do teclado — isso desloca elementos `position: fixed`
+// (como o modal do chat) junto, porque no iOS o `fixed` acaba se comportando
+// relativo ao viewport de LAYOUT, que passa a ficar deslocado em relação à
+// área realmente visível. window.visualViewport descreve exatamente essa
+// área visível (altura e o deslocamento do topo, `offsetTop`); guardamos os
+// dois em custom properties e o CSS usa elas pra "grudar" o modal na área
+// visível de verdade, em vez de confiar só em dvh/fixed puro.
+function syncVisualViewport() {
   const vv = window.visualViewport
-  document.documentElement.style.setProperty('--vvh', `${vv ? vv.height : window.innerHeight}px`)
+  const root = document.documentElement.style
+  root.setProperty('--vvh', `${vv ? vv.height : window.innerHeight}px`)
+  root.setProperty('--vv-top', `${vv ? vv.offsetTop : 0}px`)
 }
 if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', syncVisualViewportHeight)
-  window.visualViewport.addEventListener('scroll', syncVisualViewportHeight)
+  window.visualViewport.addEventListener('resize', syncVisualViewport)
+  window.visualViewport.addEventListener('scroll', syncVisualViewport)
 }
-syncVisualViewportHeight()
+syncVisualViewport()
 
 init()

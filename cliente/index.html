@@ -16,8 +16,11 @@
     <!-- viewport-fit=cover libera as variáveis env(safe-area-inset-*), usadas para
          não deixar a barra do carrinho/chat coladas no notch/home indicator do
          celular. Sem maximum-scale/user-scalable=no: desabilitar zoom prejudica
-         acessibilidade. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+         acessibilidade. interactive-widget=resizes-content (Chrome 108+/Safari
+         16.4+) faz o teclado virtual encolher o viewport de verdade — nessa
+         faixa de navegadores, 100dvh já reflete o teclado aberto sozinho, sem
+         depender só do fallback via window.visualViewport (ver cardapio.js). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#FF6B35" />
     <title>SeuAri — Cardápio Digital</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />

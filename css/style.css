@@ -86,13 +86,22 @@ body {
 }
 .modal-overlay {
   animation: modal-overlay-in 0.15s ease;
-  /* iOS Safari não encolhe 100dvh quando o teclado abre — cardapio.js
-     mantém --vvh atualizado com window.visualViewport.height (área
-     realmente visível, já descontando o teclado). Repetir a declaração é
-     proposital: navegadores sem suporte a var() ignoram a segunda linha e
-     ficam com o fallback 100dvh da primeira. */
-  height: 100dvh;
-  height: var(--vvh, 100dvh);
+  /* iOS Safari não encolhe 100dvh quando o teclado abre, e ainda rola a
+     página pra levantar o campo focado — o que desloca elementos "fixed"
+     (como este overlay) da área realmente visível. cardapio.js mantém
+     --vvh/--vv-top atualizados com window.visualViewport (altura e
+     deslocamento do topo da área visível de verdade). Repetir cada
+     declaração é proposital: navegadores sem suporte a var() ignoram a
+     segunda linha e ficam com o fallback (100dvh / top:0) da primeira. */
+  /* !important necessário: o CDN do Tailwind reinjeta o CSS dele conforme
+     novas classes aparecem no DOM (ex: a primeira vez que um modal abre) e
+     pode acabar vindo DEPOIS deste arquivo na cascata — sem isso, "top" (que
+     a própria classe utilitária "inset-0" também define) volta a ganhar de
+     "top: var(--vv-top)" dependendo da ordem de carregamento. */
+  height: 100dvh !important;
+  height: var(--vvh, 100dvh) !important;
+  top: 0 !important;
+  top: var(--vv-top, 0px) !important;
 }
 .modal-box {
   animation: modal-box-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
