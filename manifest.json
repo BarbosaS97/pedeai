@@ -1,0 +1,17 @@
+{
+  "name": "SeuAri — Cardápio Digital",
+  "short_name": "SeuAri",
+  "description": "Cardápio digital com QR Code e o Ari, garçom IA, para restaurantes.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FAFAFA",
+  "theme_color": "#FF6B35",
+  "icons": [
+    {
+      "src": "images/favicon.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

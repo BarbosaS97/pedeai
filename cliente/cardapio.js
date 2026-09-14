@@ -9,10 +9,15 @@ const slug = queryParams.get('slug')
 const numero = queryParams.get('mesa')
 
 const CUSTOMER_STORAGE_KEY = 'pedeai_customer'
-const CHAT_AVATAR_URL = '../images/avatar-chat.png'
+const CHAT_AVATAR_URL = '../images/avatar.png'
+
+// A foto do Ari é um retrato vertical (1024x1536, rosto no terço de cima) —
+// object-cover com posição padrão (centro) cortaria bem no meio do rosto.
+// "50% 10%" mantém a cabeça inteira enquadrada em qualquer tamanho de avatar.
+const AVATAR_OBJECT_POSITION = 'object-position: 50% 10%'
 
 function chatAvatarHtml(sizeClass) {
-  return `<img src="${CHAT_AVATAR_URL}" alt="Ari" loading="eager" class="${sizeClass} rounded-full object-cover shrink-0 bg-brand-purple/20" />`
+  return `<img src="${CHAT_AVATAR_URL}" alt="Ari" loading="eager" style="${AVATAR_OBJECT_POSITION}" class="${sizeClass} rounded-full object-cover shrink-0 bg-brand-purple/20" />`
 }
 
 // Ícones de contorno simples (sem emoji) usados no formulário de boas-vindas.
@@ -131,7 +136,7 @@ function isWelcomeValid() {
 
 function buildInitialChatMessage() {
   const greeting = customerName ? `, ${customerName}` : ''
-  return `Pede aí${greeting}! Eu sou o Ari, garçom do ${restaurant.name}. O que você tá com vontade de comer hoje?`
+  return `Oi${greeting}! Eu sou o Ari, garçom do ${restaurant.name}. O que você tá com vontade de comer hoje?`
 }
 
 // ---- Card de apresentação do Ari (acima das categorias) ----
@@ -308,6 +313,7 @@ function welcomeScreenHtml() {
               <img
                 src="${CHAT_AVATAR_URL}"
                 alt="Ari"
+                style="${AVATAR_OBJECT_POSITION}"
                 class="relative w-28 h-28 rounded-full object-cover ring-4 ring-white shadow-xl bg-brand-purple/20"
               />
             </div>
@@ -394,6 +400,12 @@ function updateWelcomeSubmitState() {
 function pageHtml() {
   return `
     <div class="min-h-[100dvh] bg-neutral-50 pb-32">
+      <!-- Faixa fina com a marca SeuAri — visível de cara, sem precisar rolar,
+           mas discreta o bastante pra não competir com a identidade do
+           restaurante logo abaixo (ver header colorido). -->
+      <div class="bg-white px-4 sm:px-6 py-1.5 border-b border-neutral-100 flex items-center justify-center">
+        <img src="${LOGO_IMAGE_URL}" alt="SeuAri — Cardápio Digital" class="h-5 w-auto opacity-80" />
+      </div>
       <header class="relative bg-gradient-to-br from-brand-orange to-brand-red px-4 sm:px-6 pt-5 pb-5 sm:pt-6 sm:pb-6 overflow-hidden">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -422,12 +434,11 @@ function pageHtml() {
         ${menuContentHtml()}
       </main>
 
-      <footer class="max-w-2xl mx-auto px-4 pb-4 -mt-2 flex items-center justify-center gap-1.5 text-neutral-400">
-        <span class="text-[11px]">Cardápio digital por</span>
-        <span class="font-extrabold text-sm tracking-tight"><span class="text-neutral-400">Pede</span><span class="brand-ai">AI</span></span>
+      <footer class="max-w-2xl mx-auto px-4 pb-4 -mt-2 flex items-center justify-center">
+        <img src="${LOGO_IMAGE_URL}" alt="SeuAri — Cardápio Digital" class="h-6 w-auto opacity-70" />
       </footer>
 
-      <!-- Botão flutuante do Ari — coração da proposta "Pede AI" -->
+      <!-- Botão flutuante do Ari — coração da proposta do SeuAri -->
       <button
         id="chat-fab"
         class="fixed right-4 bg-brand-purple text-white rounded-full shadow-lg hover:shadow-xl pl-2 pr-4 py-2 font-semibold text-sm transition active:scale-95 flex items-center gap-2 ${
@@ -706,7 +717,7 @@ function chatModalHtml() {
           <div class="flex items-center gap-2.5 min-w-0">
             ${chatAvatarHtml('w-10 h-10 ring-2 ring-white/25')}
             <div class="leading-tight min-w-0">
-              <p class="font-semibold text-sm truncate">Ari do PedeAí</p>
+              <p class="font-semibold text-sm truncate">Ari</p>
               <p class="text-[11px] text-white/75 flex items-center gap-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                 Sempre disponível
@@ -789,7 +800,33 @@ function chatMessageHtml(m, isNew) {
       <div class="flex flex-col items-start gap-1.5 max-w-[80%] min-w-0">
         <div class="rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-white text-neutral-800 shadow-sm border border-neutral-100">${escapeHtml(m.content)}</div>
         ${m.actionCards && m.actionCards.length > 0 ? actionCardsHtml(m.actionCards, isNew) : ''}
+        ${m.recommendedProducts && m.recommendedProducts.length > 0 ? recommendedProductsHtml(m.recommendedProducts) : ''}
       </div>
+    </div>
+  `
+}
+
+// Mini-cards de produto recomendado pelo Ari (ver ai-waiter/index.ts,
+// "produtos_recomendados") — foto (se tiver)/nome/preço, sem botão de
+// adicionar: tocar em qualquer parte abre o mesmo modal de detalhe do
+// produto usado no cardápio (openProductDetail), nunca adiciona direto.
+function productMiniCardHtml(p) {
+  return `
+    <div data-mini-product="${p.id}" class="flex items-center gap-2.5 bg-white border border-neutral-200 rounded-xl p-2 w-full cursor-pointer active:bg-neutral-50 transition">
+      ${productImageHtml(p, 'sm')}
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium leading-snug truncate">${escapeHtml(p.name)}</p>
+        <p class="text-xs font-semibold text-brand-orange mt-0.5">R$ ${formatBRL(p.price)}</p>
+      </div>
+      <span class="text-neutral-300 shrink-0" aria-hidden="true">›</span>
+    </div>
+  `
+}
+
+function recommendedProductsHtml(recommendedProducts) {
+  return `
+    <div class="flex flex-col gap-1.5 w-full">
+      ${recommendedProducts.map(productMiniCardHtml).join('')}
     </div>
   `
 }
@@ -954,6 +991,18 @@ function bindPageEvents() {
     document.getElementById('chat-form').addEventListener('submit', sendChatMessage)
     // Sem autofocus agressivo no celular: abrir o teclado sozinho ao abrir o
     // chat é intrusivo. O cliente toca no campo quando quiser digitar.
+
+    // Mini-card de produto recomendado (ver recommendedProductsHtml): sem
+    // botão de adicionar — tocar em qualquer parte fecha o chat e abre o
+    // mesmo modal de detalhe do produto usado no cardápio, nunca adiciona
+    // direto ao carrinho.
+    document.querySelectorAll('[data-mini-product]').forEach((card) => {
+      card.addEventListener('click', () => {
+        const productId = card.getAttribute('data-mini-product')
+        chatOpen = false
+        openProductDetail(productId)
+      })
+    })
 
     const chatViewCartBtn = document.getElementById('chat-view-cart')
     if (chatViewCartBtn) {
@@ -1197,6 +1246,7 @@ async function sendChatMessage(e) {
 
   let respostaTexto
   let cards = []
+  let recommendedProducts = []
 
   try {
     const anonKey = window.PEDEAI_CONFIG.SUPABASE_ANON_KEY
@@ -1221,11 +1271,20 @@ async function sendChatMessage(e) {
     respostaTexto = stripMarkdown(data.resposta) || 'Desculpa, não consegui responder agora.'
     const acoes = Array.isArray(data.acoes) ? data.acoes : []
     cards = applyAiActions(acoes)
+
+    // Segunda validação independente da mesma família da de applyAiActions():
+    // só vira mini-card o id que realmente existir no cardápio já carregado
+    // (ver Segurança no README) — resolvido contra o array `products` local,
+    // não confiando cegamente na lista que veio da Edge Function.
+    const produtosRecomendadosIds = Array.isArray(data.produtos_recomendados) ? data.produtos_recomendados : []
+    recommendedProducts = produtosRecomendadosIds
+      .map((id) => products.find((p) => p.id === id))
+      .filter(Boolean)
   } catch {
     respostaTexto = 'Ops, tive um problema para responder. Tenta de novo?'
   }
 
-  chatMessages.push({ role: 'assistant', content: respostaTexto, actionCards: cards })
+  chatMessages.push({ role: 'assistant', content: respostaTexto, actionCards: cards, recommendedProducts })
   chatLoading = false
 
   if (cards.length > 0) {

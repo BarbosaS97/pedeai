@@ -1,6 +1,6 @@
 // config.js
 //
-// Configuração pública do PedeAí, versionada no repositório.
+// Configuração pública do SeuAri, versionada no repositório.
 //
 // A anon key do Supabase é segura para expor no frontend — a segurança real
 // vem das políticas de RLS (ver supabase/migrations). Já a service_role key
@@ -18,7 +18,7 @@ window.PEDEAI_CONFIG = {
 
   // URL base pública onde este site está hospedado (a raiz do projeto, onde
   // ficam as pastas admin/, restaurante/ e cliente/), usada para montar os
-  // links de cardápio e painel — ex: 'https://pedeai.app/'. Deixe em branco
+  // links de cardápio e painel — ex: 'https://seuari.app/'. Deixe em branco
   // para usar automaticamente a URL onde a página está rodando agora
   // (funciona direto com o Live Server, em localhost, ou em qualquer
   // hospedagem).

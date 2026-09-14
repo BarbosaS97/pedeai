@@ -1,29 +1,22 @@
 // logo.js
 //
-// Marca "PedeAí" com destaque tipográfico no "AI": explora a ambiguidade
-// "pede aí" (convite coloquial) / "pede AI" (camada de inteligência
-// artificial do produto).
+// Marca "SeuAri" — logo oficial em imagem (images/logo.png), já com a
+// tagline "Cardápio Digital" embutida na arte.
+//
+// A URL da imagem é resolvida a partir de onde o PRÓPRIO SCRIPT está
+// carregado (document.currentScript), não de onde a página está — assim
+// funciona tanto chamado como "js/logo.js" (landing, na raiz) quanto
+// "../js/logo.js" (admin/, restaurante/, cliente/), sem precisar de um
+// caminho relativo diferente em cada página.
+const LOGO_IMAGE_URL = new URL('../images/logo.png', document.currentScript.src).href
 
 const LOGO_SIZE_CLASSES = {
-  sm: 'text-xl',
-  md: 'text-3xl',
-  lg: 'text-5xl',
+  sm: 'h-7',
+  md: 'h-10 sm:h-12',
+  lg: 'h-16 sm:h-20',
 }
 
 function renderLogo(options) {
-  const { size = 'md', showSlogan = false, light = false } = options || {}
-  // Variante "light": para usar em cima de fundo colorido (ex: cabeçalho do
-  // cardápio) — o texto com gradiente laranja/vermelho perderia contraste
-  // ali, então vira branco sólido, com "AI" só um pouco mais translúcido pra
-  // ainda separar visualmente as duas partes do nome.
-  const pedeClass = light ? 'text-white' : 'bg-gradient-to-r from-brand-orange to-brand-red bg-clip-text text-transparent'
-  const aiClass = light ? 'text-white/80' : 'brand-ai'
-  return `
-    <div class="inline-flex flex-col items-start">
-      <span class="font-extrabold tracking-tight ${LOGO_SIZE_CLASSES[size]}"
-        ><span class="${pedeClass}">Pede</span
-        ><span class="${aiClass}">AI</span></span
-      >${showSlogan ? `<span class="text-xs ${light ? 'text-white/70' : 'text-neutral-500'} font-medium">Pede aí. A IA sugere.</span>` : ''}
-    </div>
-  `
+  const { size = 'md' } = options || {}
+  return `<img src="${LOGO_IMAGE_URL}" alt="SeuAri — Cardápio Digital" class="${LOGO_SIZE_CLASSES[size]} w-auto" />`
 }

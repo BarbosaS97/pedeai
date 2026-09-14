@@ -1,6 +1,6 @@
-# PedeAí
+# SeuAri — Cardápio Digital
 
-Cardápio digital com QR Code + garçom IA para restaurantes. "Pede aí. A IA sugere."
+Cardápio digital com QR Code + o Ari, garçom IA, para restaurantes.
 
 ## Stack
 
@@ -52,7 +52,12 @@ encontrado" — isso é esperado.
 
 ```
 config.js                     configuração pública (URL/anon key do Supabase, senha do admin, APP_URL)
+manifest.json                 manifesto PWA (ícone/nome ao "Adicionar à Tela de Início")
 index.html                    landing page
+images/
+  logo.png                      logo oficial "SeuAri" (com a tagline "Cardápio Digital" já na arte)
+  avatar.png                    foto do Ari (garçom IA), usada no chat
+  favicon.png                   ícone do navegador e da PWA (favicon + apple-touch-icon)
 admin/
   index.html                   sua área: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas
   admin.js
@@ -68,7 +73,7 @@ cliente/
 css/style.css                 estilos base (além dos utilitários do Tailwind via CDN)
 js/                            módulos compartilhados pelas três áreas acima
   util.js                       helpers (escapeHtml, formatBRL, errorMessage, loadingHtml, notFoundHtml)
-  logo.js                       marca "PedeAí" com destaque tipográfico no "AI"
+  logo.js                       renderiza a logo oficial (images/logo.png) nos cabeçalhos
   slug.js                       geração de slug a partir do nome do restaurante
   supabase-client.js            clientes Supabase (público + com token do restaurante)
   qrcode-helper.js              URL do cardápio e do painel + geração de QR Code no cliente
@@ -110,6 +115,21 @@ independente antes de mexer no carrinho de verdade. Não existe ação de
 um pedido sozinho, só pode orientar o cliente a tocar em "Finalizar pedido".
 Cada ação aplicada aparece no chat como um cartãozinho (entrada animada,
 `prefers-reduced-motion` respeitado) e pulsa o botão do carrinho.
+
+**O garçom IA também recomenda visualmente, não só em texto.** A mesma chamada de
+function calling devolve um terceiro campo, `produtos_recomendados` (ids de
+produto) — preenchido toda vez que a resposta cita, sugere ou lista produtos
+do cardápio (cardápio de uma categoria, sugestão de complemento, opções numa
+ambiguidade). O texto da resposta fica curto (sem repetir nome/preço) e cada
+id vira um mini-card no chat com foto (se o produto tiver)/nome/preço — sem
+botão de adicionar; tocar em qualquer parte do card fecha o chat e abre o
+mesmo modal de detalhe do produto usado no cardápio público (foto grande,
+descrição, ingredientes, observação, "Adicionar ao pedido"), pra manter um
+fluxo único de adicionar item em todo o app. Mesma validação em duas camadas
+das `acoes`: o servidor só aceita id/nome que resolva pra um produto real do
+cardápio (máximo 8 por resposta), e o frontend (`cliente/cardapio.js`,
+`sendChatMessage`) resolve os ids de novo contra o array `products` já
+carregado antes de montar os cards.
 
 **Categorias (seções do cardápio)**: o restaurante cria categorias livres
 (ex: Entradas, Pratos principais, Bebidas) na aba Produtos do painel
@@ -154,7 +174,7 @@ window.PEDEAI_CONFIG = {
   SUPABASE_URL: '...',
   SUPABASE_ANON_KEY: '...',   // pública, segura para expor — ver seção Segurança
   ADMIN_PASSWORD: '...',       // troque por uma senha forte
-  APP_URL: '',                 // opcional: URL de produção, ex. 'https://pedeai.app/'
+  APP_URL: '',                 // opcional: URL de produção, ex. 'https://seuari.app/'
 }
 ```
 
@@ -216,13 +236,19 @@ supabase functions deploy ai-waiter
 
 ## Identidade visual
 
-Logo do PedeAí com destaque tipográfico no "AI" (`js/logo.js`), paleta
-laranja/vermelho (calor, convite) + roxo (tecnologia/IA), definida no
-`tailwind.config` inline de cada página (Tailwind via CDN).
+Logo oficial do SeuAri em `images/logo.png` (renderizada nos cabeçalhos por
+`js/logo.js`), favicon/ícone de PWA em `images/favicon.png` (ligado em cada
+página via `<link rel="icon">`/`apple-touch-icon` e no `manifest.json` da
+raiz) e a foto do Ari em `images/avatar.png`, usada no chat
+(`cliente/cardapio.js`). Paleta laranja/vermelho (calor, convite) + roxo
+(tecnologia/IA), definida no `tailwind.config` inline de cada página
+(Tailwind via CDN).
 
 Cada restaurante pode ter sua própria logo (seção "Identidade visual" na aba
 Produtos do painel, `restaurante/painel.js`), guardada em `restaurants.logo_url`
 (migration `0009`) e no bucket de Storage `logos`. Ela aparece em destaque no
 cabeçalho do cardápio público, com o nome do restaurante logo abaixo; sem
-logo cadastrada, o cabeçalho mostra só o nome em texto. A marca "PedeAí"
-continua presente, de forma discreta, no rodapé do cardápio.
+logo cadastrada, o cabeçalho mostra só o nome em texto. A marca "SeuAri —
+Cardápio Digital" continua presente, de forma discreta, no rodapé do
+cardápio. O garçom IA em si sempre se apresenta só como "Ari", sem o nome do
+produto junto (ver cabeçalho do chat em `cliente/cardapio.js`).
