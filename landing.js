@@ -56,13 +56,13 @@ function resetLeadModal() {
   leadFormWrap.classList.remove('hidden')
 }
 
-document.getElementById('cta-hero').addEventListener('click', () => {
-  resetLeadModal()
-  openLeadModal()
-})
-document.getElementById('cta-bottom').addEventListener('click', () => {
-  resetLeadModal()
-  openLeadModal()
+// Todo botão que deve abrir o formulário leva a classe .js-cta — a página
+// tem vários (nav, hero, CTA final), todos com o mesmo comportamento.
+document.querySelectorAll('.js-cta').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    resetLeadModal()
+    openLeadModal()
+  })
 })
 document.getElementById('lead-close-btn').addEventListener('click', closeLeadModal)
 document.getElementById('lead-success-close').addEventListener('click', closeLeadModal)

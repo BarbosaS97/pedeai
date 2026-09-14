@@ -1,6 +1,6 @@
 // logo.js
 //
-// Marca "SeuAri" — logo oficial em imagem (images/logo.png), já com a
+// Marca "PapeiAI" — logo oficial em imagem (images/logo.png), já com a
 // tagline "Cardápio Digital" embutida na arte.
 //
 // A URL da imagem é resolvida a partir de onde o PRÓPRIO SCRIPT está
@@ -18,5 +18,5 @@ const LOGO_SIZE_CLASSES = {
 
 function renderLogo(options) {
   const { size = 'md' } = options || {}
-  return `<img src="${LOGO_IMAGE_URL}" alt="SeuAri — Cardápio Digital" class="${LOGO_SIZE_CLASSES[size]} w-auto" />`
+  return `<img src="${LOGO_IMAGE_URL}" alt="PapeiAI — Cardápio Digital" class="${LOGO_SIZE_CLASSES[size]} w-auto" />`
 }

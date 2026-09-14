@@ -61,12 +61,12 @@ function renderPanel() {
             <p class="text-sm text-neutral-500 mt-1">${escapeHtml(restaurant.name)}</p>
           </div>
           <div class="flex items-center gap-3">
-            <a href="${escapeHtml(menuUrl(restaurant.slug))}" target="_blank" rel="noreferrer" class="text-xs text-brand-purple underline hover:opacity-80 transition">Ver cardápio público ↗</a>
+            <a href="${escapeHtml(menuUrl(restaurant.slug))}" target="_blank" rel="noreferrer" class="text-xs text-brand-blue underline hover:opacity-80 transition">Ver cardápio público ↗</a>
           </div>
         </div>
         <nav class="flex gap-2 mt-4">
-          <button data-tab="orders" class="px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'orders' ? 'bg-brand-purple text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}">📋 Pedidos</button>
-          <button data-tab="products" class="px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'products' ? 'bg-brand-purple text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}">🍽️ Produtos</button>
+          <button data-tab="orders" class="px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'orders' ? 'bg-brand-blue text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}">📋 Pedidos</button>
+          <button data-tab="products" class="px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'products' ? 'bg-brand-blue text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}">🍽️ Produtos</button>
         </nav>
       </header>
 
@@ -126,7 +126,7 @@ function renderOrdersList() {
   return ordersState
     .map(
       (order) => `
-    <div class="fade-slide-in bg-white border border-neutral-200 rounded-xl p-4 mb-3">
+    <div class="fade-slide-in bg-white border border-neutral-200 rounded-xl p-4 mb-3 shadow-sm">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <p class="font-medium">${order.table_number ? `Mesa ${escapeHtml(order.table_number)}` : 'Balcão'}</p>
@@ -134,7 +134,7 @@ function renderOrdersList() {
             order.customer_name
               ? `<p class="text-sm text-neutral-700 mt-0.5">👤 ${escapeHtml(order.customer_name)}${
                   order.customer_phone
-                    ? ` · <a href="tel:${escapeHtml(order.customer_phone.replace(/\D/g, ''))}" class="text-brand-purple underline">${escapeHtml(order.customer_phone)}</a>`
+                    ? ` · <a href="tel:${escapeHtml(order.customer_phone.replace(/\D/g, ''))}" class="text-brand-blue underline">${escapeHtml(order.customer_phone)}</a>`
                     : ''
                 }</p>`
               : ''
@@ -293,9 +293,9 @@ function categoriesManagerHtml() {
           id="new-category-input"
           value="${escapeHtml(newCategoryName)}"
           placeholder="Nova categoria (ex: Bebidas)"
-          class="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+          class="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
         />
-        <button type="submit" class="bg-brand-purple text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition shrink-0">+ Adicionar</button>
+        <button type="submit" class="bg-brand-blue text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90 transition shrink-0">+ Adicionar</button>
       </form>
       ${
         categoriesState.length === 0
@@ -319,7 +319,7 @@ function categoryChipHtml(c) {
   return `
     <span class="inline-flex items-center gap-0.5 bg-neutral-100 text-neutral-700 text-sm rounded-full pl-3 pr-1 py-1">
       ${escapeHtml(c.name)}
-      <button data-edit-category="${c.id}" title="Renomear" class="text-neutral-400 hover:text-brand-purple w-7 h-7 flex items-center justify-center rounded-full transition">✎</button>
+      <button data-edit-category="${c.id}" title="Renomear" class="text-neutral-400 hover:text-brand-blue w-7 h-7 flex items-center justify-center rounded-full transition">✎</button>
       <button data-delete-category="${c.id}" title="Excluir" class="text-neutral-400 hover:text-brand-red w-7 h-7 flex items-center justify-center rounded-full transition">✕</button>
     </span>
   `
@@ -428,7 +428,7 @@ function productImageHtml(p) {
 
 function productRowHtml(p) {
   return `
-    <div class="fade-slide-in card-hover bg-white border border-neutral-200 rounded-xl p-4 flex gap-4 ${p.is_available ? '' : 'opacity-60'}">
+    <div class="fade-slide-in card-hover bg-white border border-neutral-200 rounded-xl p-4 flex gap-4 shadow-sm ${p.is_available ? '' : 'opacity-60'}">
       ${productImageHtml(p)}
       <div class="flex-1 min-w-0">
         <p class="font-medium truncate">
@@ -576,11 +576,11 @@ function productFormHtml() {
     <div id="product-form-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <form id="product-form" class="modal-box bg-white rounded-2xl p-6 max-w-md w-full space-y-3 max-h-[90vh] overflow-y-auto">
         <h3 class="font-semibold text-lg">${p ? 'Editar produto' : 'Novo produto'}</h3>
-        <input required id="pf-name" value="${escapeHtml(p ? p.name : '')}" placeholder="Nome do produto" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple transition" />
-        <textarea id="pf-description" placeholder="Descrição" rows="2" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple transition">${escapeHtml(p ? p.description || '' : '')}</textarea>
-        <input required type="number" step="0.01" min="0" id="pf-price" value="${p ? p.price : ''}" placeholder="Preço (R$)" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple transition" />
-        <input id="pf-ingredients" value="${escapeHtml(p && p.ingredients ? p.ingredients.join(', ') : '')}" placeholder="Ingredientes (separados por vírgula)" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple transition" />
-        <select id="pf-category" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-purple transition">
+        <input required id="pf-name" value="${escapeHtml(p ? p.name : '')}" placeholder="Nome do produto" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue transition" />
+        <textarea id="pf-description" placeholder="Descrição" rows="2" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue transition">${escapeHtml(p ? p.description || '' : '')}</textarea>
+        <input required type="number" step="0.01" min="0" id="pf-price" value="${p ? p.price : ''}" placeholder="Preço (R$)" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue transition" />
+        <input id="pf-ingredients" value="${escapeHtml(p && p.ingredients ? p.ingredients.join(', ') : '')}" placeholder="Ingredientes (separados por vírgula)" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue transition" />
+        <select id="pf-category" class="w-full border border-neutral-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue transition">
           <option value="">Sem categoria (aparece em "Outros")</option>
           ${categoriesState
             .map(
@@ -591,10 +591,10 @@ function productFormHtml() {
         <div class="space-y-2">
           <p class="text-xs font-semibold text-neutral-500">Foto do produto</p>
           <div class="flex gap-2">
-            <label data-has-image-option="yes" class="flex-1 flex items-center justify-center text-sm border rounded-lg px-3 py-2 cursor-pointer transition ${productHasImage ? 'border-brand-purple bg-brand-purple/5 text-brand-purple font-medium' : 'border-neutral-300 text-neutral-500'}">
+            <label data-has-image-option="yes" class="flex-1 flex items-center justify-center text-sm border rounded-lg px-3 py-2 cursor-pointer transition ${productHasImage ? 'border-brand-blue bg-brand-blue/5 text-brand-blue font-medium' : 'border-neutral-300 text-neutral-500'}">
               <input type="radio" name="pf-has-image" value="yes" class="hidden" ${productHasImage ? 'checked' : ''} /> Tem imagem
             </label>
-            <label data-has-image-option="no" class="flex-1 flex items-center justify-center text-sm border rounded-lg px-3 py-2 cursor-pointer transition ${!productHasImage ? 'border-brand-purple bg-brand-purple/5 text-brand-purple font-medium' : 'border-neutral-300 text-neutral-500'}">
+            <label data-has-image-option="no" class="flex-1 flex items-center justify-center text-sm border rounded-lg px-3 py-2 cursor-pointer transition ${!productHasImage ? 'border-brand-blue bg-brand-blue/5 text-brand-blue font-medium' : 'border-neutral-300 text-neutral-500'}">
               <input type="radio" name="pf-has-image" value="no" class="hidden" ${!productHasImage ? 'checked' : ''} /> Não tem imagem
             </label>
           </div>
@@ -607,7 +607,7 @@ function productFormHtml() {
         </div>
         ${productFormError ? `<p class="text-brand-red text-sm flex items-center gap-1.5">⚠️ ${escapeHtml(productFormError)}</p>` : ''}
         <div class="flex gap-2 pt-2">
-          <button type="submit" ${savingProduct ? 'disabled' : ''} class="flex-1 bg-brand-purple text-white font-semibold rounded-lg py-2 hover:opacity-90 transition disabled:opacity-50">${savingProduct ? 'Salvando...' : 'Salvar'}</button>
+          <button type="submit" ${savingProduct ? 'disabled' : ''} class="flex-1 bg-brand-blue text-white font-semibold rounded-lg py-2 shadow-brand-blue hover:opacity-90 transition disabled:opacity-50">${savingProduct ? 'Salvando...' : 'Salvar'}</button>
           <button type="button" id="pf-cancel" class="flex-1 bg-neutral-100 rounded-lg py-2 hover:bg-neutral-200 transition">Cancelar</button>
         </div>
       </form>
@@ -643,9 +643,9 @@ function bindProductFormEvents() {
       document.getElementById('pf-image-section').classList.toggle('hidden', !productHasImage)
       form.querySelectorAll('[data-has-image-option]').forEach((label) => {
         const active = label.getAttribute('data-has-image-option') === (productHasImage ? 'yes' : 'no')
-        label.classList.toggle('border-brand-purple', active)
-        label.classList.toggle('bg-brand-purple/5', active)
-        label.classList.toggle('text-brand-purple', active)
+        label.classList.toggle('border-brand-blue', active)
+        label.classList.toggle('bg-brand-blue/5', active)
+        label.classList.toggle('text-brand-blue', active)
         label.classList.toggle('font-medium', active)
         label.classList.toggle('border-neutral-300', !active)
         label.classList.toggle('text-neutral-500', !active)

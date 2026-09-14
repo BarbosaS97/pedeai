@@ -1,4 +1,4 @@
-# SeuAri — Cardápio Digital
+# PapeiAI — Cardápio Digital
 
 Cardápio digital com QR Code + o Ari, garçom IA, para restaurantes.
 
@@ -56,9 +56,12 @@ manifest.json                 manifesto PWA (ícone/nome ao "Adicionar à Tela d
 index.html                    landing page pública (conversão — ver seção "Landing page e leads")
 landing.js
 images/
-  logo.png                      logo oficial "SeuAri" (com a tagline "Cardápio Digital" já na arte)
-  avatar.png                    foto do Ari (garçom IA) — usada no chat e na landing page
+  logo.png                      logo oficial "PapeiAI" (com a tagline "Cardápio Digital" já na arte)
+  avatar.png                    foto do Ari recortada (rosto), usada só no chat de verdade (cliente/cardapio.js)
+  avatar-full.png                foto inteira do Ari, usada na landing page (hero e mockups)
   favicon.png                   ícone do navegador e da PWA (favicon + apple-touch-icon)
+  restaurante.jpg                foto de salão, fundo desfocado do hero da landing page — ⚠️ tem marca-d'água de banco de imagens, ver aviso abaixo
+  tela-branca.jpg                foto de mão com celular, usada na seção "Na mão do cliente" da landing (tela composta via CSS)
 admin/
   index.html                   sua área: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas
   admin.js
@@ -181,6 +184,18 @@ Edge Function (ex: com [Resend](https://resend.com)) disparada por um
 tabela `leads` — a tabela e a policy de insert público já estão prontas pra
 isso, só falta essa peça.
 
+O hero usa `images/restaurante.jpg` desfocada como fundo (com o Ari "na
+beira" da seção, dissolvendo no rodapé via `mask-image`) e a seção "Na mão do
+cliente" usa `images/tela-branca.jpg` (foto real de uma mão segurando um
+celular de tela branca) — uma recriação bem simples do chat (barra roxa +
+"bolhas" sem texto, pra não depender de fonte ilegível em tamanho minúsculo)
+é posicionada por cima via CSS (`position: absolute` + `rotate()`, calibrado
+a olho pelas coordenadas da tela na foto), não é uma imagem composta de
+verdade. **Atenção**: `images/restaurante.jpg`, do jeito que foi fornecida,
+tem uma marca-d'água de banco de imagens visível (fica bem disfarçada atrás
+do blur e da sobreposição branca, mas ainda está lá) — troque por uma versão
+licenciada/sem marca-d'água antes de publicar de verdade.
+
 ## Configuração
 
 Todas as chaves ficam em [config.js](config.js), versionado no repositório:
@@ -190,7 +205,7 @@ window.PEDEAI_CONFIG = {
   SUPABASE_URL: '...',
   SUPABASE_ANON_KEY: '...',   // pública, segura para expor — ver seção Segurança
   ADMIN_PASSWORD: '...',       // troque por uma senha forte
-  APP_URL: '',                 // opcional: URL de produção, ex. 'https://seuari.app/'
+  APP_URL: '',                 // opcional: URL de produção, ex. 'https://papeiai.app/'
 }
 ```
 
@@ -255,7 +270,7 @@ supabase functions deploy ai-waiter
 
 ## Identidade visual
 
-Logo oficial do SeuAri em `images/logo.png` (renderizada nos cabeçalhos por
+Logo oficial do PapeiAI em `images/logo.png` (renderizada nos cabeçalhos por
 `js/logo.js`), favicon/ícone de PWA em `images/favicon.png` (ligado em cada
 página via `<link rel="icon">`/`apple-touch-icon` e no `manifest.json` da
 raiz) e a foto do Ari em `images/avatar.png`, usada no chat
@@ -267,7 +282,7 @@ Cada restaurante pode ter sua própria logo (seção "Identidade visual" na aba
 Produtos do painel, `restaurante/painel.js`), guardada em `restaurants.logo_url`
 (migration `0009`) e no bucket de Storage `logos`. Ela aparece em destaque no
 cabeçalho do cardápio público, com o nome do restaurante logo abaixo; sem
-logo cadastrada, o cabeçalho mostra só o nome em texto. A marca "SeuAri —
+logo cadastrada, o cabeçalho mostra só o nome em texto. A marca "PapeiAI —
 Cardápio Digital" continua presente, de forma discreta, no rodapé do
 cardápio. O garçom IA em si sempre se apresenta só como "Ari", sem o nome do
 produto junto (ver cabeçalho do chat em `cliente/cardapio.js`).

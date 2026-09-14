@@ -3,7 +3,6 @@
 :root {
   --brand-orange: #ff6b35;
   --brand-red: #e63946;
-  --brand-purple: #7c3aed;
   --brand-blue: #2563eb;
 }
 
@@ -38,6 +37,17 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #a3a3a3;
 }
+
+/* ---- Sombras nas cores da marca (o mesmo brilho colorido do logo em 3D)
+   aplicadas nos botões/CTAs principais, pra dar profundidade em vez do
+   preto/cinza padrão do shadow do Tailwind. ---- */
+.shadow-brand-blue {
+  box-shadow: 0 10px 24px -8px rgba(37, 99, 235, 0.45), 0 2px 8px rgba(37, 99, 235, 0.18);
+}
+.shadow-brand-ai {
+  box-shadow: 0 10px 24px -8px rgba(230, 57, 70, 0.4), 0 2px 8px rgba(255, 107, 53, 0.22);
+}
+
 
 /* ---- Cartões com leve elevação ao passar o mouse ---- */
 .card-hover {
@@ -245,8 +255,8 @@ textarea {
   --action-accent-bg: #dbeafe;
 }
 .action-card--note {
-  --action-accent: #7c3aed;
-  --action-accent-bg: #ede9fe;
+  --action-accent: #ff6b35;
+  --action-accent-bg: #ffe4d5;
 }
 @keyframes action-card-in {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
@@ -284,7 +294,7 @@ textarea {
 
 /* ---- Destaque temporário da linha do carrinho que o chat acabou de mudar ---- */
 @keyframes row-highlight {
-  0% { background-color: rgba(124, 58, 237, 0.12); }
+  0% { background-color: rgba(255, 107, 53, 0.14); }
   100% { background-color: transparent; }
 }
 .row-highlight {

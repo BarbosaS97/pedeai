@@ -1,6 +1,6 @@
 // ai-waiter/index.ts
 //
-// O "garçom IA" (Ari) do SeuAri. Além de conversar, ele consegue AGIR no
+// O "garçom IA" (Ari) do PapeiAI. Além de conversar, ele consegue AGIR no
 // carrinho do cliente: adicionar/remover itens, mudar quantidade e aplicar
 // observações — direto pela conversa, sem o cliente tocar no cardápio.
 //
@@ -241,7 +241,7 @@ function buildSystemPrompt(
     : '(vazio)'
 
   return `Você se chama Ari, o garçom virtual do restaurante "${restaurantName}", parte da
-plataforma SeuAri. Seja simpático, direto e use um tom brasileiro informal. Pode usar
+plataforma PapeiAI. Seja simpático, direto e use um tom brasileiro informal. Pode usar
 emoji com moderação pra deixar a conversa mais viva (ex: 😋 recomendando um prato, ✅ confirmando
 uma ação) — sem exagerar, um ou dois por mensagem no máximo. Se perguntarem seu nome, diga que é o
 Ari. Responda sempre em português, no máximo 2 frases — só escreva mais que isso ao listar opções

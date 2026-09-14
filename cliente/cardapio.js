@@ -11,19 +11,47 @@ const numero = queryParams.get('mesa')
 const CUSTOMER_STORAGE_KEY = 'pedeai_customer'
 const CHAT_AVATAR_URL = '../images/avatar.png'
 
-// A foto do Ari (images/avatar.png) já é um recorte quadrado bem próximo do
-// rosto — object-cover simples é suficiente, sem precisar de object-position
-// customizado pra evitar cortar a cabeça.
+// A foto do Ari (images/avatar.png) é um retrato de corpo inteiro (rosto só
+// no terço de cima, braços cruzados ocupam o centro) — object-cover puro
+// centraliza o corte no meio da imagem e mostra os braços/avental, não o
+// rosto. Por isso o zoom (scale) e a origem ficam fixados perto do topo,
+// pra recortar só a região da cabeça. Um anel fino no wrapper serve de
+// moldura, separando o avatar do fundo em vez de esticar a foto até a borda.
 function chatAvatarHtml(sizeClass) {
-  return `<img src="${CHAT_AVATAR_URL}" alt="Ari" loading="eager" class="${sizeClass} rounded-full object-cover shrink-0 bg-brand-purple/20" />`
+  return `<span class="${sizeClass} rounded-full bg-brand-orange/15 flex items-center justify-center overflow-hidden"><img src="${CHAT_AVATAR_URL}" alt="Ari" loading="eager" class="w-full h-full rounded-full object-cover" style="object-position: 50% 12%; transform: scale(1.55); transform-origin: 50% 15%;" /></span>`
 }
 
 // Ícones de contorno simples (sem emoji) usados no formulário de boas-vindas.
 const ICON_PERSON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
 const ICON_PHONE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`
-const ICON_TABLE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8h20"/><path d="M5 8v11M19 8v11"/><path d="M2 8l2.5-5h15L22 8"/></svg>`
 const ICON_CART = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2l2.6 12.6a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 8H6"/></svg>`
 const ICON_CHEVRON_RIGHT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`
+const ICON_CHAT_BUBBLE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 5.94 2 10.8c0 2.62 1.32 4.96 3.4 6.57-.11 1.2-.5 2.44-1.28 3.5a.5.5 0 0 0 .5.77c1.9-.42 3.4-1.24 4.5-2.03.9.24 1.87.36 2.88.36 5.52 0 10-3.94 10-8.8S17.52 2 12 2Z"/></svg>`
+
+// Ícones das categorias (pílulas de filtro): o nome vem livre do restaurante
+// (ver categoryStyle, abaixo), então o ícone é escolhido por palavra-chave,
+// com um talher genérico como fallback pra qualquer categoria que não bata
+// com nenhuma palavra conhecida.
+const ICON_CAT_STARTER = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12a10 10 0 0 1 20 0Z"/><path d="M2 12h20M6 12V9M18 12V9"/></svg>`
+const ICON_CAT_MAIN = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v7a3 3 0 0 0 3 3v8M6 3v7M9 3v7M15 3c-1.5 1.5-2 3-2 5.5S15 13 15 13v8M15 3v18"/></svg>`
+const ICON_CAT_DESSERT = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-6a8 8 0 0 1 16 0v6"/><path d="M2 21h20M12 3v4M9 4.5 12 7l3-2.5"/></svg>`
+const ICON_CAT_DRINK = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12l-1.5 15.5a2 2 0 0 1-2 1.8h-5a2 2 0 0 1-2-1.8L6 3Z"/><path d="M5 8h14"/></svg>`
+
+// Palavra-chave no nome da categoria (livre, cadastrado pelo restaurante) →
+// ícone + frase de efeito da seção. Cobre os nomes mais comuns; qualquer
+// outro nome cai no fallback genérico, sem quebrar nada.
+function categoryStyle(name) {
+  const n = name.toLowerCase()
+  if (n.includes('entrada') || n.includes('starter'))
+    return { icon: ICON_CAT_STARTER, tagline: 'Comece sua experiência com muito sabor.' }
+  if (n.includes('sobremesa') || n.includes('doce') || n.includes('dessert'))
+    return { icon: ICON_CAT_DESSERT, tagline: 'Um docinho pra fechar com chave de ouro.' }
+  if (n.includes('bebida') || n.includes('suco') || n.includes('drink') || n.includes('álcool') || n.includes('alcool'))
+    return { icon: ICON_CAT_DRINK, tagline: 'Pra acompanhar e refrescar.' }
+  if (n.includes('principal') || n.includes('prato') || n.includes('main'))
+    return { icon: ICON_CAT_MAIN, tagline: 'O prato certo pra matar a fome.' }
+  return { icon: ICON_CAT_MAIN, tagline: 'Dá uma olhada nessas opções.' }
+}
 
 let restaurant = null
 let products = []
@@ -144,18 +172,30 @@ function buildInitialChatMessage() {
 // ---- Card de apresentação do Ari (acima das categorias) ----
 // Diferente do balão de dica (temporário, some sozinho), este card fica fixo
 // no topo do cardápio — é a primeira explicação de quem é o Ari e pra que
-// serve, antes mesmo do cliente olhar os pratos.
+// serve, antes mesmo do cliente olhar os pratos. Fundo azul-marinho escuro
+// (não é uma das cores "quentes" da marca) só pra dar contraste — a foto do
+// Ari (que já vem com um fundo escuro em degradê na própria arte, ver
+// avatar.png) se funde nele sem precisar de moldura/recorte.
 function ariIntroHtml() {
   return `
-    <div id="ari-intro" class="fade-slide-in bg-gradient-to-br from-brand-purple to-indigo-600 rounded-2xl p-4 shadow-sm space-y-3">
-      <div class="flex items-center gap-3">
-        ${chatAvatarHtml('w-12 h-12 ring-2 ring-white/30 shrink-0')}
-        <div class="min-w-0">
-          <p class="text-white font-semibold text-sm">Sou o Ari, seu garçom</p>
-          <p class="text-white/80 text-xs mt-0.5 leading-snug">Peça sugestões, tire dúvidas ou monte seu pedido — é só chamar.</p>
+    <div id="ari-intro" class="fade-slide-in relative rounded-2xl shadow-lg overflow-hidden flex items-stretch" style="background: linear-gradient(135deg, #16213f, #0e1830);">
+      <img
+        src="${CHAT_AVATAR_URL}"
+        alt="Ari"
+        class="w-24 sm:w-32 object-cover shrink-0"
+        style="object-position: 50% 15%;"
+      />
+      <div class="flex-1 min-w-0 p-4 sm:p-5 flex flex-col justify-center gap-2.5">
+        <div>
+          <h2 class="text-white font-bold text-base sm:text-lg leading-snug">Olá! Eu sou o <span class="text-brand-orange">Ari</span>,</h2>
+          <p class="text-white/70 text-xs sm:text-sm mt-0.5 leading-relaxed">seu garçom de IA. Tô aqui pra te ajudar a escolher o que pedir. Vamos nessa?</p>
         </div>
+        <button id="ari-intro-btn" class="inline-flex items-center gap-2 bg-brand-orange text-white text-xs sm:text-sm font-semibold rounded-full pl-3.5 pr-3 py-2 sm:py-2.5 w-fit shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition">
+          ${ICON_CHAT_BUBBLE}
+          Conversar com o Ari
+          ${ICON_CHEVRON_RIGHT}
+        </button>
       </div>
-      <button id="ari-intro-btn" class="w-full bg-white text-brand-purple text-sm font-semibold rounded-full py-2.5 hover:opacity-90 active:scale-[0.98] transition">Conversar com o Ari</button>
     </div>
   `
 }
@@ -167,10 +207,10 @@ function chatHintHtml() {
     <div
       id="chat-hint"
       class="fade-slide-in fixed right-4 z-10 max-w-[15rem] bg-white text-neutral-800 rounded-2xl rounded-br-md shadow-xl border border-neutral-100 pl-4 pr-8 py-3 cursor-pointer"
-      style="bottom: calc(6.5rem + 3.5rem + env(safe-area-inset-bottom, 0px));"
+      style="bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));"
     >
       <button id="chat-hint-close" title="Fechar" class="absolute top-1.5 right-1.5 text-neutral-300 hover:text-neutral-500 transition w-6 h-6 flex items-center justify-center text-sm leading-none">✕</button>
-      <p class="font-semibold text-sm text-brand-purple">Fale com o Ari</p>
+      <p class="font-semibold text-sm text-brand-orange">Fale com o Ari</p>
       <p class="text-xs text-neutral-500 mt-0.5 leading-relaxed">Posso te ajudar a escolher algo delicioso!</p>
     </div>
   `
@@ -302,7 +342,7 @@ function renderPage() {
 function welcomeScreenHtml() {
   return `
     <div class="relative min-h-[100dvh] overflow-hidden bg-neutral-50 flex flex-col">
-      <div class="absolute -top-28 -left-24 w-72 h-72 rounded-full bg-brand-purple/25 blur-3xl" aria-hidden="true"></div>
+      <div class="absolute -top-28 -left-24 w-72 h-72 rounded-full bg-brand-blue/25 blur-3xl" aria-hidden="true"></div>
       <div class="absolute -bottom-32 -right-20 w-80 h-80 rounded-full bg-brand-orange/25 blur-3xl" aria-hidden="true"></div>
 
       <div class="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
@@ -311,11 +351,12 @@ function welcomeScreenHtml() {
 
           <div class="text-center mt-7">
             <div class="relative w-28 h-28 mx-auto">
-              <div class="absolute inset-0 rounded-full bg-gradient-to-br from-brand-purple to-brand-orange blur-xl opacity-40"></div>
+              <div class="absolute inset-0 rounded-full bg-gradient-to-br from-brand-orange to-brand-red blur-xl opacity-40"></div>
               <img
                 src="${CHAT_AVATAR_URL}"
                 alt="Ari"
-                class="relative w-28 h-28 rounded-full object-cover ring-4 ring-white shadow-xl bg-brand-purple/20"
+                class="relative w-28 h-28 rounded-full object-cover ring-4 ring-white shadow-xl bg-brand-orange/20"
+                style="object-position: 50% 12%; transform: scale(1.55); transform-origin: 50% 15%;"
               />
             </div>
             <h1 class="text-2xl font-bold text-neutral-900 mt-4">Oi, eu sou o Ari</h1>
@@ -335,7 +376,7 @@ function welcomeScreenHtml() {
                 aria-label="Primeiro nome"
                 autocomplete="given-name"
                 autofocus
-                class="w-full border border-neutral-300 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+                class="w-full border border-neutral-300 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
               />
             </div>
             <div class="relative">
@@ -347,14 +388,14 @@ function welcomeScreenHtml() {
                 aria-label="Telefone com DDD"
                 inputmode="numeric"
                 autocomplete="tel"
-                class="w-full border border-neutral-300 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+                class="w-full border border-neutral-300 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
               />
             </div>
             <button
               type="submit"
               id="welcome-submit"
               ${isWelcomeValid() ? '' : 'disabled'}
-              class="w-full bg-gradient-to-r from-brand-purple to-indigo-600 text-white font-semibold rounded-xl py-3.5 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-40"
+              class="w-full bg-gradient-to-r from-brand-orange to-brand-red text-white font-semibold rounded-xl py-3.5 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition disabled:opacity-40"
             >
               Iniciar
             </button>
@@ -399,35 +440,31 @@ function updateWelcomeSubmitState() {
 // ---- Cardápio ----
 
 function pageHtml() {
+  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0)
   return `
     <div class="min-h-[100dvh] bg-neutral-50 pb-32">
-      <!-- Faixa fina com a marca SeuAri — visível de cara, sem precisar rolar,
-           mas discreta o bastante pra não competir com a identidade do
-           restaurante logo abaixo (ver header colorido). -->
-      <div class="bg-white px-4 sm:px-6 py-1.5 border-b border-neutral-100 flex items-center justify-center">
-        <img src="${LOGO_IMAGE_URL}" alt="SeuAri — Cardápio Digital" class="h-5 w-auto opacity-80" />
-      </div>
-      <header class="relative bg-gradient-to-br from-brand-orange to-brand-red px-4 sm:px-6 pt-5 pb-5 sm:pt-6 sm:pb-6 overflow-hidden">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
+      <!-- Header: identidade do restaurante à esquerda, marca PapeiAI
+           centralizada, atalho pro carrinho à direita — grid de 3 colunas
+           (não flex+justify-between) pra logo ficar de fato centralizada,
+           não deslocada pelo tamanho desigual dos dois lados. -->
+      <header class="sticky top-0 z-20 bg-neutral-50/95 backdrop-blur border-b border-neutral-100">
+        <div class="max-w-2xl mx-auto px-4 sm:px-6 h-16 grid grid-cols-3 items-center gap-2">
+          <p class="justify-self-start text-sm font-semibold text-neutral-700 truncate">${escapeHtml(restaurant.name)}</p>
+          <img src="${LOGO_IMAGE_URL}" alt="PapeiAI" class="justify-self-center h-6 sm:h-7 w-auto" />
+          <button
+            id="header-cart-btn"
+            title="Ver carrinho"
+            aria-label="Ver carrinho"
+            class="justify-self-end relative w-10 h-10 rounded-full bg-white border border-neutral-200 flex items-center justify-center text-neutral-600 hover:border-brand-orange hover:text-brand-orange transition shrink-0"
+          >
+            ${ICON_CART}
             ${
-              restaurant.logo_url
-                ? `
-              <div class="inline-block bg-white/95 rounded-xl px-2.5 py-1.5 shadow-sm">
-                <img src="${escapeHtml(restaurant.logo_url)}" alt="${escapeHtml(restaurant.name)}" class="h-8 sm:h-9 max-w-[9rem] sm:max-w-[11rem] object-contain" />
-              </div>
-              <p class="text-white/90 text-xs sm:text-sm font-medium mt-1.5 truncate">${escapeHtml(restaurant.name)}</p>
-            `
-                : `<p class="text-white font-bold text-lg sm:text-xl leading-tight truncate">${escapeHtml(restaurant.name)}</p>`
+              cartCount > 0
+                ? `<span class="absolute -top-1.5 -right-1.5 bg-brand-orange text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center leading-none ring-2 ring-neutral-50">${cartCount}</span>`
+                : ''
             }
-          </div>
-          ${
-            numero
-              ? `<span class="flex items-center gap-1.5 text-xs font-semibold text-white bg-black/25 backdrop-blur rounded-full px-3 py-1.5 shrink-0"><span class="shrink-0">${ICON_TABLE}</span>Mesa ${escapeHtml(numero)}</span>`
-              : ''
-          }
+          </button>
         </div>
-        <h1 class="text-xl sm:text-2xl font-bold text-white mt-3.5 break-words">O que você deseja hoje?</h1>
       </header>
 
       <main class="max-w-2xl mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-6">
@@ -436,20 +473,30 @@ function pageHtml() {
       </main>
 
       <footer class="max-w-2xl mx-auto px-4 pb-4 -mt-2 flex items-center justify-center">
-        <img src="${LOGO_IMAGE_URL}" alt="SeuAri — Cardápio Digital" class="h-6 w-auto opacity-70" />
+        <img src="${LOGO_IMAGE_URL}" alt="PapeiAI — Cardápio Digital" class="h-6 w-auto opacity-70" />
       </footer>
 
-      <!-- Botão flutuante do Ari — coração da proposta do SeuAri -->
-      <button
-        id="chat-fab"
-        class="fixed right-4 bg-brand-purple text-white rounded-full shadow-lg hover:shadow-xl pl-2 pr-4 py-2 font-semibold text-sm transition active:scale-95 flex items-center gap-2 ${
-          chatOpen || expandedProduct || cartOpen ? 'hidden' : ''
-        }"
-        style="bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));"
+      <!-- Botão flutuante do Ari — avatar redondo com um brilho suave atrás
+           (glow) e um selinho de chat no canto, em vez de tentar forçar uma
+           forma geométrica chamativa: mais simples, mais limpo, sem parte
+           nenhuma "flutuando" sem apoio visual. -->
+      <div
+        class="fixed right-4 z-30 ${chatOpen || expandedProduct || cartOpen ? 'hidden' : ''}"
+        style="bottom: calc(1rem + env(safe-area-inset-bottom, 0px));"
       >
-        ${chatAvatarHtml('w-8 h-8 ring-2 ring-white/40')}
-        <span>Falar com o Ari</span>
-      </button>
+        <span class="absolute inset-0 rounded-full bg-brand-orange/45 blur-xl scale-125" aria-hidden="true"></span>
+        <button
+          id="chat-fab"
+          title="Falar com o Ari"
+          aria-label="Falar com o Ari"
+          class="relative block rounded-full ring-4 ring-brand-orange/25 shadow-brand-ai hover:scale-105 active:scale-95 transition"
+        >
+          ${chatAvatarHtml('w-16 h-16 ring-2 ring-white')}
+          <span class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-brand-orange text-white flex items-center justify-center ring-2 ring-white shadow-sm">
+            ${ICON_CHAT_BUBBLE}
+          </span>
+        </button>
+      </div>
 
       ${chatHintVisible && !chatOpen && !expandedProduct && !cartOpen ? chatHintHtml() : ''}
 
@@ -498,11 +545,11 @@ function categoryNavHtml(groups) {
         ${groups
           .map(
             (g, idx) =>
-              `<a href="#secao-${g.id || 'outros'}" data-category-pill class="text-xs font-semibold whitespace-nowrap rounded-full px-3.5 py-2 transition ${
+              `<a href="#secao-${g.id || 'outros'}" data-category-pill class="inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap rounded-full px-3.5 py-2 transition ${
                 idx === 0
-                  ? 'bg-brand-purple border border-brand-purple text-white'
-                  : 'bg-white border border-neutral-200 text-neutral-600 hover:border-brand-purple hover:text-brand-purple'
-              }">${escapeHtml(g.name)}</a>`
+                  ? 'bg-brand-orange border border-brand-orange text-white'
+                  : 'bg-white border border-neutral-200 text-neutral-600 hover:border-brand-orange hover:text-brand-orange'
+              }">${categoryStyle(g.name).icon}${escapeHtml(g.name)}</a>`
           )
           .join('')}
       </div>
@@ -511,9 +558,16 @@ function categoryNavHtml(groups) {
 }
 
 function menuSectionHtml(g) {
+  const { tagline } = categoryStyle(g.name)
   return `
     <section id="secao-${g.id || 'outros'}" class="space-y-3 scroll-mt-16">
-      <h2 class="text-sm font-bold uppercase tracking-wide text-neutral-500">${escapeHtml(g.name)}</h2>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="w-1 h-5 rounded-full bg-brand-orange shrink-0"></span>
+          <h2 class="text-lg font-bold text-neutral-900">${escapeHtml(g.name)}</h2>
+        </div>
+        <p class="text-sm text-neutral-500 mt-0.5 ml-3">${tagline}</p>
+      </div>
       <div class="space-y-3">${g.items.map((p) => productCardHtml(p)).join('')}</div>
     </section>
   `
@@ -540,7 +594,7 @@ function productCardHtml(p) {
         ${p.description ? `<p class="text-sm text-neutral-500 line-clamp-2 mt-0.5">${escapeHtml(p.description)}</p>` : ''}
         <div class="flex items-center justify-between mt-2 gap-2">
           <span class="font-semibold text-brand-orange">R$ ${formatBRL(p.price)}</span>
-          <button data-add="${p.id}" class="text-xs sm:text-sm font-medium bg-brand-purple text-white rounded-full px-3.5 sm:px-4 py-2 hover:opacity-90 active:scale-95 transition shrink-0">+ Adicionar</button>
+          <button data-add="${p.id}" class="text-xs sm:text-sm font-medium bg-white border border-brand-orange text-brand-orange rounded-full px-3.5 sm:px-4 py-2 hover:bg-brand-orange hover:text-white active:scale-95 transition shrink-0">+ Adicionar</button>
         </div>
       </div>
     </div>
@@ -593,10 +647,10 @@ function productDetailModalHtml() {
               rows="2"
               maxlength="140"
               placeholder="Ex: sem cebola, ponto da carne, tirar o queijo…"
-              class="w-full border border-neutral-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition resize-none"
+              class="w-full border border-neutral-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue transition resize-none"
             >${escapeHtml(productNoteDraft)}</textarea>
           </div>
-          <button id="detail-save-btn" class="w-full bg-brand-purple text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition mt-1">
+          <button id="detail-save-btn" class="w-full bg-brand-orange text-white font-semibold rounded-lg py-3 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition mt-1">
             ${cartItem ? 'Salvar observação' : 'Adicionar ao pedido'}
           </button>
         </div>
@@ -613,7 +667,7 @@ function cartBarHtml() {
   return `
     <button
       id="cart-bar-open"
-      class="fixed bottom-0 left-0 right-0 bg-brand-purple text-white shadow-[0_-4px_16px_rgba(0,0,0,0.15)] safe-bottom transition active:opacity-90 ${
+      class="fixed bottom-0 left-0 right-0 bg-brand-orange text-white shadow-[0_-4px_16px_rgba(0,0,0,0.15)] safe-bottom transition active:opacity-90 ${
         chatOpen || expandedProduct ? 'hidden' : ''
       } ${cartJustUpdated ? 'cart-pulse' : ''}"
     >
@@ -621,7 +675,7 @@ function cartBarHtml() {
         <span class="flex items-center gap-3 font-semibold text-sm">
           <span class="relative shrink-0">
             ${ICON_CART}
-            <span class="absolute -top-2 -right-2 bg-brand-orange text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center leading-none border-2 border-brand-purple ${cartJustUpdated ? 'badge-bump' : ''}">${count}</span>
+            <span class="absolute -top-2 -right-2 bg-white text-brand-orange text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center leading-none ${cartJustUpdated ? 'badge-bump' : ''}">${count}</span>
           </span>
           Ver carrinho
         </span>
@@ -689,7 +743,7 @@ function cartSheetHtml() {
               <span class="text-sm text-neutral-500">Subtotal</span>
               <span class="font-bold text-lg">R$ ${formatBRL(total)}</span>
             </div>
-            <button id="place-order-btn" ${placing ? 'disabled' : ''} class="w-full bg-brand-red text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50">
+            <button id="place-order-btn" ${placing ? 'disabled' : ''} class="w-full bg-brand-red text-white font-semibold rounded-lg py-3 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50">
               ${placing ? 'Enviando...' : 'Finalizar pedido'}
             </button>
           </div>
@@ -714,7 +768,7 @@ function chatModalHtml() {
   return `
     <div id="chat-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div id="chat-box" class="modal-box bg-neutral-50 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[calc(var(--vvh,100dvh)*0.88)] sm:h-[34rem] flex flex-col overflow-hidden shadow-2xl">
-        <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand-purple to-indigo-600 text-white shrink-0">
+        <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand-orange to-brand-red text-white shrink-0">
           <div class="flex items-center gap-2.5 min-w-0">
             ${chatAvatarHtml('w-10 h-10 ring-2 ring-white/25')}
             <div class="leading-tight min-w-0">
@@ -730,7 +784,7 @@ function chatModalHtml() {
               cartCount > 0
                 ? `<button id="chat-view-cart" title="Ver carrinho" class="relative bg-white/20 hover:bg-white/30 text-white transition w-12 h-12 flex items-center justify-center rounded-full text-[26px] shadow-sm">
                     🛒
-                    <span class="absolute -top-1 -right-1 bg-brand-orange text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] px-1 flex items-center justify-center leading-none border-2 border-brand-purple">${cartCount}</span>
+                    <span class="absolute -top-1 -right-1 bg-brand-orange text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] px-1 flex items-center justify-center leading-none border-2 border-brand-red">${cartCount}</span>
                   </button>`
                 : ''
             }
@@ -756,9 +810,9 @@ function chatModalHtml() {
             placeholder="${notingOrder ? 'Anotando seu pedido…' : 'Ex: algo vegetariano e picante'}"
             autocomplete="off"
             ${notingOrder ? 'disabled' : ''}
-            class="flex-1 min-w-0 border border-neutral-300 rounded-full px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-purple transition disabled:bg-neutral-50 disabled:text-neutral-400"
+            class="flex-1 min-w-0 border border-neutral-300 rounded-full px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue transition disabled:bg-neutral-50 disabled:text-neutral-400"
           />
-          <button type="submit" ${chatLoading || notingOrder ? 'disabled' : ''} title="Enviar" class="bg-brand-purple text-white rounded-full w-11 h-11 flex items-center justify-center text-base hover:opacity-90 active:scale-95 transition disabled:opacity-50 shrink-0">➤</button>
+          <button type="submit" ${chatLoading || notingOrder ? 'disabled' : ''} title="Enviar" class="bg-gradient-to-br from-brand-orange to-brand-red text-white rounded-full w-11 h-11 flex items-center justify-center text-base shadow-brand-ai hover:opacity-90 active:scale-95 transition disabled:opacity-50 shrink-0">➤</button>
         </form>
       </div>
     </div>
@@ -779,7 +833,7 @@ function chatSuggestionsHtml() {
       ${suggestions
         .map(
           (s) =>
-            `<button data-suggest="${escapeHtml(s)}" ${busy ? 'disabled' : ''} class="text-xs font-medium bg-white border border-neutral-200 text-neutral-600 whitespace-nowrap rounded-full px-3.5 py-2 hover:border-brand-purple hover:text-brand-purple transition shrink-0 shadow-sm disabled:opacity-50">${escapeHtml(s)}</button>`
+            `<button data-suggest="${escapeHtml(s)}" ${busy ? 'disabled' : ''} class="text-xs font-medium bg-white border border-neutral-200 text-neutral-600 whitespace-nowrap rounded-full px-3.5 py-2 hover:border-brand-orange hover:text-brand-orange transition shrink-0 shadow-sm disabled:opacity-50">${escapeHtml(s)}</button>`
         )
         .join('')}
     </div>
@@ -791,7 +845,7 @@ function chatMessageHtml(m, isNew) {
   if (m.role === 'user') {
     return `
       <div class="flex justify-end ${entrance}">
-        <div class="max-w-[80%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-brand-purple text-white shadow-sm">${escapeHtml(m.content)}</div>
+        <div class="max-w-[80%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-brand-blue text-white shadow-sm">${escapeHtml(m.content)}</div>
       </div>
     `
   }
@@ -906,11 +960,11 @@ function bindPageEvents() {
       const pill = e.target.closest('[data-category-pill]')
       if (!pill) return
       categoryNav.querySelectorAll('[data-category-pill]').forEach((el) => {
-        el.classList.remove('bg-brand-purple', 'border-brand-purple', 'text-white')
+        el.classList.remove('bg-brand-orange', 'border-brand-orange', 'text-white')
         el.classList.add('bg-white', 'border-neutral-200', 'text-neutral-600')
       })
       pill.classList.remove('bg-white', 'border-neutral-200', 'text-neutral-600')
-      pill.classList.add('bg-brand-purple', 'border-brand-purple', 'text-white')
+      pill.classList.add('bg-brand-orange', 'border-brand-orange', 'text-white')
     })
   }
 
@@ -945,6 +999,11 @@ function bindPageEvents() {
       renderPage()
     })
   }
+
+  document.getElementById('header-cart-btn').addEventListener('click', () => {
+    cartOpen = true
+    renderPage()
+  })
 
   const cartOverlay = document.getElementById('cart-overlay')
   if (cartOverlay) {

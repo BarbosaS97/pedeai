@@ -32,7 +32,7 @@ function render() {
 
 function loginHtml() {
   return `
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-purple/10 via-neutral-50 to-brand-orange/10 px-4">
+    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-blue/10 via-neutral-50 to-brand-orange/10 px-4">
       <form id="login-form" class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm space-y-5 fade-slide-in">
         <div class="flex justify-center mb-1">${renderLogo({ size: 'lg', showSlogan: true })}</div>
         <div class="flex items-center justify-center gap-1.5 text-neutral-500 text-sm">
@@ -44,12 +44,12 @@ function loginHtml() {
           id="password-input"
           autofocus
           placeholder="Senha de admin"
-          class="w-full border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+          class="w-full border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
         />
         ${state.loginError ? `<p class="text-brand-red text-sm flex items-center gap-1.5">⚠️ ${escapeHtml(state.loginError)}</p>` : ''}
         <button
           type="submit"
-          class="w-full bg-brand-purple text-white font-semibold rounded-lg py-2.5 hover:opacity-90 active:scale-[0.99] transition"
+          class="w-full bg-brand-blue text-white font-semibold rounded-lg py-2.5 shadow-brand-blue hover:opacity-90 active:scale-[0.99] transition"
         >
           Entrar
         </button>
@@ -87,7 +87,7 @@ function dashboardHtml() {
         <section class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
           <div class="flex items-center justify-between gap-3 mb-4">
             <h2 class="font-semibold text-lg">Leads da landing page (${state.leads.length})</h2>
-            <button id="leads-refresh-btn" title="Atualizar" class="text-xs text-brand-purple hover:opacity-80 transition shrink-0">🔄 Atualizar</button>
+            <button id="leads-refresh-btn" title="Atualizar" class="text-xs text-brand-blue hover:opacity-80 transition shrink-0">🔄 Atualizar</button>
           </div>
           <div id="leads-list">${state.leadsLoading ? skeletonCardsHtml(2) : leadsListHtml()}</div>
         </section>
@@ -99,7 +99,7 @@ function dashboardHtml() {
               id="name-input"
               value="${escapeHtml(state.nameDraft)}"
               placeholder="Nome do restaurante"
-              class="flex-1 border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+              class="flex-1 border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
             />
             <button
               type="submit"
@@ -117,7 +117,7 @@ function dashboardHtml() {
             <h2 class="font-semibold text-lg">Restaurantes (${total})</h2>
             ${
               total > 0
-                ? `<input id="search-input" value="${escapeHtml(state.searchQuery)}" placeholder="Buscar por nome..." class="border border-neutral-300 rounded-lg px-3 py-1.5 text-sm w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-brand-purple transition" />`
+                ? `<input id="search-input" value="${escapeHtml(state.searchQuery)}" placeholder="Buscar por nome..." class="border border-neutral-300 rounded-lg px-3 py-1.5 text-sm w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-brand-blue transition" />`
                 : ''
             }
           </div>
@@ -156,8 +156,8 @@ function restaurantListHtml() {
       ${list
         .map(
           (r) => `
-        <div class="card-hover fade-slide-in flex flex-col sm:flex-row sm:items-center gap-4 border border-neutral-200 rounded-xl px-4 py-4">
-          <div class="w-11 h-11 rounded-full bg-brand-purple/10 text-brand-purple font-bold flex items-center justify-center text-lg shrink-0">
+        <div class="card-hover fade-slide-in flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-neutral-200 rounded-xl px-4 py-4 shadow-sm">
+          <div class="w-11 h-11 rounded-full bg-brand-blue/10 text-brand-blue font-bold flex items-center justify-center text-lg shrink-0">
             ${escapeHtml(r.name.trim().charAt(0).toUpperCase() || '?')}
           </div>
           <div class="flex-1 min-w-0">
@@ -168,18 +168,18 @@ function restaurantListHtml() {
             <div class="mt-1.5 space-y-1 text-xs">
               <div class="flex items-center gap-1.5 text-neutral-500">
                 <span>🔗</span>
-                <a href="${escapeHtml(menuUrl(r.slug))}" target="_blank" rel="noreferrer" class="underline truncate hover:text-brand-purple transition">Ver cardápio público</a>
-                <button data-copy-id="${r.id}" data-copy-kind="menu" title="Copiar link do cardápio" class="text-neutral-400 hover:text-brand-purple transition shrink-0">⧉</button>
+                <a href="${escapeHtml(menuUrl(r.slug))}" target="_blank" rel="noreferrer" class="underline truncate hover:text-brand-blue transition">Ver cardápio público</a>
+                <button data-copy-id="${r.id}" data-copy-kind="menu" title="Copiar link do cardápio" class="text-neutral-400 hover:text-brand-blue transition shrink-0">⧉</button>
               </div>
               <div class="flex items-center gap-1.5 text-neutral-500">
                 <span>🧑‍🍳</span>
-                <a href="${escapeHtml(panelUrl(r.access_token))}" target="_blank" rel="noreferrer" class="underline truncate text-brand-purple hover:opacity-80 transition">Abrir painel do restaurante</a>
-                <button data-copy-id="${r.id}" data-copy-kind="panel" title="Copiar link do painel" class="text-neutral-400 hover:text-brand-purple transition shrink-0">⧉</button>
+                <a href="${escapeHtml(panelUrl(r.access_token))}" target="_blank" rel="noreferrer" class="underline truncate text-brand-blue hover:opacity-80 transition">Abrir painel do restaurante</a>
+                <button data-copy-id="${r.id}" data-copy-kind="panel" title="Copiar link do painel" class="text-neutral-400 hover:text-brand-blue transition shrink-0">⧉</button>
               </div>
             </div>
           </div>
           <div class="flex sm:flex-col gap-2 shrink-0">
-            <button data-action="qr" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-purple/10 text-brand-purple font-medium rounded-lg px-3 py-1.5 hover:bg-brand-purple/20 transition">QR Code</button>
+            <button data-action="qr" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-blue/10 text-brand-blue font-medium rounded-lg px-3 py-1.5 hover:bg-brand-blue/20 transition">QR Code</button>
             <button data-action="mesas" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-orange/10 text-brand-orange font-medium rounded-lg px-3 py-1.5 hover:bg-brand-orange/20 transition">Mesas</button>
             <button data-action="toggle" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-neutral-100 text-neutral-600 font-medium rounded-lg px-3 py-1.5 hover:bg-neutral-200 transition">${r.is_active ? 'Desativar' : 'Ativar'}</button>
             <button data-action="regen" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-red/10 text-brand-red font-medium rounded-lg px-3 py-1.5 hover:bg-brand-red/20 transition">Regenerar link</button>
@@ -209,8 +209,8 @@ function leadsListHtml() {
             <p class="text-xs text-neutral-400">${new Date(l.created_at).toLocaleString('pt-BR')}</p>
           </div>
           <div class="flex items-center gap-3 text-sm shrink-0">
-            <a href="tel:${escapeHtml(l.phone.replace(/\D/g, ''))}" class="text-brand-purple hover:underline">${escapeHtml(l.phone)}</a>
-            <a href="mailto:${escapeHtml(l.email)}" class="text-brand-purple hover:underline truncate max-w-[10rem]">${escapeHtml(l.email)}</a>
+            <a href="tel:${escapeHtml(l.phone.replace(/\D/g, ''))}" class="text-brand-blue hover:underline">${escapeHtml(l.phone)}</a>
+            <a href="mailto:${escapeHtml(l.email)}" class="text-brand-blue hover:underline truncate max-w-[10rem]">${escapeHtml(l.email)}</a>
           </div>
         </div>
       `
@@ -247,18 +247,18 @@ function qrModalHtml() {
           state.qrDataUrl
             ? `<img src="${state.qrDataUrl}" alt="QR Code de ${escapeHtml(r.name)}" class="mx-auto rounded-lg border border-neutral-100" />`
             : `<div class="py-12 flex flex-col items-center gap-2 text-neutral-400">
-                <div class="w-8 h-8 border-2 border-brand-purple/30 border-t-brand-purple rounded-full animate-spin"></div>
+                <div class="w-8 h-8 border-2 border-brand-blue/30 border-t-brand-blue rounded-full animate-spin"></div>
                 <p class="text-sm">Gerando QR Code...</p>
               </div>`
         }
         <div class="flex items-center gap-1.5 justify-center text-xs text-neutral-500">
           <span class="truncate max-w-[200px]">${escapeHtml(menuUrl(r.slug))}</span>
-          <button id="qr-copy-btn" title="Copiar link" class="text-neutral-400 hover:text-brand-purple transition shrink-0">⧉</button>
+          <button id="qr-copy-btn" title="Copiar link" class="text-neutral-400 hover:text-brand-blue transition shrink-0">⧉</button>
         </div>
         <div class="flex gap-2">
           ${
             state.qrDataUrl
-              ? `<a href="${state.qrDataUrl}" download="qrcode-${escapeHtml(r.slug)}.png" class="flex-1 bg-brand-purple text-white text-sm font-semibold rounded-lg py-2 hover:opacity-90 transition">Baixar PNG</a>`
+              ? `<a href="${state.qrDataUrl}" download="qrcode-${escapeHtml(r.slug)}.png" class="flex-1 bg-brand-blue text-white text-sm font-semibold rounded-lg py-2 hover:opacity-90 transition">Baixar PNG</a>`
               : ''
           }
           <button id="qr-close-btn" class="flex-1 bg-neutral-100 text-neutral-600 text-sm font-semibold rounded-lg py-2 hover:bg-neutral-200 transition">Fechar</button>
@@ -293,10 +293,10 @@ function mesasModalHtml() {
               max="200"
               value="${escapeHtml(state.newMesaCount)}"
               placeholder="Ex: 8"
-              class="w-full border border-neutral-300 rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-brand-purple transition"
+              class="w-full border border-neutral-300 rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
             />
           </div>
-          <button type="submit" class="bg-brand-purple text-white text-sm font-semibold rounded-lg px-4 py-2.5 hover:opacity-90 transition shrink-0">Gerar</button>
+          <button type="submit" class="bg-brand-blue text-white text-sm font-semibold rounded-lg px-4 py-2.5 hover:opacity-90 transition shrink-0">Gerar</button>
         </form>
         <p class="text-xs text-neutral-400 -mt-3">Cria as mesas 1 a N. Mesas que já existem (inclusive renomeadas) não são duplicadas — dá pra gerar de novo com um número maior só pra adicionar mesas novas.</p>
         ${state.mesasError ? `<p class="text-brand-red text-sm flex items-center gap-1.5">⚠️ ${escapeHtml(state.mesasError)}</p>` : ''}
@@ -335,7 +335,7 @@ function mesaRowHtml(m) {
     <div class="flex items-center gap-2 border border-neutral-200 rounded-lg px-3 py-2">
       <span class="flex-1 text-sm font-medium truncate">${escapeHtml(m.numero)}</span>
       <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${m.ativo ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-200 text-neutral-500'}">${m.ativo ? 'Ativa' : 'Inativa'}</span>
-      <button data-mesa-action="rename" data-mesa-id="${m.id}" title="Renomear" class="text-neutral-400 hover:text-brand-purple w-7 h-7 flex items-center justify-center rounded-full transition shrink-0">✎</button>
+      <button data-mesa-action="rename" data-mesa-id="${m.id}" title="Renomear" class="text-neutral-400 hover:text-brand-blue w-7 h-7 flex items-center justify-center rounded-full transition shrink-0">✎</button>
       <button data-mesa-action="toggle" data-mesa-id="${m.id}" title="${m.ativo ? 'Desativar' : 'Ativar'}" class="text-xs bg-neutral-100 rounded-lg px-2 py-1 hover:bg-neutral-200 transition shrink-0">${m.ativo ? 'Desativar' : 'Ativar'}</button>
       <button data-mesa-action="delete" data-mesa-id="${m.id}" title="Excluir" class="text-neutral-400 hover:text-brand-red w-7 h-7 flex items-center justify-center rounded-full transition shrink-0">✕</button>
     </div>

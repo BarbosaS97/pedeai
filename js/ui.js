@@ -10,7 +10,7 @@
 const TOAST_STYLES = {
   success: 'bg-neutral-900 text-white',
   error: 'bg-brand-red text-white',
-  info: 'bg-brand-purple text-white',
+  info: 'bg-brand-blue text-white',
 }
 
 const TOAST_ICON = {
@@ -72,7 +72,7 @@ function showConfirm(options) {
         <p class="text-sm text-neutral-600">${escapeHtml(message)}</p>
         <div class="flex gap-2 pt-2">
           <button id="confirm-cancel-btn" type="button" class="flex-1 bg-neutral-100 text-neutral-700 font-semibold rounded-lg py-2 hover:bg-neutral-200 transition">${escapeHtml(cancelLabel)}</button>
-          <button id="confirm-ok-btn" type="button" class="flex-1 ${danger ? 'bg-brand-red' : 'bg-brand-purple'} text-white font-semibold rounded-lg py-2 hover:opacity-90 transition">${escapeHtml(confirmLabel)}</button>
+          <button id="confirm-ok-btn" type="button" class="flex-1 ${danger ? 'bg-brand-red' : 'bg-brand-blue'} text-white font-semibold rounded-lg py-2 hover:opacity-90 transition">${escapeHtml(confirmLabel)}</button>
         </div>
       </div>
     `

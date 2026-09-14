@@ -1,6 +1,6 @@
 {
-  "name": "SeuAri — Cardápio Digital",
-  "short_name": "SeuAri",
+  "name": "PapeiAI — Cardápio Digital",
+  "short_name": "PapeiAI",
   "description": "Cardápio digital com QR Code e o Ari, garçom IA, para restaurantes.",
   "start_url": ".",
   "display": "standalone",
