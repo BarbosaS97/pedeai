@@ -107,6 +107,19 @@ body {
   animation: modal-box-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Com o teclado aberto (ver cardapio.js, syncVisualViewport), o chat usa
+   100% da área visível em vez dos 88% padrão — sem a folga de "bottom
+   sheet" no topo, pra sobrar o máximo de espaço pra ler a conversa enquanto
+   o cliente digita. Volta ao tamanho normal sozinho quando o teclado fecha.
+   Só em telas pequenas: no desktop o chat tem altura fixa (sm:h-[34rem]) e
+   não há teclado virtual disputando espaço. */
+@media (max-width: 639px) {
+  .keyboard-open #chat-box {
+    height: 100dvh;
+    height: var(--vvh, 100dvh);
+  }
+}
+
 /* ---- Indicador de digitação do garçom IA ---- */
 .typing-dot {
   display: inline-block;

@@ -1336,11 +1336,27 @@ function scrollChatToBottom() {
 // área visível (altura e o deslocamento do topo, `offsetTop`); guardamos os
 // dois em custom properties e o CSS usa elas pra "grudar" o modal na área
 // visível de verdade, em vez de confiar só em dvh/fixed puro.
+//
+// "maior altura de viewport já vista" — usada só pra detectar teclado aberto
+// (ver syncVisualViewport). Sobe sozinha se a tela ficar maior de verdade
+// (ex: girar o celular), então uma rotação não fica marcada como "teclado".
+let tallestViewportSeen = window.visualViewport ? window.visualViewport.height : window.innerHeight
+
 function syncVisualViewport() {
   const vv = window.visualViewport
   const root = document.documentElement.style
-  root.setProperty('--vvh', `${vv ? vv.height : window.innerHeight}px`)
+  const currentHeight = vv ? vv.height : window.innerHeight
+  root.setProperty('--vvh', `${currentHeight}px`)
   root.setProperty('--vv-top', `${vv ? vv.offsetTop : 0}px`)
+
+  if (currentHeight > tallestViewportSeen) tallestViewportSeen = currentHeight
+  // Teclado aberto encolhe a área visível bem mais do que qualquer ajuste
+  // normal de UI do navegador (barra de endereço etc, no máximo uns 100px) —
+  // nesse caso o chat (ver chatModalHtml) usa 100% da área visível em vez
+  // dos 88% padrão, pra aproveitar cada pixel enquanto o cliente digita, e
+  // volta ao tamanho normal sozinho assim que o teclado fecha.
+  const keyboardLikelyOpen = tallestViewportSeen - currentHeight > 150
+  document.documentElement.classList.toggle('keyboard-open', keyboardLikelyOpen)
 }
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', syncVisualViewport)
