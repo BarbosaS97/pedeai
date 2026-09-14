@@ -38,8 +38,7 @@ dinâmicas do app original:
 | [admin/index.html](admin/index.html) | `/admin` | **Você**: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas |
 | `admin/mesas-print.html?restaurant=<id>` | — | Folha A4 com um QR Code por mesa, pronta pra imprimir/salvar como PDF |
 | `restaurante/index.html?token=<access_token>` | `/r/:accessToken` | **Restaurante**: painel de pedidos + produtos |
-| `cozinha/index.html?token=<access_token>` | — | **Cozinha**: tela para tablet fixo — pedidos novos / em preparo + histórico do dia |
-| `cliente/index.html?slug=<slug>` | `/:slug` | **Cliente**: cardápio público |
+| `cliente/index.html?slug=<slug>` | `/:slug` | **Cliente**: cardápio público, com o Ari (garçom IA) |
 | `cliente/index.html?slug=<slug>&mesa=<numero>` | `/:slug/mesa/:numero` | Cardápio público de uma mesa específica — `numero` precisa bater com uma mesa ativa cadastrada no admin |
 
 `restaurante/` e `cliente/` sempre precisam do parâmetro na URL (`token` e
@@ -63,10 +62,6 @@ admin/
 restaurante/
   index.html                   painel do restaurante (?token=...)
   painel.js
-cozinha/
-  index.html                   tela de cozinha para tablet fixo (?token=...)
-  cozinha.js
-  cozinha.css                   ajustes específicos desta tela (tela cheia, sem bounce)
 cliente/
   index.html                   cardápio público (?slug=...&mesa=...)
   cardapio.js
@@ -76,9 +71,9 @@ js/                            módulos compartilhados pelas três áreas acima
   logo.js                       marca "PedeAí" com destaque tipográfico no "AI"
   slug.js                       geração de slug a partir do nome do restaurante
   supabase-client.js            clientes Supabase (público + com token do restaurante)
-  qrcode-helper.js              URL do cardápio, do painel e da cozinha + geração de QR Code no cliente
+  qrcode-helper.js              URL do cardápio e do painel + geração de QR Code no cliente
 supabase/
-  migrations/                  8 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo da cozinha, mesas)
+  migrations/                  9 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
 ```
 
@@ -174,15 +169,15 @@ hospedagem estática).
 Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https://supabase.com/dashboard) do projeto (`thwnhgpjysykkoblbtrd`):
 
 1. **Migrations** → menu **SQL Editor** → **New query**. Abra cada arquivo de
-   `supabase/migrations/` (nessa ordem: `0001` a `0008`), cole o conteúdo
+   `supabase/migrations/` (nessa ordem: `0001` a `0009`), cole o conteúdo
    inteiro do arquivo e clique **Run**. Rode uma de cada vez, na ordem — cada
-   uma depende de tabelas/extensões criadas na anterior. A tela de cozinha
-   (`cozinha/index.html`) só funciona depois que a `0007` rodar — antes
-   disso, `orders.updated_at` não existe e a consulta da tela falha. O botão
+   uma depende de tabelas/extensões criadas na anterior. O botão
    "Mesas" do admin e a validação de `?mesa=` no cardápio só funcionam depois
    da `0008` — antes disso, a tabela `mesas` não existe e qualquer link com
    `&mesa=` no cardápio mostra a tela de "mesa indisponível" (o erro de query
-   é tratado, mas bloqueia por não conseguir confirmar a mesa).
+   é tratado, mas bloqueia por não conseguir confirmar a mesa). A logo do
+   restaurante no cabeçalho do cardápio só funciona depois da `0009`
+   (coluna `restaurants.logo_url`).
 2. **Secret da DeepSeek** → menu **Edge Functions** → **Manage secrets** →
    adicione `DEEPSEEK_API_KEY` com sua chave. Esse secret nunca vai para o
    frontend.
@@ -210,7 +205,7 @@ supabase functions deploy ai-waiter
 
 ## Segurança — pontos importantes (MVP sem login)
 
-- **RLS ativo em todas as tabelas** (`restaurants`, `products`, `orders`, `order_items`, `mesas`) e no bucket `products` do Storage.
+- **RLS ativo em todas as tabelas** (`restaurants`, `products`, `orders`, `order_items`, `mesas`) e nos buckets `products` e `logos` do Storage.
 - **`mesas`**: leitura é pública (`using (true)`, mesmo padrão de `restaurants_select_public`/`products_select_public`) — não tem como a RLS diferenciar "o admin lendo" de "um cliente anônimo lendo" neste MVP sem Supabase Auth, então a regra "só mesa ativa aceita pedido" é aplicada na aplicação (`cliente/cardapio.js`), não escondida via RLS. Escrita (gerar/renomear/ativar/excluir mesa) segue o mesmo aviso do próximo item.
 - **Painel do restaurante** (`restaurante/index.html?token=...`) não usa Supabase Auth: o token da URL é enviado em todo request como header `x-restaurant-token`, e as policies de RLS (`current_restaurant_token()`) só liberam escrita nas linhas do restaurante dono do token.
 - **`admin/index.html`**: a senha em `PEDEAI_CONFIG.ADMIN_PASSWORD` é um gate só no frontend — como não há Supabase Auth ainda, a policy de `insert`/`update` em `restaurants` é permissiva para a anon key (comentado em detalhe na migration `0001`). **Antes de produção**, migrar para Supabase Auth (ou mover o cadastro de restaurantes para uma Edge Function com `service_role`).
@@ -221,6 +216,13 @@ supabase functions deploy ai-waiter
 
 ## Identidade visual
 
-Logo com destaque tipográfico no "AI" (`js/logo.js`), paleta laranja/vermelho
-(calor, convite) + roxo (tecnologia/IA), definida no `tailwind.config` inline
-de cada página (Tailwind via CDN).
+Logo do PedeAí com destaque tipográfico no "AI" (`js/logo.js`), paleta
+laranja/vermelho (calor, convite) + roxo (tecnologia/IA), definida no
+`tailwind.config` inline de cada página (Tailwind via CDN).
+
+Cada restaurante pode ter sua própria logo (seção "Identidade visual" na aba
+Produtos do painel, `restaurante/painel.js`), guardada em `restaurants.logo_url`
+(migration `0009`) e no bucket de Storage `logos`. Ela aparece em destaque no
+cabeçalho do cardápio público, com o nome do restaurante logo abaixo; sem
+logo cadastrada, o cabeçalho mostra só o nome em texto. A marca "PedeAí"
+continua presente, de forma discreta, no rodapé do cardápio.

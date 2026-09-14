@@ -166,11 +166,6 @@ function restaurantListHtml() {
                 <a href="${escapeHtml(panelUrl(r.access_token))}" target="_blank" rel="noreferrer" class="underline truncate text-brand-purple hover:opacity-80 transition">Abrir painel do restaurante</a>
                 <button data-copy-id="${r.id}" data-copy-kind="panel" title="Copiar link do painel" class="text-neutral-400 hover:text-brand-purple transition shrink-0">⧉</button>
               </div>
-              <div class="flex items-center gap-1.5 text-neutral-500">
-                <span>👨‍🍳</span>
-                <a href="${escapeHtml(kitchenUrl(r.access_token))}" target="_blank" rel="noreferrer" class="underline truncate text-brand-purple hover:opacity-80 transition">Abrir tela da cozinha</a>
-                <button data-copy-id="${r.id}" data-copy-kind="kitchen" title="Copiar link da cozinha" class="text-neutral-400 hover:text-brand-purple transition shrink-0">⧉</button>
-              </div>
             </div>
           </div>
           <div class="flex sm:flex-col gap-2 shrink-0">
@@ -516,12 +511,7 @@ function bindRestaurantListEvents() {
       const restaurant = state.restaurants.find((r) => r.id === btn.getAttribute('data-copy-id'))
       if (!restaurant) return
       const kind = btn.getAttribute('data-copy-kind')
-      const link =
-        kind === 'panel'
-          ? panelUrl(restaurant.access_token)
-          : kind === 'kitchen'
-            ? kitchenUrl(restaurant.access_token)
-            : menuUrl(restaurant.slug)
+      const link = kind === 'panel' ? panelUrl(restaurant.access_token) : menuUrl(restaurant.slug)
       copyLinkWithFeedback(link)
     })
   })

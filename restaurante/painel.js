@@ -1,13 +1,5 @@
 // painel.js — página restaurante/index.html?token=... (equivalente ao antigo /r/:accessToken)
 
-const STATUS_META = {
-  pending: { label: 'Pendente', bar: 'border-l-amber-400', badge: 'bg-amber-100 text-amber-700' },
-  preparing: { label: 'Em preparo', bar: 'border-l-blue-400', badge: 'bg-blue-100 text-blue-700' },
-  ready: { label: 'Pronto', bar: 'border-l-emerald-400', badge: 'bg-emerald-100 text-emerald-700' },
-  completed: { label: 'Concluído', bar: 'border-l-neutral-300', badge: 'bg-neutral-100 text-neutral-600' },
-  cancelled: { label: 'Cancelado', bar: 'border-l-red-400', badge: 'bg-red-100 text-red-700' },
-}
-
 const root = document.getElementById('root')
 const accessToken = new URLSearchParams(location.search).get('token')
 
@@ -26,6 +18,9 @@ let editingProduct = null
 let productFormError = ''
 let savingProduct = false
 let imagePreviewUrl = null
+let productHasImage = true // controla se o campo de upload aparece no formulário de produto
+
+let logoSaving = false
 
 async function init() {
   if (!accessToken) {
@@ -66,7 +61,6 @@ function renderPanel() {
             <p class="text-sm text-neutral-500 mt-1">${escapeHtml(restaurant.name)}</p>
           </div>
           <div class="flex items-center gap-3">
-            <a href="${escapeHtml(kitchenUrl(accessToken))}" target="_blank" rel="noreferrer" class="text-xs text-brand-purple underline hover:opacity-80 transition">👨‍🍳 Abrir cozinha ↗</a>
             <a href="${escapeHtml(menuUrl(restaurant.slug))}" target="_blank" rel="noreferrer" class="text-xs text-brand-purple underline hover:opacity-80 transition">Ver cardápio público ↗</a>
           </div>
         </div>
@@ -130,16 +124,12 @@ function renderOrdersList() {
     return emptyStateHtml('🧾', 'Nenhum pedido ainda. Assim que um cliente pedir, aparece aqui na hora.')
   }
   return ordersState
-    .map((order) => {
-      const meta = STATUS_META[order.status] || STATUS_META.pending
-      return `
-    <div class="fade-slide-in bg-white border border-neutral-200 border-l-4 ${meta.bar} rounded-xl p-4 mb-3">
+    .map(
+      (order) => `
+    <div class="fade-slide-in bg-white border border-neutral-200 rounded-xl p-4 mb-3">
       <div class="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <p class="font-medium">${order.table_number ? `Mesa ${escapeHtml(order.table_number)}` : 'Balcão'}</p>
-            <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${meta.badge}">${meta.label}</span>
-          </div>
+          <p class="font-medium">${order.table_number ? `Mesa ${escapeHtml(order.table_number)}` : 'Balcão'}</p>
           ${
             order.customer_name
               ? `<p class="text-sm text-neutral-700 mt-0.5">👤 ${escapeHtml(order.customer_name)}${
@@ -152,24 +142,14 @@ function renderOrdersList() {
           <p class="text-sm text-neutral-600 mt-0.5">R$ ${formatBRL(order.total)}</p>
           <p class="text-xs text-neutral-400">${new Date(order.created_at).toLocaleString('pt-BR')}</p>
         </div>
-        <select data-order-select="${order.id}" class="text-sm border border-neutral-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-purple transition">
-          ${Object.entries(STATUS_META)
-            .map(([value, m]) => `<option value="${value}" ${order.status === value ? 'selected' : ''}>${m.label}</option>`)
-            .join('')}
-        </select>
       </div>
     </div>
   `
-    })
+    )
     .join('')
 }
 
-function bindOrdersTabEvents() {
-  document.getElementById('orders-list').addEventListener('change', (e) => {
-    const orderId = e.target.getAttribute('data-order-select')
-    if (orderId) updateOrderStatus(orderId, e.target.value)
-  })
-}
+function bindOrdersTabEvents() {}
 
 async function loadOrders() {
   const { data, error } = await restaurantClient
@@ -181,11 +161,6 @@ async function loadOrders() {
   ordersState = data || []
   const list = document.getElementById('orders-list')
   if (list) list.innerHTML = renderOrdersList()
-}
-
-async function updateOrderStatus(orderId, status) {
-  const { error } = await restaurantClient.from('orders').update({ status }).eq('id', orderId)
-  if (error) showToast('Erro ao atualizar status do pedido.', 'error')
 }
 
 function subscribeOrders() {
@@ -213,6 +188,7 @@ function unsubscribeOrders() {
 function productsTabHtml() {
   return `
     <div class="space-y-4">
+      <div id="identity-manager">${identityManagerHtml()}</div>
       <div class="flex items-center justify-between">
         <h2 class="font-semibold text-lg">Produtos</h2>
         <button id="new-product-btn" class="bg-brand-orange text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90 active:scale-[0.99] transition">+ Novo produto</button>
@@ -221,6 +197,86 @@ function productsTabHtml() {
       <div id="products-list" class="space-y-5">${skeletonCardsHtml(2)}</div>
     </div>
   `
+}
+
+// ---- Identidade visual (logo do restaurante) ----
+
+function identityManagerHtml() {
+  return `
+    <div class="bg-white border border-neutral-200 rounded-xl p-4 space-y-3">
+      <p class="text-sm font-semibold text-neutral-700">Identidade visual</p>
+      <div class="flex items-center gap-4">
+        <div id="logo-preview" class="w-16 h-16 rounded-xl shrink-0 overflow-hidden border border-neutral-200 ${restaurant.logo_url ? '' : 'img-placeholder text-2xl'}">
+          ${restaurant.logo_url ? `<img src="${escapeHtml(restaurant.logo_url)}" class="w-full h-full object-contain" />` : '🏠'}
+        </div>
+        <div class="flex-1 min-w-0 space-y-1.5">
+          <p class="text-xs text-neutral-500">Aparece no topo do cardápio público, acima do nome do restaurante.</p>
+          <div class="flex items-center gap-3">
+            <label class="text-xs font-medium bg-neutral-100 hover:bg-neutral-200 rounded-lg px-3 py-1.5 cursor-pointer transition ${logoSaving ? 'opacity-50 pointer-events-none' : ''}">
+              ${logoSaving ? 'Enviando...' : restaurant.logo_url ? 'Trocar logo' : 'Enviar logo'}
+              <input type="file" accept="image/*" id="logo-file-input" class="hidden" ${logoSaving ? 'disabled' : ''} />
+            </label>
+            ${
+              restaurant.logo_url
+                ? `<button id="logo-remove-btn" ${logoSaving ? 'disabled' : ''} class="text-xs text-brand-red hover:underline transition disabled:opacity-50">Remover</button>`
+                : ''
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderIdentityManager() {
+  const el = document.getElementById('identity-manager')
+  if (el) el.innerHTML = identityManagerHtml()
+}
+
+async function handleLogoFileChange(e) {
+  const file = e.target.files[0]
+  if (!file) return
+  logoSaving = true
+  renderIdentityManager()
+
+  try {
+    // Mesma convenção de path do bucket "products": logos/{restaurant_id}/{arquivo}
+    // — as policies de storage.objects (migration 0009) exigem esse prefixo.
+    const path = `${restaurant.id}/${crypto.randomUUID()}-${file.name}`
+    const { error: uploadError } = await restaurantClient.storage.from('logos').upload(path, file)
+    if (uploadError) throw uploadError
+    const { data: publicUrlData } = restaurantClient.storage.from('logos').getPublicUrl(path)
+    const logo_url = publicUrlData.publicUrl
+
+    const { error } = await restaurantClient.from('restaurants').update({ logo_url }).eq('id', restaurant.id)
+    if (error) throw error
+
+    restaurant.logo_url = logo_url
+    showToast('Logo atualizada!', 'success')
+  } catch (err) {
+    showToast('Erro ao enviar logo: ' + errorMessage(err), 'error')
+  }
+  logoSaving = false
+  renderIdentityManager()
+}
+
+async function handleLogoRemove() {
+  const confirmed = await showConfirm({
+    title: 'Remover logo',
+    message: 'O cardápio público volta a mostrar só o nome do restaurante em texto. Continuar?',
+    confirmLabel: 'Remover',
+    danger: true,
+  })
+  if (!confirmed) return
+
+  const { error } = await restaurantClient.from('restaurants').update({ logo_url: null }).eq('id', restaurant.id)
+  if (error) {
+    showToast('Erro ao remover logo.', 'error')
+    return
+  }
+  restaurant.logo_url = null
+  showToast('Logo removida.', 'success')
+  renderIdentityManager()
 }
 
 // ---- Categorias (seções do cardápio) ----
@@ -453,6 +509,16 @@ function bindProductsTabEvents() {
   categoriesManager.addEventListener('submit', handleCategoriesManagerSubmit)
   categoriesManager.addEventListener('click', handleCategoriesManagerClick)
   categoriesManager.addEventListener('input', handleCategoriesManagerInput)
+
+  // Mesmo padrão de delegação: #identity-manager em si não é recriado, só o
+  // innerHTML (ver renderIdentityManager).
+  const identityManager = document.getElementById('identity-manager')
+  identityManager.addEventListener('change', (e) => {
+    if (e.target.id === 'logo-file-input') handleLogoFileChange(e)
+  })
+  identityManager.addEventListener('click', (e) => {
+    if (e.target.closest('#logo-remove-btn')) handleLogoRemove()
+  })
 }
 
 async function loadProducts() {
@@ -493,6 +559,7 @@ function openProductForm(product) {
   productFormError = ''
   savingProduct = false
   imagePreviewUrl = product ? product.image_url : null
+  productHasImage = product ? !!product.image_url : true
   renderProductFormModal()
 }
 
@@ -521,11 +588,22 @@ function productFormHtml() {
             )
             .join('')}
         </select>
-        <div class="flex items-center gap-3">
-          <div id="pf-image-preview" class="w-14 h-14 rounded-lg shrink-0 overflow-hidden ${imagePreviewUrl ? '' : 'img-placeholder text-xl'}">
-            ${imagePreviewUrl ? `<img src="${escapeHtml(imagePreviewUrl)}" class="w-full h-full object-cover" />` : '🍽️'}
+        <div class="space-y-2">
+          <p class="text-xs font-semibold text-neutral-500">Foto do produto</p>
+          <div class="flex gap-2">
+            <label data-has-image-option="yes" class="flex-1 flex items-center justify-center text-sm border rounded-lg px-3 py-2 cursor-pointer transition ${productHasImage ? 'border-brand-purple bg-brand-purple/5 text-brand-purple font-medium' : 'border-neutral-300 text-neutral-500'}">
+              <input type="radio" name="pf-has-image" value="yes" class="hidden" ${productHasImage ? 'checked' : ''} /> Tem imagem
+            </label>
+            <label data-has-image-option="no" class="flex-1 flex items-center justify-center text-sm border rounded-lg px-3 py-2 cursor-pointer transition ${!productHasImage ? 'border-brand-purple bg-brand-purple/5 text-brand-purple font-medium' : 'border-neutral-300 text-neutral-500'}">
+              <input type="radio" name="pf-has-image" value="no" class="hidden" ${!productHasImage ? 'checked' : ''} /> Não tem imagem
+            </label>
           </div>
-          <input type="file" accept="image/*" id="pf-image" class="flex-1 text-xs" />
+          <div id="pf-image-section" class="flex items-center gap-3 ${productHasImage ? '' : 'hidden'}">
+            <div id="pf-image-preview" class="w-14 h-14 rounded-lg shrink-0 overflow-hidden ${imagePreviewUrl ? '' : 'img-placeholder text-xl'}">
+              ${imagePreviewUrl ? `<img src="${escapeHtml(imagePreviewUrl)}" class="w-full h-full object-cover" />` : '🍽️'}
+            </div>
+            <input type="file" accept="image/*" id="pf-image" class="flex-1 text-xs" />
+          </div>
         </div>
         ${productFormError ? `<p class="text-brand-red text-sm flex items-center gap-1.5">⚠️ ${escapeHtml(productFormError)}</p>` : ''}
         <div class="flex gap-2 pt-2">
@@ -555,6 +633,25 @@ function bindProductFormEvents() {
   document.getElementById('pf-cancel').addEventListener('click', closeProductForm)
   document.getElementById('pf-image').addEventListener('change', handleImagePreview)
   form.addEventListener('submit', handleProductFormSubmit)
+
+  // Alterna só a visibilidade do campo de upload (sem re-render do form
+  // inteiro) para não perder o que o restaurante já digitou nos outros
+  // campos ao trocar de ideia sobre ter foto ou não.
+  form.querySelectorAll('input[name="pf-has-image"]').forEach((radio) => {
+    radio.addEventListener('change', (e) => {
+      productHasImage = e.target.value === 'yes'
+      document.getElementById('pf-image-section').classList.toggle('hidden', !productHasImage)
+      form.querySelectorAll('[data-has-image-option]').forEach((label) => {
+        const active = label.getAttribute('data-has-image-option') === (productHasImage ? 'yes' : 'no')
+        label.classList.toggle('border-brand-purple', active)
+        label.classList.toggle('bg-brand-purple/5', active)
+        label.classList.toggle('text-brand-purple', active)
+        label.classList.toggle('font-medium', active)
+        label.classList.toggle('border-neutral-300', !active)
+        label.classList.toggle('text-neutral-500', !active)
+      })
+    })
+  })
 }
 
 function onProductFormKeydown(e) {
@@ -591,9 +688,12 @@ async function handleProductFormSubmit(e) {
       .map((i) => i.trim())
       .filter(Boolean)
     const category_id = document.getElementById('pf-category').value || null
-    const imageFile = document.getElementById('pf-image').files[0]
+    const hasImage = document.querySelector('input[name="pf-has-image"]:checked').value === 'yes'
+    const imageFile = hasImage ? document.getElementById('pf-image').files[0] : null
 
-    let image_url = editingProduct ? editingProduct.image_url : null
+    // "Não tem imagem" limpa qualquer foto anterior — sem foto_url, o
+    // cardápio trata o produto como sem imagem (sem placeholder reservado).
+    let image_url = hasImage ? (editingProduct ? editingProduct.image_url : null) : null
 
     if (imageFile) {
       // Path com prefixo do restaurant_id: as policies de storage.objects

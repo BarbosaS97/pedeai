@@ -134,6 +134,25 @@ function buildInitialChatMessage() {
   return `Pede aí${greeting}! Eu sou o Ari, garçom do ${restaurant.name}. O que você tá com vontade de comer hoje?`
 }
 
+// ---- Card de apresentação do Ari (acima das categorias) ----
+// Diferente do balão de dica (temporário, some sozinho), este card fica fixo
+// no topo do cardápio — é a primeira explicação de quem é o Ari e pra que
+// serve, antes mesmo do cliente olhar os pratos.
+function ariIntroHtml() {
+  return `
+    <div id="ari-intro" class="fade-slide-in bg-gradient-to-br from-brand-purple to-indigo-600 rounded-2xl p-4 shadow-sm space-y-3">
+      <div class="flex items-center gap-3">
+        ${chatAvatarHtml('w-12 h-12 ring-2 ring-white/30 shrink-0')}
+        <div class="min-w-0">
+          <p class="text-white font-semibold text-sm">Sou o Ari, seu garçom</p>
+          <p class="text-white/80 text-xs mt-0.5 leading-snug">Peça sugestões, tire dúvidas ou monte seu pedido — é só chamar.</p>
+        </div>
+      </div>
+      <button id="ari-intro-btn" class="w-full bg-white text-brand-purple text-sm font-semibold rounded-full py-2.5 hover:opacity-90 active:scale-[0.98] transition">Conversar com o Ari</button>
+    </div>
+  `
+}
+
 // ---- Balão de dica do Ari (chama atenção pro chat na primeira olhada) ----
 
 function chatHintHtml() {
@@ -376,21 +395,37 @@ function pageHtml() {
   return `
     <div class="min-h-[100dvh] bg-neutral-50 pb-32">
       <header class="relative bg-gradient-to-br from-brand-orange to-brand-red px-4 sm:px-6 pt-5 pb-5 sm:pt-6 sm:pb-6 overflow-hidden">
-        <div class="flex items-center justify-between gap-3">
-          ${renderLogo({ size: 'sm', light: true })}
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            ${
+              restaurant.logo_url
+                ? `
+              <div class="inline-block bg-white/95 rounded-xl px-2.5 py-1.5 shadow-sm">
+                <img src="${escapeHtml(restaurant.logo_url)}" alt="${escapeHtml(restaurant.name)}" class="h-8 sm:h-9 max-w-[9rem] sm:max-w-[11rem] object-contain" />
+              </div>
+              <p class="text-white/90 text-xs sm:text-sm font-medium mt-1.5 truncate">${escapeHtml(restaurant.name)}</p>
+            `
+                : `<p class="text-white font-bold text-lg sm:text-xl leading-tight truncate">${escapeHtml(restaurant.name)}</p>`
+            }
+          </div>
           ${
             numero
               ? `<span class="flex items-center gap-1.5 text-xs font-semibold text-white bg-black/25 backdrop-blur rounded-full px-3 py-1.5 shrink-0"><span class="shrink-0">${ICON_TABLE}</span>Mesa ${escapeHtml(numero)}</span>`
               : ''
           }
         </div>
-        <p class="text-white/85 text-sm font-medium mt-3.5 truncate">${escapeHtml(restaurant.name)}</p>
-        <h1 class="text-xl sm:text-2xl font-bold text-white mt-0.5 break-words">O que você deseja hoje?</h1>
+        <h1 class="text-xl sm:text-2xl font-bold text-white mt-3.5 break-words">O que você deseja hoje?</h1>
       </header>
 
       <main class="max-w-2xl mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-6">
+        ${ariIntroHtml()}
         ${menuContentHtml()}
       </main>
+
+      <footer class="max-w-2xl mx-auto px-4 pb-4 -mt-2 flex items-center justify-center gap-1.5 text-neutral-400">
+        <span class="text-[11px]">Cardápio digital por</span>
+        <span class="font-extrabold text-sm tracking-tight"><span class="text-neutral-400">Pede</span><span class="brand-ai">AI</span></span>
+      </footer>
 
       <!-- Botão flutuante do Ari — coração da proposta "Pede AI" -->
       <button
@@ -472,13 +507,13 @@ function menuSectionHtml(g) {
   `
 }
 
+// Produto sem foto não reserva nenhum espaço de imagem (sem placeholder
+// cinza, sem ícone de "sem foto") — o card se reorganiza sozinho porque o
+// flex simplesmente fica com um filho a menos.
 function productImageHtml(p, size) {
-  const boxClass = size === 'sm' ? 'w-14 h-14' : 'w-[4.5rem] h-[4.5rem] sm:w-20 sm:h-20'
-  const iconClass = size === 'sm' ? 'text-xl' : 'text-2xl sm:text-3xl'
-  if (p.image_url) {
-    return `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="${boxClass} rounded-lg object-cover shrink-0" />`
-  }
-  return `<div class="img-placeholder ${boxClass} rounded-lg shrink-0 ${iconClass}">🍽️</div>`
+  if (!p.image_url) return ''
+  const boxClass = size === 'sm' ? 'w-14 h-14' : 'w-16 h-16 sm:w-20 sm:h-20'
+  return `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="${boxClass} rounded-lg object-cover shrink-0" />`
 }
 
 function productCardHtml(p) {
@@ -493,7 +528,7 @@ function productCardHtml(p) {
         ${p.description ? `<p class="text-sm text-neutral-500 line-clamp-2 mt-0.5">${escapeHtml(p.description)}</p>` : ''}
         <div class="flex items-center justify-between mt-2 gap-2">
           <span class="font-semibold text-brand-orange">R$ ${formatBRL(p.price)}</span>
-          <button data-add="${p.id}" class="text-sm font-medium bg-brand-purple text-white rounded-full px-4 py-2 hover:opacity-90 active:scale-95 transition shrink-0">+ Adicionar</button>
+          <button data-add="${p.id}" class="text-xs sm:text-sm font-medium bg-brand-purple text-white rounded-full px-3.5 sm:px-4 py-2 hover:opacity-90 active:scale-95 transition shrink-0">+ Adicionar</button>
         </div>
       </div>
     </div>
@@ -514,11 +549,11 @@ function productDetailModalHtml() {
           ${
             p.image_url
               ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="w-full h-44 sm:h-52 object-cover" />`
-              : `<div class="img-placeholder w-full h-36 text-5xl">🍽️</div>`
+              : ''
           }
-          <button id="detail-close" title="Fechar" class="absolute top-3 right-3 bg-white/95 hover:bg-white text-neutral-600 rounded-full w-9 h-9 flex items-center justify-center shadow transition">✕</button>
+          <button id="detail-close" title="Fechar" class="absolute top-3 right-3 z-10 bg-white/95 hover:bg-white text-neutral-600 rounded-full w-9 h-9 flex items-center justify-center shadow transition">✕</button>
         </div>
-        <div class="p-5 space-y-3">
+        <div class="p-5 ${p.image_url ? '' : 'pt-10'} space-y-3">
           <div>
             <h3 class="text-lg font-bold leading-snug">${escapeHtml(p.name)}</h3>
             <p class="text-brand-orange font-semibold mt-0.5">R$ ${formatBRL(p.price)}</p>
@@ -597,16 +632,16 @@ function cartItemRowHtml(i) {
         <div data-edit-item="${i.product.id}" class="cursor-pointer">
           <div class="flex items-start justify-between gap-2">
             <p class="font-medium text-sm leading-snug">${escapeHtml(i.product.name)}</p>
-            <button data-remove="${i.product.id}" title="Remover item" class="text-neutral-300 hover:text-brand-red transition shrink-0 w-7 h-7 -mt-1 -mr-1 flex items-center justify-center">🗑</button>
+            <button data-remove="${i.product.id}" title="Remover item" class="text-neutral-300 hover:text-brand-red transition shrink-0 w-9 h-9 -mt-1.5 -mr-1.5 flex items-center justify-center">🗑</button>
           </div>
           <p class="text-xs text-neutral-400">R$ ${formatBRL(i.product.price)} cada</p>
           ${i.notes ? `<p class="text-xs text-neutral-500 italic mt-0.5">"${escapeHtml(i.notes)}"</p>` : ''}
         </div>
         <div class="flex items-center justify-between mt-2">
           <div class="flex items-center gap-2">
-            <button data-dec="${i.product.id}" class="qty-btn w-8 h-8 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">−</button>
+            <button data-dec="${i.product.id}" class="qty-btn w-9 h-9 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">−</button>
             <span class="w-5 text-center text-sm tabular-nums">${i.quantity}</span>
-            <button data-inc="${i.product.id}" class="qty-btn w-8 h-8 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">+</button>
+            <button data-inc="${i.product.id}" class="qty-btn w-9 h-9 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">+</button>
           </div>
           <span class="font-semibold text-sm text-brand-orange">R$ ${formatBRL(lineTotal)}</span>
         </div>
@@ -666,7 +701,7 @@ function chatModalHtml() {
 
   return `
     <div id="chat-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div id="chat-box" class="modal-box bg-neutral-50 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[88dvh] sm:h-[34rem] flex flex-col overflow-hidden shadow-2xl">
+      <div id="chat-box" class="modal-box bg-neutral-50 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[calc(var(--vvh,100dvh)*0.88)] sm:h-[34rem] flex flex-col overflow-hidden shadow-2xl">
         <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand-purple to-indigo-600 text-white shrink-0">
           <div class="flex items-center gap-2.5 min-w-0">
             ${chatAvatarHtml('w-10 h-10 ring-2 ring-white/25')}
@@ -797,6 +832,15 @@ function bindPageEvents() {
     dismissChatHint()
     renderPage()
   })
+
+  const ariIntroBtn = document.getElementById('ari-intro-btn')
+  if (ariIntroBtn) {
+    ariIntroBtn.addEventListener('click', () => {
+      chatOpen = true
+      dismissChatHint()
+      renderPage()
+    })
+  }
 
   const chatHint = document.getElementById('chat-hint')
   if (chatHint) {
@@ -1207,5 +1251,22 @@ function scrollChatToBottom() {
   const el = document.getElementById('chat-messages')
   if (el) el.scrollTop = el.scrollHeight
 }
+
+// iOS Safari não encolhe `dvh` quando o teclado abre (ele só reflete a
+// UI do navegador, não o teclado) — então uma folha fixa com altura em dvh
+// (o chat, ver chatModalHtml) pode ficar com o rodapé (campo de texto +
+// botão enviar) escondido atrás do teclado. window.visualViewport reflete a
+// área realmente visível (já descontando o teclado); guardamos a altura dele
+// numa custom property e o CSS/Tailwind arbitrário usam essa variável em vez
+// de depender só de dvh.
+function syncVisualViewportHeight() {
+  const vv = window.visualViewport
+  document.documentElement.style.setProperty('--vvh', `${vv ? vv.height : window.innerHeight}px`)
+}
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', syncVisualViewportHeight)
+  window.visualViewport.addEventListener('scroll', syncVisualViewportHeight)
+}
+syncVisualViewportHeight()
 
 init()

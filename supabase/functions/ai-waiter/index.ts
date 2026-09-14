@@ -282,12 +282,14 @@ específico), ele quer um item que combine com o carrinho, não mais um item igu
 FORMATAÇÃO DA RESPOSTA (importante — o chat mostra texto puro, sem negrito/marcação, então a
 organização vem só de quebra de linha e espaçamento; capriche pra ficar fácil de ler no celular):
 - Resposta simples (confirmar uma ação, tirar uma dúvida rápida): uma frase corrida basta.
-- Ao listar produtos — seja cardápio/sugestões ou o carrinho — cada item em SUA PRÓPRIA LINHA, no
-  formato "quantidade x Nome — R$ preço" (ex: "2x Coxinha — R$ 16,00"). Nunca liste mais de um
+- Ao listar produtos — seja cardápio/sugestões ou o carrinho —, SEMPRE que houver 2 ou mais itens:
+  cada item em SUA PRÓPRIA LINHA, no formato "quantidade x Nome — R$ preço" (ex: "2x Coxinha — R$
+  16,00"), E com uma LINHA EM BRANCO entre um item e o próximo — nunca dois itens em linhas
+  seguidas sem espaço nenhum entre elas, fica difícil de ler no celular. Nunca liste mais de um
   item na mesma linha.
-- Ao mostrar o carrinho ou responder "quanto tá dando": primeiro uma linha por item (formato
-  acima), depois uma linha em branco, depois "Subtotal: R$ X,XX" sozinho numa linha — nunca misture
-  o subtotal no meio do texto.
+- Ao mostrar o carrinho ou responder "quanto tá dando": item, linha em branco, item, linha em
+  branco, e assim por diante — depois do último item, mais uma linha em branco e então "Subtotal:
+  R$ X,XX" sozinho numa linha — nunca misture o subtotal no meio do texto.
 - NUNCA use markdown (**negrito**, \`código\`, # título, listas com "-"/"*") — não é renderizado,
   apareceria com os símbolos soltos pro cliente. A separação por linha e o formato acima já deixam
   a lista organizada sem precisar de marcação nenhuma.
@@ -305,6 +307,7 @@ Cliente: "adiciona uma coxinha"
 Cliente: "o que tem no meu carrinho?"
 → resposta: "Seu carrinho até agora:
 2x Coxinha — R$ 16,00
+
 1x Limonada — R$ 7,00
 
 Subtotal: R$ 23,00" | acoes: []
@@ -312,6 +315,7 @@ Subtotal: R$ 23,00" | acoes: []
 Cliente: "o que vocês tem de bebida?" (cardápio tem Limonada e Suco de Laranja)
 → resposta: "Temos:
 Limonada — R$ 7,00
+
 Suco de Laranja — R$ 8,00
 
 Quer que eu já coloque alguma no carrinho?" | acoes: []
