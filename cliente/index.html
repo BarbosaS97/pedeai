@@ -37,7 +37,11 @@
         theme: {
           extend: {
             colors: {
-              brand: { orange: '#FF6823', red: '#E63946', blue: '#2563EB' },
+              // orange vem de uma CSS var (--brand-orange-rgb, ver css/style.css
+              // e js/util.js applyThemeColor()) pra poder ser a cor de destaque
+              // cadastrada por CADA restaurante (restaurants.theme_color,
+              // migration 0012), em vez de fixa — red/blue continuam fixos.
+              brand: { orange: 'rgb(var(--brand-orange-rgb) / <alpha-value>)', red: '#E63946', blue: '#2563EB' },
               // Tema escuro do cardápio público: fundo quase-preto com leve
               // calor (não é cinza puro), cartões um tom acima do fundo, e
               // uma borda quase invisível só pra separar o cartão do fundo

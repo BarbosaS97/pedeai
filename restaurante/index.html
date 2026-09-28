@@ -19,7 +19,10 @@
         theme: {
           extend: {
             colors: {
-              brand: { orange: '#FF6823', red: '#E63946', blue: '#2563EB' },
+              // Mesmo esquema do cardápio público (cliente/index.html): orange
+              // vem de uma CSS var pra refletir a cor de destaque cadastrada
+              // pelo restaurante (restaurants.theme_color, migration 0012).
+              brand: { orange: 'rgb(var(--brand-orange-rgb) / <alpha-value>)', red: '#E63946', blue: '#2563EB' },
             },
             fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
           },

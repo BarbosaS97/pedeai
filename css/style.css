@@ -1,9 +1,13 @@
 /* style.css — sistema de design compartilhado, além dos utilitários do Tailwind (CDN). */
 
 :root {
-  --brand-orange: #ff6823;
-  --brand-red: #e63946;
-  --brand-blue: #2563eb;
+  /* "R G B" (sem vírgula, formato exigido dentro de rgb(var(...) / alpha)) —
+     fallback = o laranja padrão (#FF6823). cliente/cardapio.js e
+     restaurante/painel.js sobrescrevem isso com a cor cadastrada pelo
+     restaurante (restaurants.theme_color, migration 0012) assim que os
+     dados do restaurante carregam — ver applyThemeColor() em js/util.js e
+     `colors.brand.orange` no tailwind.config de cada index.html. */
+  --brand-orange-rgb: 255 104 35;
 }
 
 * {
@@ -45,7 +49,7 @@ body {
   box-shadow: 0 10px 24px -8px rgba(37, 99, 235, 0.45), 0 2px 8px rgba(37, 99, 235, 0.18);
 }
 .shadow-brand-ai {
-  box-shadow: 0 10px 24px -8px rgba(230, 57, 70, 0.4), 0 2px 8px rgba(255, 107, 53, 0.22);
+  box-shadow: 0 10px 24px -8px rgba(230, 57, 70, 0.4), 0 2px 8px rgb(var(--brand-orange-rgb) / 0.22);
 }
 
 
@@ -256,8 +260,8 @@ textarea {
   --action-accent-bg: rgba(59, 130, 246, 0.16);
 }
 .action-card--note {
-  --action-accent: #ff6823;
-  --action-accent-bg: rgba(255, 107, 53, 0.16);
+  --action-accent: rgb(var(--brand-orange-rgb));
+  --action-accent-bg: rgb(var(--brand-orange-rgb) / 0.16);
 }
 @keyframes action-card-in {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
@@ -295,7 +299,7 @@ textarea {
 
 /* ---- Destaque temporário da linha do carrinho que o chat acabou de mudar ---- */
 @keyframes row-highlight {
-  0% { background-color: rgba(255, 107, 53, 0.22); }
+  0% { background-color: rgb(var(--brand-orange-rgb) / 0.22); }
   100% { background-color: transparent; }
 }
 .row-highlight {

@@ -30,6 +30,25 @@ function errorMessage(err) {
   }
 }
 
+// Aplica a cor de destaque do restaurante (restaurants.theme_color, migration
+// 0012) como CSS var — cliente/cardapio.js e restaurante/painel.js chamam
+// isso assim que os dados do restaurante carregam, antes do primeiro render.
+// tailwind.config (cliente/index.html e restaurante/index.html) define
+// `brand.orange` como `rgb(var(--brand-orange-rgb) / <alpha-value>)`, então
+// toda classe existente (bg-brand-orange, text-brand-orange/40 etc.) já pega
+// a cor certa sozinha — sem precisar trocar nenhuma className. Hex inválido
+// (ou ausente) não faz nada: o :root em css/style.css já tem o laranja padrão
+// como fallback.
+function applyThemeColor(hex) {
+  const match = typeof hex === 'string' ? /^#?([0-9a-f]{6})$/i.exec(hex.trim()) : null
+  if (!match) return
+  const int = parseInt(match[1], 16)
+  const r = (int >> 16) & 255
+  const g = (int >> 8) & 255
+  const b = int & 255
+  document.documentElement.style.setProperty('--brand-orange-rgb', `${r} ${g} ${b}`)
+}
+
 function loadingHtml(text) {
   return `<div class="min-h-screen flex items-center justify-center text-neutral-400">${escapeHtml(
     text || 'Carregando...'

@@ -86,7 +86,7 @@ js/                            módulos compartilhados pelas três áreas acima
   supabase-client.js            clientes Supabase (público + com token do restaurante)
   qrcode-helper.js              URL do cardápio e do painel + geração de QR Code no cliente
 supabase/
-  migrations/                  11 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante, leads, observações/destaque de produto)
+  migrations/                  12 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante, leads, observações/destaque de produto, cor de destaque do restaurante)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
 ```
 
@@ -258,7 +258,7 @@ hospedagem estática).
 Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https://supabase.com/dashboard) do projeto (`thwnhgpjysykkoblbtrd`):
 
 1. **Migrations** → menu **SQL Editor** → **New query**. Abra cada arquivo de
-   `supabase/migrations/` (nessa ordem: `0001` a `0011`), cole o conteúdo
+   `supabase/migrations/` (nessa ordem: `0001` a `0012`), cole o conteúdo
    inteiro do arquivo e clique **Run**. Rode uma de cada vez, na ordem — cada
    uma depende de tabelas/extensões criadas na anterior. O botão
    "Mesas" do admin e a validação de `?mesa=` no cardápio só funcionam depois
@@ -272,7 +272,11 @@ Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https:
    do restaurante" e o checkbox "Destacar no cardápio" no formulário de
    produto (`restaurante/painel.js`) só funcionam depois da `0011` (colunas
    `products.notas_restaurante`/`products.destaque`) — antes disso, salvar um
-   produto falha com erro de coluna inexistente.
+   produto falha com erro de coluna inexistente. O seletor de "Cor de
+   destaque" na Identidade visual do painel só funciona depois da `0012`
+   (coluna `restaurants.theme_color`) — antes disso, salvar a cor falha com
+   erro de coluna inexistente (o cardápio e o painel continuam funcionando
+   normalmente com o laranja padrão, que é só um fallback em CSS).
 2. **Secret da DeepSeek** → menu **Edge Functions** → **Manage secrets** →
    adicione `DEEPSEEK_API_KEY` com sua chave. Esse secret nunca vai para o
    frontend.
@@ -336,3 +340,24 @@ logo cadastrada, o cabeçalho mostra só o nome em texto. A marca "PapeiAI —
 Cardápio Digital" continua presente, de forma discreta, no rodapé do
 cardápio. O garçom IA em si sempre se apresenta só como "Ari", sem o nome do
 produto junto (ver cabeçalho do chat em `cliente/cardapio.js`).
+
+**Cor de destaque por restaurante** (migration `0012`, `restaurants.theme_color`,
+formato `#RRGGBB`, padrão `#FF6823` — o laranja atual): mesma seção
+"Identidade visual" do painel tem um seletor de cor (color picker nativo +
+campo de texto hex, com pré-visualização ao vivo) que substitui o laranja em
+tudo que hoje é `brand-orange` — botões, badges (ex: "Destaque"), preços,
+avatar/bolha do chat do Ari, FAB — tanto no cardápio público quanto no
+próprio painel. Vermelho (erro/exclusão/gradiente) e azul (links) continuam
+fixos, só a cor de destaque é editável; o tema do cardápio continua **sempre
+escuro** (isso não é um dark/light toggle). Tecnicamente, como o Tailwind vem
+por CDN sem build, isso é feito sem trocar nenhuma classe: `brand.orange` no
+`tailwind.config` de `cliente/index.html`/`restaurante/index.html` é definido
+como `rgb(var(--brand-orange-rgb) / <alpha-value>)`, e `applyThemeColor()`
+(`js/util.js`) converte o hex salvo em `"R G B"` e escreve a CSS var
+`--brand-orange-rgb` no `<html>` assim que os dados do restaurante carregam
+(`cardapio.js`/`painel.js`, antes do primeiro render) — toda classe existente
+(`bg-brand-orange`, `text-brand-orange/40`, `from-brand-orange` etc., e as
+classes utilitárias em `css/style.css` como `.shadow-brand-ai`) já lê essa
+var sozinha. `admin/` e a landing (`index.html` da raiz) NÃO participam disso
+— continuam com o laranja do PapeiAI fixo no `tailwind.config` delas, porque
+são ferramentas do PapeiAI, não do restaurante.

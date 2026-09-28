@@ -286,6 +286,11 @@ async function init() {
     return
   }
 
+  // Antes de qualquer render: aplica a cor de destaque cadastrada pelo
+  // restaurante (ver js/util.js) pra já pintar certo desde a primeira tela,
+  // sem flash do laranja padrão trocando pra cor escolhida.
+  applyThemeColor(restaurant.theme_color)
+
   // Se o QR Code trouxe uma mesa (?mesa=N, gerado pelo admin — ver
   // admin/mesas-print.html), confirma que ela existe e está ativa antes de
   // liberar o resto da página. Sem isso, uma mesa quebrada/removida do salão
