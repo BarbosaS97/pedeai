@@ -8,8 +8,13 @@ let restaurant = null
 let activeTab = 'orders'
 let ordersPollTimer = null
 
+// Ícone de estrela (usado só no badge de "Destaque" na lista de produtos) —
+// SVG, não emoji, pra ficar consistente com o cardápio público.
+const ICON_STAR = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.6 3.6 2.4 5.4 6 6-3.6.6-5.4 2.4-6 6-.6-3.6-2.4-5.4-6-6 3.6-.6 5.4-2.4 6-6Z"/></svg>`
+
 let ordersState = []
 let productsState = []
+let productsFilter = 'all' // 'all' | 'available' | 'unavailable' — ver filteredProductsState()
 let categoriesState = []
 let newCategoryName = ''
 let renamingCategoryId = null
@@ -194,6 +199,7 @@ function productsTabHtml() {
         <button id="new-product-btn" class="bg-brand-orange text-white text-sm font-semibold rounded-lg px-4 py-2 hover:opacity-90 active:scale-[0.99] transition">+ Novo produto</button>
       </div>
       <div id="categories-manager">${categoriesManagerHtml()}</div>
+      <div id="products-filter">${productsFilterHtml()}</div>
       <div id="products-list" class="space-y-5">${skeletonCardsHtml(2)}</div>
     </div>
   `
@@ -419,6 +425,32 @@ async function deleteCategory(c) {
 
 // ---- Produtos ----
 
+const PRODUCTS_FILTER_OPTIONS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'available', label: 'Ativos' },
+  { value: 'unavailable', label: 'Desativados' },
+]
+
+function productsFilterHtml() {
+  return `
+    <div class="flex gap-2">
+      ${PRODUCTS_FILTER_OPTIONS.map(
+        (opt) => `
+        <button data-products-filter="${opt.value}" class="px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+          productsFilter === opt.value ? 'bg-brand-blue text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+        }">${opt.label}</button>
+      `
+      ).join('')}
+    </div>
+  `
+}
+
+function filteredProductsState() {
+  if (productsFilter === 'available') return productsState.filter((p) => p.is_available)
+  if (productsFilter === 'unavailable') return productsState.filter((p) => !p.is_available)
+  return productsState
+}
+
 function productImageHtml(p) {
   if (p.image_url) {
     return `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="w-16 h-16 rounded-lg object-cover shrink-0" />`
@@ -431,9 +463,10 @@ function productRowHtml(p) {
     <div class="fade-slide-in card-hover bg-white border border-neutral-200 rounded-xl p-4 flex gap-4 shadow-sm ${p.is_available ? '' : 'opacity-60'}">
       ${productImageHtml(p)}
       <div class="flex-1 min-w-0">
-        <p class="font-medium truncate">
+        <p class="font-medium truncate flex items-center gap-1.5">
           ${escapeHtml(p.name)}
           ${!p.is_available ? '<span class="text-xs text-neutral-400 font-normal">(indisponível)</span>' : ''}
+          ${p.destaque ? `<span class="inline-flex items-center gap-1 text-xs text-brand-orange font-medium shrink-0">${ICON_STAR}Destaque</span>` : ''}
         </p>
         <p class="text-sm text-neutral-500 line-clamp-2">${escapeHtml(p.description || '')}</p>
         <p class="text-sm font-semibold text-brand-orange mt-1">R$ ${formatBRL(p.price)}</p>
@@ -449,16 +482,14 @@ function productRowHtml(p) {
 
 // Agrupa produtos pela categoria (mesma lógica usada no cardápio público, ver
 // cliente/cardapio.js) — serve de prévia pro restaurante de como vai ficar.
-function buildProductGroups() {
+function buildProductGroups(items) {
   if (categoriesState.length === 0) return null
   const groups = categoriesState.map((c) => ({
     id: c.id,
     name: c.name,
-    items: productsState.filter((p) => p.category_id === c.id),
+    items: items.filter((p) => p.category_id === c.id),
   }))
-  const uncategorized = productsState.filter(
-    (p) => !p.category_id || !categoriesState.some((c) => c.id === p.category_id)
-  )
+  const uncategorized = items.filter((p) => !p.category_id || !categoriesState.some((c) => c.id === p.category_id))
   if (uncategorized.length > 0) groups.push({ id: null, name: 'Outros', items: uncategorized })
   return groups.filter((g) => g.items.length > 0)
 }
@@ -468,9 +499,14 @@ function renderProductsList() {
     return emptyStateHtml('🍽️', 'Nenhum produto cadastrado ainda. Clique em "+ Novo produto" para começar.')
   }
 
-  const groups = buildProductGroups()
+  const items = filteredProductsState()
+  if (items.length === 0) {
+    return emptyStateHtml('🍽️', 'Nenhum produto nesse filtro.')
+  }
+
+  const groups = buildProductGroups(items)
   if (!groups) {
-    return `<div class="space-y-3">${productsState.map(productRowHtml).join('')}</div>`
+    return `<div class="space-y-3">${items.map(productRowHtml).join('')}</div>`
   }
 
   return groups
@@ -492,6 +528,13 @@ function refreshProductsListDisplay() {
 
 function bindProductsTabEvents() {
   document.getElementById('new-product-btn').addEventListener('click', () => openProductForm(null))
+  document.getElementById('products-filter').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-products-filter]')
+    if (!btn) return
+    productsFilter = btn.getAttribute('data-products-filter')
+    document.getElementById('products-filter').innerHTML = productsFilterHtml()
+    refreshProductsListDisplay()
+  })
   document.getElementById('products-list').addEventListener('click', (e) => {
     const btn = e.target.closest('[data-action]')
     if (!btn) return
@@ -605,6 +648,18 @@ function productFormHtml() {
             <input type="file" accept="image/*" id="pf-image" class="flex-1 text-xs" />
           </div>
         </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label for="pf-notes" class="text-xs font-semibold text-neutral-500">Observações do restaurante (para o Ari)</label>
+            <span id="pf-notes-counter" class="text-xs text-neutral-400">${p && p.notas_restaurante ? p.notas_restaurante.length : 0}/300</span>
+          </div>
+          <textarea id="pf-notes" rows="2" maxlength="300" placeholder="Ex: contém glúten, servido frio, não dá pra tirar a cebola..." class="w-full border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue transition">${escapeHtml(p && p.notas_restaurante ? p.notas_restaurante : '')}</textarea>
+          <p class="text-[11px] text-neutral-400 mt-1">Diferente de "ingredientes": isso é o que o Ari usa pra responder dúvidas do cliente sobre o prato (alergênicos, tempo de preparo, restrições etc.) — não aparece no cardápio.</p>
+        </div>
+        <label class="flex items-center gap-2 text-sm text-neutral-700 cursor-pointer">
+          <input type="checkbox" id="pf-destaque" ${p && p.destaque ? 'checked' : ''} class="rounded border-neutral-300 text-brand-blue focus:ring-brand-blue" />
+          Destacar no cardápio (máx. 3 por restaurante)
+        </label>
         ${productFormError ? `<p class="text-brand-red text-sm flex items-center gap-1.5">⚠️ ${escapeHtml(productFormError)}</p>` : ''}
         <div class="flex gap-2 pt-2">
           <button type="submit" ${savingProduct ? 'disabled' : ''} class="flex-1 bg-brand-blue text-white font-semibold rounded-lg py-2 shadow-brand-blue hover:opacity-90 transition disabled:opacity-50">${savingProduct ? 'Salvando...' : 'Salvar'}</button>
@@ -632,6 +687,10 @@ function bindProductFormEvents() {
   const form = document.getElementById('product-form')
   document.getElementById('pf-cancel').addEventListener('click', closeProductForm)
   document.getElementById('pf-image').addEventListener('change', handleImagePreview)
+  document.getElementById('pf-notes').addEventListener('input', (e) => {
+    const counter = document.getElementById('pf-notes-counter')
+    if (counter) counter.textContent = `${e.target.value.length}/300`
+  })
   form.addEventListener('submit', handleProductFormSubmit)
 
   // Alterna só a visibilidade do campo de upload (sem re-render do form
@@ -688,8 +747,22 @@ async function handleProductFormSubmit(e) {
       .map((i) => i.trim())
       .filter(Boolean)
     const category_id = document.getElementById('pf-category').value || null
+    const notas_restaurante = document.getElementById('pf-notes').value.trim().slice(0, 300) || null
+    const destaque = document.getElementById('pf-destaque').checked
     const hasImage = document.querySelector('input[name="pf-has-image"]:checked').value === 'yes'
     const imageFile = hasImage ? document.getElementById('pf-image').files[0] : null
+
+    // Validação de UX antes de bater no banco — a validação de verdade é o
+    // trigger enforce_max_destaque_products() (migration 0011), que barra
+    // mesmo se essa checagem no frontend for burlada (ex: duas abas abertas).
+    if (destaque) {
+      const outrosDestaques = productsState.filter(
+        (prod) => prod.destaque && (!editingProduct || prod.id !== editingProduct.id)
+      ).length
+      if (outrosDestaques >= 3) {
+        throw new Error('Já existem 3 produtos em destaque. Remova um destaque antes de adicionar outro.')
+      }
+    }
 
     // "Não tem imagem" limpa qualquer foto anterior — sem foto_url, o
     // cardápio trata o produto como sem imagem (sem placeholder reservado).
@@ -714,6 +787,8 @@ async function handleProductFormSubmit(e) {
       ingredients,
       category_id,
       image_url,
+      notas_restaurante,
+      destaque,
     }
 
     const isNew = !editingProduct

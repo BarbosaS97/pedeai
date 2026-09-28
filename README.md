@@ -86,7 +86,7 @@ js/                            módulos compartilhados pelas três áreas acima
   supabase-client.js            clientes Supabase (público + com token do restaurante)
   qrcode-helper.js              URL do cardápio e do painel + geração de QR Code no cliente
 supabase/
-  migrations/                  10 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante, leads)
+  migrations/                  11 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante, leads, observações/destaque de produto)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
 ```
 
@@ -138,6 +138,24 @@ das `acoes`: o servidor só aceita id/nome que resolva pra um produto real do
 cardápio (máximo 8 por resposta), e o frontend (`cliente/cardapio.js`,
 `sendChatMessage`) resolve os ids de novo contra o array `products` já
 carregado antes de montar os cards.
+
+**Observações do restaurante e produto em destaque** (migration `0011`,
+colunas `products.notas_restaurante`/`products.destaque`): no formulário de
+produto do painel, o restaurante pode cadastrar um texto livre (até 300
+caracteres) com informação que o Ari precisa pra responder direito — se o
+prato é servido frio, se contém glúten/lactose, se não dá pra tirar algum
+ingrediente etc. Esse campo é diferente de `ingredients` (lista estruturada,
+aparece no cardápio) e da observação do CLIENTE no carrinho
+(`order_items.notes`) — nunca aparece pro cliente, só entra no prompt da Edge
+Function (`buildSystemPrompt`) como contexto do produto, e só quando o
+produto de fato tem algo cadastrado (produto sem observação não gasta token
+à toa). O mesmo formulário tem um checkbox "Destacar no cardápio", limitado a
+3 produtos por restaurante — validado no frontend (UX) **e** por um trigger
+no banco (`enforce_max_destaque_products`, a validação de verdade, que barra
+mesmo se o frontend for burlado). Produto em destaque aparece marcado
+"DESTAQUE DA CASA" no prompt do Ari (que prioriza recomendá-lo quando fizer
+sentido) e num bloco "Destaques da casa" no topo do cardápio público, acima
+das categorias — some por completo se não houver nenhum destaque cadastrado.
 
 **Categorias (seções do cardápio)**: o restaurante cria categorias livres
 (ex: Entradas, Pratos principais, Bebidas) na aba Produtos do painel
@@ -238,7 +256,7 @@ hospedagem estática).
 Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https://supabase.com/dashboard) do projeto (`thwnhgpjysykkoblbtrd`):
 
 1. **Migrations** → menu **SQL Editor** → **New query**. Abra cada arquivo de
-   `supabase/migrations/` (nessa ordem: `0001` a `0010`), cole o conteúdo
+   `supabase/migrations/` (nessa ordem: `0001` a `0011`), cole o conteúdo
    inteiro do arquivo e clique **Run**. Rode uma de cada vez, na ordem — cada
    uma depende de tabelas/extensões criadas na anterior. O botão
    "Mesas" do admin e a validação de `?mesa=` no cardápio só funcionam depois
@@ -248,7 +266,11 @@ Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https:
    restaurante no cabeçalho do cardápio só funciona depois da `0009`
    (coluna `restaurants.logo_url`). O formulário da landing page
    (`index.html`) só funciona depois da `0010` (tabela `leads`) — antes
-   disso, o envio falha com erro de tabela inexistente.
+   disso, o envio falha com erro de tabela inexistente. O campo "Observações
+   do restaurante" e o checkbox "Destacar no cardápio" no formulário de
+   produto (`restaurante/painel.js`) só funcionam depois da `0011` (colunas
+   `products.notas_restaurante`/`products.destaque`) — antes disso, salvar um
+   produto falha com erro de coluna inexistente.
 2. **Secret da DeepSeek** → menu **Edge Functions** → **Manage secrets** →
    adicione `DEEPSEEK_API_KEY` com sua chave. Esse secret nunca vai para o
    frontend.

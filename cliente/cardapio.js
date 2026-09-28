@@ -40,6 +40,10 @@ const ICON_CAT_MAIN = `<svg width="15" height="15" viewBox="0 0 24 24" fill="non
 const ICON_CAT_DESSERT = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-6a8 8 0 0 1 16 0v6"/><path d="M2 21h20M12 3v4M9 4.5 12 7l3-2.5"/></svg>`
 const ICON_CAT_DRINK = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12l-1.5 15.5a2 2 0 0 1-2 1.8h-5a2 2 0 0 1-2-1.8L6 3Z"/><path d="M5 8h14"/></svg>`
 
+// Ícone do bloco de destaques (products.destaque, migration 0011) — um
+// "sparkle" simples, sem emoji, no mesmo estilo dos outros ícones da página.
+const ICON_SPARKLE = `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.6 3.6 2.4 5.4 6 6-3.6.6-5.4 2.4-6 6-.6-3.6-2.4-5.4-6-6 3.6-.6 5.4-2.4 6-6Z"/></svg>`
+
 // Palavra-chave no nome da categoria (livre, cadastrado pelo restaurante) →
 // ícone + frase de efeito da seção. Cobre os nomes mais comuns; qualquer
 // outro nome cai no fallback genérico, sem quebrar nada.
@@ -538,12 +542,52 @@ function menuContentHtml() {
     return emptyStateHtml('🍽️', 'Cardápio ainda não tem itens disponíveis. Volte daqui a pouco!')
   }
 
+  const destaqueHtml = destaqueSectionHtml()
   const groups = buildMenuGroups()
   if (!groups) {
-    return `<div class="grid grid-cols-3 gap-2">${products.map((p) => productCardHtml(p)).join('')}</div>`
+    return `${destaqueHtml}<div class="grid grid-cols-3 gap-2">${products.map((p) => productCardHtml(p)).join('')}</div>`
   }
 
-  return `${categoryNavHtml(groups)}${groups.map(menuSectionHtml).join('')}`
+  return `${destaqueHtml}${categoryNavHtml(groups)}${groups.map(menuSectionHtml).join('')}`
+}
+
+// Bloco "Destaques da casa" — produtos marcados pelo restaurante (máx. 3, ver
+// restaurante/painel.js) num carrossel de cards maiores, acima das
+// categorias. Some por completo (retorna string vazia, sem deixar espaço
+// reservado) quando o restaurante não tem nenhum destaque cadastrado.
+function destaqueSectionHtml() {
+  const destaques = products.filter((p) => p.destaque)
+  if (destaques.length === 0) return ''
+  return `
+    <section class="space-y-2.5">
+      <div class="flex items-center gap-1.5">
+        <span class="text-brand-orange [&>svg]:w-4 [&>svg]:h-4">${ICON_SPARKLE}</span>
+        <h2 class="text-sm font-bold text-white">Destaques da casa</h2>
+      </div>
+      <div class="flex gap-2.5 overflow-x-auto scroll-contain -mx-3 px-3 sm:-mx-6 sm:px-6 pb-1">
+        ${destaques.map(destaqueCardHtml).join('')}
+      </div>
+    </section>
+  `
+}
+
+// Card maior que o do grid normal (productCardHtml): imagem em destaque,
+// nome, descrição curta e preço. Mesmo modal de detalhe ao tocar (data-expand
+// já é tratado por bindPageEvents, junto com os cards normais).
+function destaqueCardHtml(p) {
+  return `
+    <div data-expand="${p.id}" class="fade-slide-in shrink-0 w-40 bg-surface-card border border-surface-line rounded-xl overflow-hidden cursor-pointer active:opacity-90 transition">
+      <div class="relative aspect-[4/3] w-full bg-surface-raised">
+        ${p.image_url ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy" class="w-full h-full object-cover" />` : ''}
+        <button data-add="${p.id}" title="Adicionar" class="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full bg-brand-orange text-white flex items-center justify-center shadow-lg ring-1 ring-surface-card active:scale-90 transition">${ICON_PLUS}</button>
+      </div>
+      <div class="p-2.5">
+        <p class="text-xs font-semibold text-white leading-snug line-clamp-1">${escapeHtml(p.name)}</p>
+        ${p.description ? `<p class="text-[10px] text-neutral-400 line-clamp-2 mt-0.5 leading-snug">${escapeHtml(p.description)}</p>` : ''}
+        <p class="text-brand-orange font-bold text-xs mt-1">R$ ${formatBRL(p.price)}</p>
+      </div>
+    </div>
+  `
 }
 
 // Chips circulares pra pular direto pra uma seção — só compensa mostrar

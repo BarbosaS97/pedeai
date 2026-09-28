@@ -81,6 +81,15 @@ interface Produto {
   // no carrinho, na hora de recomendar um item complementar — ver
   // buildSystemPrompt().
   category: string | null
+  // Observações do restaurante (products.notas_restaurante, migration 0011)
+  // — texto livre pro Ari usar ao responder dúvida específica ou recomendar
+  // considerando restrição alimentar. Nunca é mostrado ao cliente como está;
+  // só entra no prompt como contexto pro modelo.
+  notes: string | null
+  // products.destaque (migration 0011) — produto que o restaurante marcou
+  // pra aparecer no bloco "Destaques da casa" do cardápio público. O Ari dá
+  // preferência a esses ao recomendar algo em aberto, sem forçar.
+  featured: boolean
 }
 
 interface ResolvedCartItem {
@@ -227,7 +236,7 @@ function buildSystemPrompt(
   const cardapio = produtos
     .map(
       (p) =>
-        `- id:${p.id} | ${p.name} | R$ ${p.price.toFixed(2)}${p.category ? ` | categoria: ${p.category}` : ''}${p.description ? ` — ${p.description}` : ''}`
+        `- id:${p.id} | ${p.name} | R$ ${p.price.toFixed(2)}${p.category ? ` | categoria: ${p.category}` : ''}${p.featured ? ' | DESTAQUE DA CASA' : ''}${p.description ? ` — ${p.description}` : ''}${p.notes ? `\n  Observações do restaurante sobre este prato: ${p.notes}` : ''}`
     )
     .join('\n')
 
@@ -315,6 +324,21 @@ específico), ele quer um item que combine com o carrinho, não mais um item igu
   carrinho (nenhuma categoria complementar com item disponível), não gere ação, deixe
   "produtos_recomendados" vazio e responda exatamente: "Só tenho opções parecidas com o que você
   já escolheu. Quer que eu sugira algo para repetir ou prefere trocar?"
+
+OBSERVAÇÕES DO RESTAURANTE: alguns produtos do cardápio abaixo trazem uma linha "Observações do
+restaurante sobre este prato" — texto que o próprio restaurante cadastrou (ex: se é servido frio,
+se contém glúten/lactose, se não dá pra tirar algum ingrediente, tempo de preparo). Use assim:
+- Pergunta específica sobre o prato ("esse prato tem glúten?", "dá pra tirar a cebola?", "demora
+  quanto?"): responda com base na observação DAQUELE produto.
+- Cliente menciona restrição alimentar (vegetariano, sem glúten, sem lactose etc.) ao pedir
+  recomendação: prefira produtos cuja observação confirme que atendem, evite os que a observação
+  descarta.
+- NUNCA invente uma informação que não está na observação. Se o produto não tiver observação
+  cadastrada (ou ela não cobrir o que foi perguntado), diga que não tem certeza e sugira perguntar
+  ao garçom — não arrisque "sim"/"não" sem base nenhuma.
+- Produtos marcados "DESTAQUE DA CASA" são os favoritos que o restaurante quer destacar — dê
+  preferência a eles ao recomendar algo em aberto (ex: "o que vocês recomendam?"), sem forçar
+  quando não combinarem com o que o cliente pediu.
 
 FORMATAÇÃO DA RESPOSTA (importante — o chat mostra texto puro, sem negrito/marcação, então a
 organização vem só de quebra de linha e espaçamento; capriche pra ficar fácil de ler no celular):
@@ -482,7 +506,7 @@ Deno.serve(async (req) => {
     // ações que o modelo devolver.
     const { data: produtosData, error: produtosError } = await supabase
       .from('products')
-      .select('id, name, description, price, category_id')
+      .select('id, name, description, price, category_id, notas_restaurante, destaque')
       .eq('restaurant_id', restaurant.id)
       .eq('is_available', true)
       .order('name')
@@ -505,12 +529,22 @@ Deno.serve(async (req) => {
     )
 
     const produtos: Produto[] = (produtosData ?? []).map(
-      (p: { id: string; name: string; description: string | null; price: number; category_id: string | null }) => ({
+      (p: {
+        id: string
+        name: string
+        description: string | null
+        price: number
+        category_id: string | null
+        notas_restaurante: string | null
+        destaque: boolean | null
+      }) => ({
         id: p.id,
         name: p.name,
         description: p.description,
         price: p.price,
         category: p.category_id ? categoriaPorId.get(p.category_id) ?? null : null,
+        notes: p.notas_restaurante,
+        featured: !!p.destaque,
       })
     )
     const produtoPorId = new Map(produtos.map((p) => [p.id, p]))
