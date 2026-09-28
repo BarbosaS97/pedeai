@@ -174,7 +174,13 @@
                largura fixa, justify-end de fato empurra ele pro lado direito
                da coluna (mais a sangria -mr por cima), sobrando espaço vazio
                à esquerda — é esse vazio que dá folga pro texto. -->
-          <div class="relative flex justify-center lg:justify-end lg:-mr-16 xl:-mr-24">
+          <!-- mt- no mobile/tablet: no celular a seção empilha (texto em
+               cima, Ari embaixo, um atrás do outro no fluxo normal) — sem
+               essa folga, um top negativo no balão (ver abaixo) invadia o
+               texto de cima em vez de "sair" da imagem por cima, porque não
+               tinha imagem nenhuma ali ainda pra ele sair de cima de. Some
+               em lg porque lá as colunas já ficam lado a lado. -->
+          <div class="relative flex justify-center lg:justify-end mt-10 sm:mt-8 lg:mt-0 lg:-mr-16 xl:-mr-24">
             <div class="relative w-full max-w-2xl sm:max-w-3xl lg:w-[46rem] xl:w-[54rem]">
               <img
                 src="images/hero-ari.png"
@@ -183,11 +189,13 @@
               />
               <!-- Posição em % (não rem fixo) — a imagem varia muito de
                    tamanho entre breakpoints, e um offset fixo não
-                   acompanhava. top:0% ainda ficava colado no topo da cabeça
-                   dele (que começa bem no topo da arte, sem vão acima) —
-                   top negativo empurra o balão pra fora da imagem por cima
-                   de vez, sem chance de encostar no rosto. -->
-              <div class="absolute max-w-[10rem] sm:max-w-[11rem] bg-white text-left rounded-2xl rounded-bl-md shadow-xl border border-ink/10 px-3 py-2 fade-slide-in" style="top: -12%; right: 32%;">
+                   acompanhava. Offset negativo bem menor no mobile (a folga
+                   acima, ver mt- no wrapper, já ajuda) — o valor de lg
+                   (-12%) era grande demais pra caber sem invadir o texto de
+                   cima quando empilhado. -->
+              <div
+                class="absolute max-w-[9rem] sm:max-w-[10rem] lg:max-w-[11rem] bg-white text-left rounded-2xl rounded-bl-md shadow-xl border border-ink/10 px-3 py-2 fade-slide-in top-[1%] sm:top-[-2%] lg:top-[-12%] right-[20%] sm:right-[26%] lg:right-[32%]"
+              >
                 <p class="text-xs font-medium text-ink leading-snug">Oi! Eu sou o <span class="text-brand-orange font-bold">Ari</span>, seu garçom de IA!</p>
               </div>
             </div>
