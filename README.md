@@ -51,7 +51,7 @@ encontrado" — isso é esperado.
 ## Estrutura
 
 ```
-config.js                     configuração pública (URL/anon key do Supabase, senha do admin, APP_URL)
+config.js                     configuração pública (URL/anon key do Supabase, APP_URL)
 manifest.json                 manifesto PWA (ícone/nome ao "Adicionar à Tela de Início")
 index.html                    landing page pública (conversão — ver seção "Landing page e leads")
 landing.js
@@ -88,6 +88,7 @@ js/                            módulos compartilhados pelas três áreas acima
 supabase/
   migrations/                  12 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante, leads, observações/destaque de produto, cor de destaque do restaurante)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
+  functions/admin-login/       Edge Function que verifica a senha do admin contra o secret SENHA_ADMIN
 ```
 
 A Edge Function continua em TypeScript/Deno porque roda no servidor do
@@ -242,16 +243,18 @@ Todas as chaves ficam em [config.js](config.js), versionado no repositório:
 window.PEDEAI_CONFIG = {
   SUPABASE_URL: '...',
   SUPABASE_ANON_KEY: '...',   // pública, segura para expor — ver seção Segurança
-  ADMIN_PASSWORD: '...',       // troque por uma senha forte
   APP_URL: '',                 // opcional: URL de produção, ex. 'https://papeiai.app/'
 }
 ```
 
-`config.js` já vem preenchido com a URL e a anon key do projeto Supabase. Troque
-`ADMIN_PASSWORD` por uma senha forte antes de usar em qualquer ambiente
-compartilhado. Deixe `APP_URL` em branco para o QR Code apontar automaticamente
-para onde a página está rodando (localhost via Live Server, ou qualquer
-hospedagem estática).
+`config.js` já vem preenchido com a URL e a anon key do projeto Supabase. Deixe
+`APP_URL` em branco para o QR Code apontar automaticamente para onde a página
+está rodando (localhost via Live Server, ou qualquer hospedagem estática).
+
+A senha do admin (`admin/index.html`) **não** fica em `config.js` — é o secret
+`SENHA_ADMIN`, configurado só no Supabase e verificado pela Edge Function
+`admin-login` (ver seção de deploy abaixo). Trocar a senha é só atualizar esse
+secret no Dashboard; não precisa editar nem versionar nenhum arquivo.
 
 ## Deploy do backend (Supabase Dashboard, sem CLI)
 
@@ -277,15 +280,22 @@ Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https:
    (coluna `restaurants.theme_color`) — antes disso, salvar a cor falha com
    erro de coluna inexistente (o cardápio e o painel continuam funcionando
    normalmente com o laranja padrão, que é só um fallback em CSS).
-2. **Secret da DeepSeek** → menu **Edge Functions** → **Manage secrets** →
-   adicione `DEEPSEEK_API_KEY` com sua chave. Esse secret nunca vai para o
-   frontend.
-3. **Edge Functions** → **Deploy a new function** → nomeie exatamente
-   `ai-waiter` → cole o conteúdo de `supabase/functions/ai-waiter/index.ts`
-   (o arquivo inteiro, não a migration SQL) → desmarque **Enforce JWT
-   Verification** (o `config.toml` do repo já define `verify_jwt = false`,
-   mas isso só é lido pelo Supabase CLI — no Dashboard precisa desmarcar na
-   tela) → **Deploy**.
+2. **Secrets** → menu **Edge Functions** → **Manage secrets** → adicione
+   `DEEPSEEK_API_KEY` com a chave da DeepSeek e `SENHA_ADMIN` com a senha que
+   você quer usar pra entrar em `admin/index.html`. Nenhum dos dois secrets
+   vai para o frontend — trocar a senha depois é só atualizar `SENHA_ADMIN`
+   aqui, sem editar nem versionar nenhum arquivo.
+3. **Edge Functions** → **Deploy a new function**, uma vez para cada função:
+   nomeie exatamente `ai-waiter` → cole o conteúdo de
+   `supabase/functions/ai-waiter/index.ts`; e nomeie exatamente `admin-login`
+   → cole o conteúdo de `supabase/functions/admin-login/index.ts` (o arquivo
+   inteiro, não a migration SQL) → em cada uma, desmarque **Enforce JWT
+   Verification** (o `config.toml` do repo já define `verify_jwt = false`
+   pras duas, mas isso só é lido pelo Supabase CLI — no Dashboard precisa
+   desmarcar na tela) → **Deploy**. Sem a função `admin-login` publicada (ou
+   sem o secret `SENHA_ADMIN`), a tela de login do admin nunca libera —
+   qualquer senha digitada dá "Senha incorreta" (ou um erro de rede, se a
+   função nem existir ainda).
 
 Se o deploy da função falhar com um erro de "parse"/"bundle" apontando
 para a linha 1, o motivo quase sempre é ter colado o arquivo errado no editor
@@ -299,7 +309,9 @@ próprio), o fluxo tradicional também funciona:
 supabase link --project-ref thwnhgpjysykkoblbtrd
 supabase db push
 supabase secrets set DEEPSEEK_API_KEY=sk-...
+supabase secrets set SENHA_ADMIN=...
 supabase functions deploy ai-waiter
+supabase functions deploy admin-login
 ```
 
 ## Segurança — pontos importantes (MVP sem login)
@@ -308,9 +320,9 @@ supabase functions deploy ai-waiter
 - **`leads`**: mesmo aviso do `admin/index.html` logo abaixo — a leitura (aba "Leads" do admin) usa a mesma anon key pública, protegida só pelo gate de senha no frontend, não pela RLS (`leads_select_admin_mvp`, migration `0010`). Como o formulário coleta nome/telefone/email, isso é uma concessão deliberada de MVP; migrar pra Supabase Auth antes de produção também resolve esse ponto.
 - **`mesas`**: leitura é pública (`using (true)`, mesmo padrão de `restaurants_select_public`/`products_select_public`) — não tem como a RLS diferenciar "o admin lendo" de "um cliente anônimo lendo" neste MVP sem Supabase Auth, então a regra "só mesa ativa aceita pedido" é aplicada na aplicação (`cliente/cardapio.js`), não escondida via RLS. Escrita (gerar/renomear/ativar/excluir mesa) segue o mesmo aviso do próximo item.
 - **Painel do restaurante** (`restaurante/index.html?token=...`) não usa Supabase Auth: o token da URL é enviado em todo request como header `x-restaurant-token`, e as policies de RLS (`current_restaurant_token()`) só liberam escrita nas linhas do restaurante dono do token.
-- **`admin/index.html`**: a senha em `PEDEAI_CONFIG.ADMIN_PASSWORD` é um gate só no frontend — como não há Supabase Auth ainda, a policy de `insert`/`update` em `restaurants` é permissiva para a anon key (comentado em detalhe na migration `0001`). **Antes de produção**, migrar para Supabase Auth (ou mover o cadastro de restaurantes para uma Edge Function com `service_role`).
-- **`DEEPSEEK_API_KEY`** só existe como secret do Supabase, usada dentro das Edge Functions — nunca aparece em nenhum arquivo do frontend.
-- **`config.js` é público** (fica no navegador de qualquer visitante): só a `anon key` do Supabase e a senha de admin do MVP ficam ali. Nunca coloque a `service_role key` ou a chave da DeepSeek nesse arquivo.
+- **`admin/index.html`**: o login chama a Edge Function `admin-login`, que compara a senha digitada com o secret `SENHA_ADMIN` — a senha em si não fica mais em nenhum arquivo do frontend (antes ficava em `PEDEAI_CONFIG.ADMIN_PASSWORD`, visível em "ver código-fonte" por qualquer visitante). Isso fecha o vazamento da senha, mas **não** fecha a brecha de fundo: como ainda não há Supabase Auth, a policy de `insert`/`update` em `restaurants` continua permissiva pra qualquer request com a anon key (comentado em detalhe na migration `0001`) — ou seja, tecnicamente dá pra pular a tela de login inteira e chamar a API do Supabase direto com a anon key pública, sem precisar de senha nenhuma. `admin.js` também não guarda um token de sessão assinado, só uma flag em `sessionStorage` depois do "ok" da função — o "login" não é reverificado a cada request, só na hora de entrar. **Antes de produção**, migrar para Supabase Auth de verdade (ou mover o cadastro/edição de restaurantes para Edge Functions com `service_role`, cada uma revalidando a sessão).
+- **`DEEPSEEK_API_KEY`** e **`SENHA_ADMIN`** só existem como secrets do Supabase, usadas dentro das Edge Functions (`ai-waiter` e `admin-login`, respectivamente) — nunca aparecem em nenhum arquivo do frontend.
+- **`config.js` é público** (fica no navegador de qualquer visitante): só a `anon key` do Supabase e a `APP_URL` ficam ali. Nunca coloque a `service_role key`, a chave da DeepSeek ou a senha do admin nesse arquivo — essas três são sempre secrets de Edge Function.
 - **Sem embeddings**: o garçom IA não usa busca vetorial — a DeepSeek não tem endpoint de embeddings, então o cardápio completo do restaurante é enviado no prompt (ver nota no topo de `ai-waiter/index.ts`). A coluna `embedding` e a função `match_products` (migration `0002`) ficam no banco só para uso futuro, se um dia você quiser plugar um provedor de embeddings.
 - **Pegadinha de RLS + RETURNING**: se algum `insert()` do cliente anônimo (`orders`, `order_items`) passar a usar `.select()` de novo, o Postgres volta a rejeitar o insert inteiro com "new row violates row-level security policy" — não porque o insert em si seja proibido, mas porque devolver a linha (`RETURNING`) exige que a policy de **leitura** também libere, e o cliente anônimo não tem o token do restaurante pra isso. Ver o comentário em `placeOrder()` (`cliente/cardapio.js`) e a migration `0005`.
 

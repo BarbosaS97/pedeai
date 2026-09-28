@@ -580,24 +580,47 @@ async function copyLinkWithFeedback(link) {
   showToast(ok ? 'Link copiado!' : 'Não deu para copiar — copie manualmente.', ok ? 'success' : 'error')
 }
 
-function handleLogin(e) {
+// Gate simples de MVP: a senha em si nunca fica no frontend — é comparada
+// dentro da Edge Function admin-login, contra o secret SENHA_ADMIN
+// (configurado só no Supabase, nunca em config.js). O navegador manda o que
+// foi digitado e só recebe { ok: true/false } de volta. Ainda não é
+// autenticação real (sem token de sessão assinado — ver aviso no README);
+// antes de produção, migrar para Supabase Auth.
+async function handleLogin(e) {
   e.preventDefault()
-  // Gate simples de MVP: senha comparada no cliente contra PEDEAI_CONFIG.ADMIN_PASSWORD.
-  // Não é autenticação real — ver aviso de segurança no README/migrations.
-  // Antes de produção, migrar para Supabase Auth.
   const password = document.getElementById('password-input').value
-  const expected = window.PEDEAI_CONFIG.ADMIN_PASSWORD
-  if (expected && password === expected) {
-    sessionStorage.setItem(ADMIN_SESSION_KEY, 'true')
-    state.authenticated = true
-    state.loginError = ''
-    render()
-    loadRestaurants()
-    loadLeads()
-  } else {
+  state.loginError = ''
+
+  const submitBtn = document.querySelector('#login-form button[type="submit"]')
+  submitBtn.disabled = true
+  submitBtn.textContent = 'Verificando...'
+
+  try {
+    const anonKey = window.PEDEAI_CONFIG.SUPABASE_ANON_KEY
+    const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/admin-login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({ senha: password }),
+    })
+    const data = await res.json()
+
+    if (data.ok) {
+      sessionStorage.setItem(ADMIN_SESSION_KEY, 'true')
+      state.authenticated = true
+      render()
+      loadRestaurants()
+      loadLeads()
+      return
+    }
     state.loginError = 'Senha incorreta.'
-    render()
+  } catch {
+    state.loginError = 'Não deu para verificar a senha agora. Tenta de novo.'
   }
+  render()
 }
 
 async function loadRestaurants() {
