@@ -22,8 +22,8 @@
 //   `restaurants` via API REST do Supabase (mesma anon key pública usada
 //   pelo app inteiro, protegida por RLS de leitura pública — migration 0001)
 //   e devolve um HTML só com as tags Open Graph certas — imagem = logo do
-//   restaurante, ou NENHUMA tag de imagem se não tiver logo cadastrada (a
-//   prévia sai sem imagem nenhuma nesse caso, não com um ícone genérico).
+//   restaurante quando tiver; sem logo cadastrada, cai na imagem genérica do
+//   PapeiAI (FALLBACK_IMAGE) em vez de deixar sem imagem nenhuma.
 //
 // O QR Code impresso/gerado no admin continua apontando direto pra
 // menuUrl() (js/qrcode-helper.js) — sem esse salto extra, já que ninguém
@@ -36,6 +36,10 @@ const SUPABASE_URL = 'https://thwnhgpjysykkoblbtrd.supabase.co'
 const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRod25oZ3BqeXN5a2tvYmxidHJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNjU3NzksImV4cCI6MjEwNDY0MTc3OX0.sngg8z_ZUgpw3YixJ6y74qMaNLVGPeJ0e3Tlh7EY_TI'
 const APP_BASE_URL = 'https://www.papeiai.com.br/'
+// Prévia genérica do PapeiAI — usada quando o restaurante não tem logo
+// cadastrada (restaurants.logo_url), pra prévia nunca sair sem imagem
+// nenhuma.
+const FALLBACK_IMAGE_URL = `${APP_BASE_URL}images/og-preview.png`
 
 // Lista dos crawlers de pré-visualização mais comuns — não precisa ser
 // exaustiva: se algum passar batido, o pior caso é essa pessoa (ou robô) só
@@ -94,11 +98,9 @@ module.exports = async (req, res) => {
   const description = restaurant
     ? `Peça no ${restaurant.name} direto pelo cardápio digital, com o Ari, garçom IA.`
     : 'Cardápio digital com garçom IA — peça sem esperar o garçom.'
-  const imageTags =
-    restaurant && restaurant.logo_url
-      ? `<meta property="og:image" content="${escapeHtml(restaurant.logo_url)}" />
+  const imageUrl = (restaurant && restaurant.logo_url) || FALLBACK_IMAGE_URL
+  const imageTags = `<meta property="og:image" content="${escapeHtml(imageUrl)}" />
     <meta name="twitter:card" content="summary_large_image" />`
-      : ''
 
   const html = `<!doctype html>
 <html lang="pt-BR">

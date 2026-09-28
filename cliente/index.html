@@ -25,6 +25,17 @@
          abaixo) — a cor da barra do navegador/status bar acompanha. -->
     <meta name="theme-color" content="#121212" />
     <title>PapeiAI — Cardápio Digital</title>
+    <!-- Open Graph: fallback genérico pra quando alguém compartilha o link
+         DIRETO desse arquivo (?slug=...), sem passar pela rota
+         /cardapio/:slug (api/cardapio-preview.js) que mostra a foto de cada
+         restaurante — crawlers de WhatsApp/redes sociais não executam JS, só
+         leem essas tags no HTML bruto, então não dá pra variar por
+         restaurante aqui. URL absoluta é obrigatória pra og:image. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="PapeiAI — Cardápio Digital" />
+    <meta property="og:description" content="Cardápio digital com o Ari, garçom IA — peça sem esperar o garçom." />
+    <meta property="og:image" content="https://www.papeiai.com.br/images/og-preview.png" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

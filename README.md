@@ -67,6 +67,10 @@ images/
   hero-lettering.png             letra "Bora papear?" desenhada à mão, fundo transparente
                                  (1779x884) — usada como imagem, não texto, no hero da landing
   favicon.png                   ícone do navegador e da PWA (favicon + apple-touch-icon)
+  og-preview.png                 imagem genérica de prévia de link (og:image) — pessoa + celular +
+                                 "PapeiAI Cardápio Digital" (1254x1254). NÃO é ícone (grande
+                                 demais/detalhada pra virar favicon) — só aparece grande na prévia
+                                 do WhatsApp/redes sociais, nunca na aba do navegador
   tela-branca.jpg                sem uso atualmente — sobrou de uma seção da landing que foi removida
 admin/
   index.html                   sua área: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas
@@ -380,9 +384,15 @@ direto. Um rewrite no `vercel.json` manda essa rota pra
   via API REST do Supabase (mesma anon key pública de sempre, protegida pela
   policy de leitura pública `restaurants_select_public`, migration `0001`) e
   devolve um HTML só com as tags Open Graph certas — `og:image` = logo do
-  restaurante (`restaurants.logo_url`, migration `0009`) **se e só se**
-  tiver uma cadastrada; sem logo, a tag nem existe, então a prévia sai sem
-  imagem nenhuma (não cai num ícone genérico).
+  restaurante (`restaurants.logo_url`, migration `0009`) quando tiver uma
+  cadastrada; sem logo, cai na imagem genérica do PapeiAI
+  (`images/og-preview.png`, `FALLBACK_IMAGE_URL` em `api/cardapio-preview.js`)
+  em vez de sair sem imagem nenhuma. A mesma imagem genérica é usada como
+  fallback estático (via tag `<meta property="og:image">` fixa no HTML) em
+  `index.html` (landing) e `cliente/index.html`, pro caso de alguém
+  compartilhar o link direto (sem passar pela rota `/cardapio/:slug`) — nesses
+  dois casos a imagem não varia por restaurante, é sempre a genérica, porque
+  são arquivos estáticos sem essa lógica de bot/Supabase por trás.
 
 **Depois de fazer o deploy (`git push`, a Vercel redeploya sozinha), teste de
 verdade antes de confiar**: o comportamento de bot-detection só se prova
