@@ -21,6 +21,7 @@ function toolbarHtml(restaurant, count) {
       <div>
         <h1>Folha de QR Codes — ${escapeHtml(restaurant.name)}</h1>
         <p>${count} mesa${count === 1 ? '' : 's'} · A4, pronta pra imprimir ou salvar como PDF</p>
+        <p class="print-tip">⚠ No diálogo de impressão: Papel <strong>A4</strong>, Margens <strong>Padrão</strong> e Escala <strong>100%</strong> — desmarque "Ajustar à página"/"Fit to printable area". Com isso marcado, o navegador encolhe a folha e o QR Code (45×45mm) sai menor do que deveria.</p>
       </div>
       <button id="print-btn" class="print-btn">Imprimir / Salvar como PDF</button>
     </div>

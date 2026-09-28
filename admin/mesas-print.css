@@ -47,6 +47,15 @@ body {
   color: #737373;
   margin: 2px 0 0;
 }
+.print-tip {
+  color: #92400e !important;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-top: 8px !important;
+  max-width: 46em;
+}
 .print-btn {
   background: #7c3aed;
   color: #fff;
