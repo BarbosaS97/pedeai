@@ -60,8 +60,10 @@ images/
   avatar.png                    foto do Ari, corpo inteiro (2:3) — usada tanto no chat de verdade
                                  (cliente/cardapio.js, com zoom/crop via CSS pro rosto) quanto no
                                  CTA final da landing (sem crop)
-  hero-ari.png                   Ari + celular com o cardápio + ícones flutuantes, fundo já
-                                 transparente (941x1672 ≈ 9:16) — usada no hero da landing
+  hero-ari.png                   Ari com o celular do cardápio + placa "Escaneie e peça" (QR
+                                 Code), fundo já transparente (880x635) — hero da landing
+  hero-lettering.png             letra "Bora papear?" desenhada à mão, fundo transparente
+                                 (1779x884) — usada como imagem, não texto, no hero da landing
   favicon.png                   ícone do navegador e da PWA (favicon + apple-touch-icon)
   tela-branca.jpg                sem uso atualmente — sobrou de uma seção da landing que foi removida
 admin/
@@ -186,30 +188,30 @@ Edge Function (ex: com [Resend](https://resend.com)) disparada por um
 tabela `leads` — a tabela e a policy de insert público já estão prontas pra
 isso, só falta essa peça.
 
-O hero mostra `images/hero-ari.png` (fundo já transparente de verdade,
-≈9:16), dissolvendo no rodapé via `mask-image`. Duas tentativas de usar um
-vídeo aqui no lugar (`videos/hero-ari.mp4`, hoje removido do repo) foram
-abandonadas: a primeira tinha fundo preto sólido e tentava removê-lo *ao
-vivo* no navegador (`<canvas>` + `getImageData`/`putImageData`, um
-chroma/luma key simples) — não ficou bom o bastante e só funciona servida por
-HTTP (quebra com `file://`, que é como dá pra abrir a página sem o Live
-Server); a segunda veio com fundo branco sólido do próprio exportador
-(**MP4/H.264 não tem canal alpha** — nenhum navegador decodifica
-transparência real nesse formato, então "sem fundo" nunca é transparente de
-verdade num MP4), branco esse que ficava visível contra o creme da página
-mesmo sendo uma cor próxima. Se um dia quiser tentar vídeo de novo, precisa
-ser num formato com alpha de verdade (WebM VP9 com transparência, ou ProRes
-4444) — nenhuma ferramenta usada até agora exportou nesses formatos.
+O hero usa duas artes prontas com fundo já transparente, em vez de recriar
+tudo em CSS/texto: `images/hero-lettering.png` (a letra "Bora papear?"
+desenhada à mão, no lugar do `<h1>` de texto — três tentativas de imitar isso
+com fonte cursiva/gradiente/sombra não chegaram perto do resultado de uma
+arte de verdade) e `images/hero-ari.png` (Ari com o celular do cardápio e a
+placa de QR Code, substituindo o mockup de celular que antes era recriado em
+CSS por cima de uma foto). Duas tentativas anteriores de usar vídeo aqui no
+lugar (`videos/hero-ari.mp4`, hoje removido do repo) foram abandonadas: a
+primeira tinha fundo preto sólido e tentava removê-lo *ao vivo* no navegador
+(`<canvas>` + `getImageData`/`putImageData`, um chroma/luma key simples) —
+não ficou bom o bastante e só funciona servida por HTTP (quebra com
+`file://`); a segunda veio com fundo branco sólido do próprio exportador
+(**MP4/H.264 não tem canal alpha** — "sem fundo" nunca é transparente de
+verdade num MP4), branco esse que ficava visível contra o creme da página.
 `images/tela-branca.jpg` (foto de mão com celular, usada numa seção "Na mão
 do cliente" que existiu numa versão anterior da landing) não é mais
 referenciada em lugar nenhum — a seção foi removida, o arquivo só ficou no
 repo sem uso.
 
 A landing usa uma paleta separada do resto do site — creme (`bg-cream`) +
-tinta quase-preta (`bg-ink`/`text-ink`) + laranja de destaque, com títulos
-grandes em Sora (`font-display`) — pra parecer uma marca de comida com
-personalidade própria, não uma ferramenta de IA genérica. Esses tokens
-(`cream`, `ink`, `font-display`, `font-script`) só existem no
+tinta azul-marinho (`bg-ink`/`text-ink`, a cor real do "Papei" no logo) +
+laranja de destaque, com títulos grandes em Sora (`font-display`) — pra
+parecer uma marca de comida com personalidade própria, não uma ferramenta de
+IA genérica. Esses tokens (`cream`, `ink`, `font-display`) só existem no
 `tailwind.config` de `index.html`; nenhuma outra página os usa.
 
 ## Configuração

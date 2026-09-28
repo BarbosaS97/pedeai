@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&family=Caveat:wght@600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -41,10 +41,9 @@
             },
             fontFamily: {
               sans: ['Inter', 'system-ui', 'sans-serif'],
-              // Display (títulos grandes) e script (nota "escrita à mão") só
-              // existem nesta página — o resto do site usa só Inter.
+              // Display (títulos grandes) só existe nesta página — o resto
+              // do site usa só Inter.
               display: ['Sora', 'system-ui', 'sans-serif'],
-              script: ['Caveat', 'cursive'],
             },
           },
         },
@@ -70,7 +69,12 @@
     <header class="sticky top-0 z-40 bg-cream/90 backdrop-blur border-b border-ink/10">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         <div id="header-logo-slot" class="shrink-0"></div>
-        <button class="js-cta shrink-0 bg-ink text-cream text-sm font-bold rounded-full px-4 sm:px-5 py-2.5 hover:opacity-85 active:scale-[0.98] transition">
+        <nav class="hidden md:flex items-center gap-7 text-sm font-semibold text-ink/70">
+          <a href="#como-funciona" class="hover:text-ink transition">Como funciona</a>
+          <a href="#beneficios" class="hover:text-ink transition">Benefícios</a>
+          <a href="#para-quem" class="hover:text-ink transition">Para quem é</a>
+        </nav>
+        <button class="js-cta shrink-0 bg-brand-orange text-white text-sm font-bold rounded-full px-4 sm:px-5 py-2.5 shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition">
           <span class="sm:hidden">Conhecer</span>
           <span class="hidden sm:inline">Quero conhecer o PapeiAI</span>
         </button>
@@ -78,73 +82,111 @@
     </header>
 
     <!-- ---- Hero ---- -->
-    <section class="relative overflow-hidden bg-cream">
-      <!-- Manchas orgânicas em blur (a referência visual usa respingos de
-           tinta preta) — CSS puro não reproduz textura de pincel de verdade,
-           mas mantém a mesma energia "poster impresso", longe do
-           gradiente/orbe que qualquer produto de IA usa. -->
-      <div class="absolute -top-20 -right-24 w-[26rem] h-[26rem] rounded-full bg-ink/[0.04] blur-3xl" aria-hidden="true"></div>
-      <div class="absolute top-1/3 -left-32 w-80 h-80 rounded-full bg-brand-orange/10 blur-3xl" aria-hidden="true"></div>
+    <section class="relative overflow-hidden bg-gradient-to-br from-cream via-cream to-brand-orange/[0.08]">
+      <!-- Manchas em blur, mais concentradas do lado do Ari — o "brilho"
+           quente atrás dele na referência. Mais forte que a primeira versão:
+           ficou pálido/plano demais comparado com o fundo bem mais quente da
+           referência (ver README). -->
+      <div class="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-brand-blue/[0.08] blur-3xl" aria-hidden="true"></div>
+      <div class="absolute top-0 right-0 w-[38rem] h-[38rem] rounded-full bg-brand-orange/25 blur-3xl" aria-hidden="true"></div>
 
-      <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-14 sm:pt-20 pb-14 sm:pb-20">
-        <div class="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+      <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-14 sm:pb-16">
+        <!-- lg:grid-cols com fração generosa pro Ari, mas o tamanho dele
+             real não vem mais daqui (ver comentário na imagem, abaixo) — só
+             dá o espaço mínimo pro texto não brigar com ele. -->
+        <div class="grid lg:grid-cols-[minmax(18rem,1fr)_2.2fr] gap-6 lg:gap-2 items-end">
           <!-- Texto + CTA -->
           <div class="text-center lg:text-left">
-            <!-- Título inteiro na mesma fonte (Sora) e cor (text-ink = o azul
-                 de verdade do logo, #0A2C55 — ver tailwind.config) — depois de
-                 três tentativas de destacar "Papear?" com fonte cursiva/
-                 gradiente/sombra que só pioraram, a versão que funciona é a
-                 mais simples: igual ao resto do título. -->
-            <h1 class="font-display font-extrabold text-ink leading-[0.95] tracking-tight text-4xl sm:text-5xl lg:text-6xl">
-              BORA<br />PAPEAR?
-            </h1>
+            <!-- Arte pronta (images/hero-lettering.png, fundo transparente)
+                 no lugar de texto — três tentativas de imitar essa letra à
+                 mão em CSS (fonte cursiva, gradiente, sombra) não chegaram
+                 perto; a arte de verdade resolve isso de vez. -->
+            <img
+              src="images/hero-lettering.png"
+              alt="Bora papear?"
+              class="mx-auto lg:mx-[-0.5rem] w-64 sm:w-80 lg:w-[24rem] h-auto"
+            />
 
-            <p class="font-display font-bold text-base sm:text-lg text-ink mt-4">
-              Bom cardápio. <span class="text-brand-orange">Boa conversa.</span>
+            <p class="font-display font-extrabold text-xl sm:text-2xl text-ink mt-1 leading-snug">
+              Seu cardápio que <span class="text-brand-orange">conversa</span> com seus clientes.
             </p>
 
-            <p class="text-ink/60 mt-3 text-sm sm:text-base max-w-md mx-auto lg:mx-0 leading-relaxed">
-              O PapeiAI apresenta seus pratos, tira dúvidas e recomenda opções — o cliente escolhe
-              com calma pelo celular e chama o garçom já decidido.
+            <p class="text-ink/60 mt-4 text-sm sm:text-base max-w-md mx-auto lg:mx-0 leading-relaxed">
+              O PapeiAI apresenta seus pratos, tira dúvidas, recomenda opções e ajuda cada cliente
+              a encontrar o que realmente quer pedir.
             </p>
 
-            <div class="mt-7 flex flex-col sm:flex-row lg:justify-start justify-center items-center gap-4">
+            <div class="mt-6 flex flex-col sm:flex-row lg:justify-start justify-center items-center gap-3">
               <button
                 id="cta-hero"
                 class="js-cta w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-orange text-white font-bold rounded-full px-7 py-3.5 text-sm sm:text-base shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition"
               >
                 Quero conhecer o PapeiAI
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               </button>
-              <p class="font-script text-xl text-ink/70 -rotate-2 hidden sm:block">Escaneia. Papeia. Pede.</p>
             </div>
-            <p class="text-xs text-ink/40 mt-4">Sem compromisso — é só deixar seus dados.</p>
+            <a href="#como-funciona" class="inline-flex items-center gap-1.5 text-ink/70 hover:text-ink text-sm font-semibold mt-4 transition">
+              Veja como funciona na prática
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+
+            <!-- Escaneia / Papeia / Pede — o mesmo "Escaneia. Papeia. Pede."
+                 de antes, mas como 3 blocos com ícone em vez de uma linha só
+                 em fonte script (a script sozinha ficava perdida/pouco
+                 legível nesse tamanho). -->
+            <div class="grid grid-cols-3 gap-3 sm:gap-6 mt-9 max-w-sm mx-auto lg:mx-0 text-left">
+              <div>
+                <div class="w-9 h-9 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center mb-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM19 14v3M19 19.5v1.5M14.5 19.5H14M17.5 21H21v-3.5"/></svg>
+                </div>
+                <p class="font-bold text-xs sm:text-sm text-ink">Escaneia</p>
+                <p class="text-[11px] sm:text-xs text-ink/55 mt-0.5 leading-snug">Aponte a câmera do seu celular.</p>
+              </div>
+              <div>
+                <div class="w-9 h-9 rounded-lg bg-brand-orange/10 text-brand-orange flex items-center justify-center mb-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-4.8 7.6 8.5 8.5 0 0 1-9.08-1.28L3 19l1.18-4.12A8.5 8.5 0 1 1 21 11.5z"/></svg>
+                </div>
+                <p class="font-bold text-xs sm:text-sm text-ink">Papeia</p>
+                <p class="text-[11px] sm:text-xs text-ink/55 mt-0.5 leading-snug">Converse com o Ari e tire suas dúvidas.</p>
+              </div>
+              <div>
+                <div class="w-9 h-9 rounded-lg bg-brand-blue/10 text-brand-blue flex items-center justify-center mb-2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5V4"/><path d="m9 13 2 2 4-4.5"/></svg>
+                </div>
+                <p class="font-bold text-xs sm:text-sm text-ink">Pede</p>
+                <p class="text-[11px] sm:text-xs text-ink/55 mt-0.5 leading-snug">Escolha seus pratos e finalize o pedido.</p>
+              </div>
+            </div>
           </div>
 
-          <!-- Ari + celular com o cardápio, ícones flutuantes — imagem com
-               fundo já transparente de verdade (images/hero-ari.png,
-               941x1672 ≈ 9:16). O vídeo (videos/hero-ari.mp4) foi tentado de
-               novo e descartado de novo: MP4/H.264 não tem canal alpha, o
-               "sem fundo" dele é só um branco sólido que ficava visível
-               contra o creme da página — a imagem, com transparência real,
-               não tem esse problema. -->
-          <div class="relative flex justify-center lg:justify-end">
-            <div class="absolute inset-0 flex justify-center lg:justify-end" aria-hidden="true">
-              <div class="w-72 sm:w-96 lg:w-[26rem] aspect-[941/1672] rounded-[2.5rem] bg-brand-orange/25 blur-3xl scale-90"></div>
-            </div>
-            <div class="relative w-72 sm:w-96 lg:w-[26rem] aspect-[941/1672] shrink-0">
+          <!-- Ari com o celular do cardápio + placa de QR Code — arte pronta
+               (images/hero-ari.png, fundo já transparente), sem precisar
+               recriar o mockup de celular em CSS por cima como antes.
+               "Ancorado" embaixo (items-end no grid pai) — a sombra de mesa
+               que já vem desenhada na própria arte precisa "pousar" em
+               algum lugar, não flutuar num mar de creme vazio.
+
+               Importante: o tamanho dele em lg é uma largura FIXA
+               (lg:w-.../xl:w-...), não mais "w-full" da coluna — com w-full,
+               toda vez que a coluna crescia (pra ele ficar maior) a borda
+               ESQUERDA da imagem também avançava sobre o texto, porque
+               w-full ignora justify-end e preenche a coluna inteira. Com
+               largura fixa, justify-end de fato empurra ele pro lado direito
+               da coluna (mais a sangria -mr por cima), sobrando espaço vazio
+               à esquerda — é esse vazio que dá folga pro texto. -->
+          <div class="relative flex justify-center lg:justify-end lg:-mr-16 xl:-mr-24">
+            <div class="relative w-full max-w-2xl sm:max-w-3xl lg:w-[46rem] xl:w-[54rem]">
               <img
                 src="images/hero-ari.png"
-                alt="Ari segurando o celular com o cardápio digital do PapeiAI, com ícones de chat e QR Code flutuando ao redor"
-                class="relative w-full h-full object-contain"
-                style="mask-image: linear-gradient(to bottom, black 90%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%)"
+                alt="Ari mostrando o cardápio digital do PapeiAI no celular, ao lado de uma placa de QR Code pra escanear"
+                class="relative w-full h-auto"
               />
-              <div class="absolute -top-3 -right-4 sm:right-0 sm:translate-x-[30%] max-w-[10.5rem] bg-white text-left rounded-2xl rounded-bl-md shadow-xl border border-ink/10 px-3.5 py-2.5 fade-slide-in">
-                <p class="text-xs font-medium text-ink leading-snug">
-                  "Sou o Ari, eu ajudo o seu cliente a escolher o pedido."
-                </p>
-              </div>
-              <div class="absolute -bottom-3 -left-6 sm:-left-10 w-24 h-24 rounded-full border-2 border-dashed border-ink/25 bg-cream flex items-center justify-center text-center p-2">
-                <p class="text-[10px] font-bold uppercase tracking-wide text-ink/70 leading-tight">Sempre<br />disponível</p>
+              <!-- Posição em % (não rem fixo) — a imagem varia muito de
+                   tamanho entre breakpoints agora, e um offset fixo não
+                   acompanhava, ficava longe da cabeça do Ari nos tamanhos
+                   maiores. -->
+              <div class="absolute max-w-[12rem] bg-white text-left rounded-2xl rounded-bl-md shadow-xl border border-ink/10 px-3.5 py-2.5 fade-slide-in" style="top: 2%; right: 6%;">
+                <p class="text-xs font-medium text-ink leading-snug">Oi! Eu sou o <span class="text-brand-orange font-bold">Ari</span>, seu garçom de IA!</p>
               </div>
             </div>
           </div>
