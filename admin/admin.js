@@ -181,7 +181,7 @@ function restaurantListHtml() {
             <div class="mt-1.5 space-y-1 text-xs">
               <div class="flex items-center gap-1.5 text-neutral-500">
                 <span>🔗</span>
-                <a href="${escapeHtml(menuUrl(r.slug))}" target="_blank" rel="noreferrer" class="underline truncate hover:text-brand-blue transition">Ver cardápio público</a>
+                <a href="${escapeHtml(menuShareUrl(r.slug))}" target="_blank" rel="noreferrer" class="underline truncate hover:text-brand-blue transition">Ver cardápio público</a>
                 <button data-copy-id="${r.id}" data-copy-kind="menu" title="Copiar link do cardápio" class="text-neutral-400 hover:text-brand-blue transition shrink-0">⧉</button>
               </div>
               <div class="flex items-center gap-1.5 text-neutral-500">
@@ -639,7 +639,7 @@ function bindRestaurantListEvents() {
       const restaurant = state.restaurants.find((r) => r.id === btn.getAttribute('data-copy-id'))
       if (!restaurant) return
       const kind = btn.getAttribute('data-copy-kind')
-      const link = kind === 'panel' ? panelUrl(restaurant.access_token) : menuUrl(restaurant.slug)
+      const link = kind === 'panel' ? panelUrl(restaurant.access_token) : menuShareUrl(restaurant.slug)
       copyLinkWithFeedback(link)
     })
   })

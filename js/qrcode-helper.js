@@ -35,6 +35,20 @@ async function generateMenuQrCode(slug) {
   })
 }
 
+// URL "bonita" (mesmo domínio do site) pensada pra ser colada em
+// WhatsApp/redes sociais — passa pela rota /cardapio/:slug (ver
+// vercel.json + api/cardapio-preview.js), que devolve uma prévia com a foto
+// do restaurante (ou nenhuma, se não tiver) pra quem for receber o link, e
+// redireciona quem clica de verdade pro cardápio de verdade (menuUrl()).
+// Só pros links pensados pra COMPARTILHAR como texto (ex: "copiar link" do
+// admin) — o QR Code continua apontando direto pra menuUrl(), sem esse
+// salto extra, já que ninguém "pré-visualiza" um QR Code escaneado.
+function menuShareUrl(slug) {
+  const configured = window.PEDEAI_CONFIG.APP_URL
+  const base = configured ? configured.replace(/\/?$/, '/') : new URL('../', window.location.href).href
+  return `${base}cardapio/${encodeURIComponent(slug)}`
+}
+
 // URL do painel do restaurante: {APP_URL}restaurante/index.html?token=...
 // Mesma lógica de resolução de base que menuUrl(). Chamada a partir de
 // admin/index.html (uma pasta abaixo da raiz).

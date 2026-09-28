@@ -52,6 +52,8 @@ encontrado" — isso é esperado.
 
 ```
 config.js                     configuração pública (URL/anon key do Supabase, APP_URL)
+vercel.json                   rewrite de /cardapio/:slug (ver seção "Prévia de link")
+api/cardapio-preview.js       Vercel Serverless Function por trás dessa rota (só funciona na Vercel)
 manifest.json                 manifesto PWA (ícone/nome ao "Adicionar à Tela de Início")
 index.html                    landing page pública (conversão — ver seção "Landing page e leads")
 landing.js
@@ -340,6 +342,64 @@ supabase secrets set SENHA_ADMIN=...
 supabase functions deploy ai-waiter
 supabase functions deploy admin-login
 ```
+
+## Prévia de link (WhatsApp/redes sociais) com a foto do restaurante
+
+**Só funciona hospedado na Vercel** (é onde o site está hoje, `papeiai.com.br`,
+DNS na Cloudflare) — depende de `vercel.json` + `api/cardapio-preview.js`,
+recursos específicos da Vercel. Em GitHub Pages ou outra hospedagem 100%
+estática isso não funciona (o link cai de volta pro comportamento antigo, sem
+quebrar nada — só sem a prévia).
+
+**O problema que isso resolve**: `cliente/index.html` é uma SPA estática — o
+HTML é sempre o mesmo arquivo pra qualquer restaurante, os dados de verdade
+(nome, foto) só chegam depois, via JavaScript, buscando no Supabase. Isso é
+ótimo pra pessoas de verdade, mas ruim pra pré-visualização de link: o robô
+do WhatsApp/Facebook/Telegram que gera aquela prévia com foto+título não
+executa JavaScript, só lê o HTML bruto — então via de regra ele cai no
+`apple-touch-icon` (favicon do PapeiAI) pra qualquer restaurante, nunca a foto
+de cada um.
+
+**Como funciona**: os links pensados pra COMPARTILHAR como texto (botão
+"copiar link do cardápio"/"Ver cardápio público" no admin —
+`menuShareUrl()`, `js/qrcode-helper.js`) agora apontam pra
+`papeiai.com.br/cardapio/:slug` em vez de `cliente/index.html?slug=...`
+direto. Um rewrite no `vercel.json` manda essa rota pra
+`api/cardapio-preview.js` (Vercel Serverless Function, zero-config — qualquer
+`.js` dentro de `api/` vira endpoint sozinho, sem build), que olha o
+`User-Agent` de quem pediu:
+
+- **Pessoa de verdade** (qualquer User-Agent que não bata com a lista de
+  robôs conhecidos): redireciona (302) direto pro cardápio de verdade — o
+  salto extra é imperceptível, e só acontece nesse link, nunca no QR Code
+  (que continua apontando direto pra `menuUrl()`, sem passar por aqui, já
+  que ninguém "pré-visualiza" um QR Code escaneado).
+- **Robô de prévia de link** (User-Agent do WhatsApp, Facebook, Telegram,
+  Twitter/X, LinkedIn, Slack, Discord etc. — lista em `BOT_UA_PATTERN`, não
+  precisa ser exaustiva): busca o restaurante direto na tabela `restaurants`
+  via API REST do Supabase (mesma anon key pública de sempre, protegida pela
+  policy de leitura pública `restaurants_select_public`, migration `0001`) e
+  devolve um HTML só com as tags Open Graph certas — `og:image` = logo do
+  restaurante (`restaurants.logo_url`, migration `0009`) **se e só se**
+  tiver uma cadastrada; sem logo, a tag nem existe, então a prévia sai sem
+  imagem nenhuma (não cai num ícone genérico).
+
+**Depois de fazer o deploy (`git push`, a Vercel redeploya sozinha), teste de
+verdade antes de confiar**: o comportamento de bot-detection só se prova
+certo com um robô de verdade, não dá pra simular 100% testando no navegador.
+Duas formas fáceis:
+1. [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/)
+   com a URL `https://www.papeiai.com.br/cardapio/<slug de um restaurante>`
+   — mostra exatamente a prévia que seria gerada, e tem um botão "Scrape
+   Again" pra forçar buscar de novo se você mudar a logo depois.
+2. Mandar o link de verdade pra você mesmo no WhatsApp.
+
+Se a prévia não aparecer: confira se o registro DNS de `papeiai.com.br` na
+Cloudflare está como **"Proxied"** (nuvem laranja) — se estiver, olhe
+**Security → Bots** no painel da Cloudflare, porque regras de bot-fight-mode
+ou WAF muito estritas podem estar barrando o robô do WhatsApp/Facebook antes
+mesmo dele chegar na Vercel (esse é o suspeito nº 1 se tudo no código estiver
+certo e mesmo assim não funcionar).
 
 ## Segurança — pontos importantes (MVP sem login)
 
