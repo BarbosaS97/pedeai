@@ -11,6 +11,16 @@ const numero = queryParams.get('mesa')
 const CUSTOMER_STORAGE_KEY = 'pedeai_customer'
 const CHAT_AVATAR_URL = '../images/avatar.png'
 
+// URL da landing page pública do PapeiAI — usada só no link "PapeiAI" do
+// rodapé (pageHtml). Mesma lógica de "resolve a partir de onde a página está
+// rodando agora" de menuUrl()/panelUrl() (js/qrcode-helper.js, usadas no
+// admin/painel): se PEDEAI_CONFIG.APP_URL estiver configurado, usa ele;
+// senão sobe uma pasta a partir de cliente/index.html.
+function landingUrl() {
+  const configured = window.PEDEAI_CONFIG.APP_URL
+  return configured ? configured.replace(/\/?$/, '/') : new URL('../', window.location.href).href
+}
+
 // A foto do Ari (images/avatar.png) é um retrato de corpo inteiro (rosto só
 // no terço de cima, braços cruzados ocupam o centro) — object-cover puro
 // centraliza o corte no meio da imagem e mostra os braços/avental, não o
@@ -493,7 +503,7 @@ function pageHtml() {
       </main>
 
       <footer class="max-w-2xl mx-auto px-4 pb-4 -mt-2 flex items-center justify-center">
-        <img src="${LOGO_IMAGE_URL}" alt="PapeiAI — Cardápio Digital" class="h-5 w-auto opacity-70" />
+        <a href="${escapeHtml(landingUrl())}" target="_blank" rel="noreferrer" class="text-xs text-neutral-500 underline hover:text-neutral-300 transition">PapeiAI</a>
       </footer>
 
       <!-- Botão flutuante do Ari — avatar redondo com um brilho suave atrás
