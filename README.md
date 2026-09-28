@@ -37,7 +37,7 @@ dinâmicas do app original:
 | [index.html](index.html) | — | Landing page pública, só de conversão (formulário de contato) — sem link nenhum pro admin/painel/cardápio |
 | [admin/index.html](admin/index.html) | `/admin` | **Você**: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas |
 | `admin/mesas-print.html?restaurant=<id>` | — | Folha A4 com um QR Code por mesa, pronta pra imprimir/salvar como PDF |
-| `restaurante/index.html?token=<access_token>` | `/r/:accessToken` | **Restaurante**: painel de pedidos + produtos |
+| `restaurante/index.html?token=<access_token>` | `/r/:accessToken` | **Restaurante**: painel de produtos |
 | `cliente/index.html?slug=<slug>` | `/:slug` | **Cliente**: cardápio público, com o Ari (garçom IA) |
 | `cliente/index.html?slug=<slug>&mesa=<numero>` | `/:slug/mesa/:numero` | Cardápio público de uma mesa específica — `numero` precisa bater com uma mesa ativa cadastrada no admin |
 
@@ -185,9 +185,11 @@ mesa, não só um número).
 primeiro nome e telefone (com máscara e validação) — guardados no
 `localStorage` do navegador, então visitas futuras no mesmo aparelho pulam
 direto pro cardápio. Esses dados também vão junto de cada pedido
-(`orders.customer_name`/`customer_phone`, migration `0006`) e aparecem no
-painel do restaurante, com o telefone como link `tel:` pra ligar direto. O
-carrinho é uma bottom sheet (mesmo padrão do chat) com observação por item
+(`orders.customer_name`/`customer_phone`, migration `0006`) — o painel do
+restaurante não tem mais uma aba de pedidos (removida; só a aba Produtos
+existe hoje em `restaurante/painel.js`), mas os pedidos continuam sendo
+gravados normalmente em `orders`/`order_items`. O carrinho é uma bottom sheet
+(mesmo padrão do chat) com observação por item
 (`order_items.notes`, já existia desde a migration `0003`, só não era usada),
 controle de quantidade e remoção.
 

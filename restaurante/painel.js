@@ -5,14 +5,11 @@ const accessToken = new URLSearchParams(location.search).get('token')
 
 let restaurantClient = null
 let restaurant = null
-let activeTab = 'orders'
-let ordersPollTimer = null
 
 // Ícone de estrela (usado só no badge de "Destaque" na lista de produtos) —
 // SVG, não emoji, pra ficar consistente com o cardápio público.
 const ICON_STAR = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.6 3.6 2.4 5.4 6 6-3.6.6-5.4 2.4-6 6-.6-3.6-2.4-5.4-6-6 3.6-.6 5.4-2.4 6-6Z"/></svg>`
 
-let ordersState = []
 let productsState = []
 let productsFilter = 'all' // 'all' | 'available' | 'unavailable' — ver filteredProductsState()
 let categoriesState = []
@@ -69,123 +66,21 @@ function renderPanel() {
             <a href="${escapeHtml(menuUrl(restaurant.slug))}" target="_blank" rel="noreferrer" class="text-xs text-brand-blue underline hover:opacity-80 transition">Ver cardápio público ↗</a>
           </div>
         </div>
-        <nav class="flex gap-2 mt-4">
-          <button data-tab="orders" class="px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'orders' ? 'bg-brand-blue text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}">📋 Pedidos</button>
-          <button data-tab="products" class="px-4 py-2 rounded-lg text-sm font-medium transition ${activeTab === 'products' ? 'bg-brand-blue text-white shadow-sm' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'}">🍽️ Produtos</button>
-        </nav>
       </header>
 
       <main class="max-w-3xl mx-auto px-6 py-8" id="tab-content"></main>
     </div>
   `
 
-  document.querySelectorAll('[data-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')))
-  })
-
   renderTabContent()
-}
-
-function switchTab(tab) {
-  if (tab === activeTab) return
-  if (activeTab === 'orders') unsubscribeOrders()
-  activeTab = tab
-  renderPanel()
 }
 
 function renderTabContent() {
   const container = document.getElementById('tab-content')
-  if (activeTab === 'orders') {
-    container.innerHTML = ordersTabHtml()
-    bindOrdersTabEvents()
-    loadOrders()
-    subscribeOrders()
-  } else {
-    container.innerHTML = productsTabHtml()
-    bindProductsTabEvents()
-    loadCategories()
-    loadProducts()
-  }
-}
-
-// ---- Pedidos ----
-
-function ordersTabHtml() {
-  return `
-    <div class="space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="font-semibold text-lg">Pedidos em tempo real</h2>
-        <span class="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>ao vivo
-        </span>
-      </div>
-      <div id="orders-list">${skeletonCardsHtml(2)}</div>
-    </div>
-  `
-}
-
-function renderOrdersList() {
-  if (ordersState.length === 0) {
-    return emptyStateHtml('🧾', 'Nenhum pedido ainda. Assim que um cliente pedir, aparece aqui na hora.')
-  }
-  return ordersState
-    .map(
-      (order) => `
-    <div class="fade-slide-in bg-white border border-neutral-200 rounded-xl p-4 mb-3 shadow-sm">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <p class="font-medium">${order.table_number ? `Mesa ${escapeHtml(order.table_number)}` : 'Balcão'}</p>
-          ${
-            order.customer_name
-              ? `<p class="text-sm text-neutral-700 mt-0.5">👤 ${escapeHtml(order.customer_name)}${
-                  order.customer_phone
-                    ? ` · <a href="tel:${escapeHtml(order.customer_phone.replace(/\D/g, ''))}" class="text-brand-blue underline">${escapeHtml(order.customer_phone)}</a>`
-                    : ''
-                }</p>`
-              : ''
-          }
-          <p class="text-sm text-neutral-600 mt-0.5">R$ ${formatBRL(order.total)}</p>
-          <p class="text-xs text-neutral-400">${new Date(order.created_at).toLocaleString('pt-BR')}</p>
-        </div>
-      </div>
-    </div>
-  `
-    )
-    .join('')
-}
-
-function bindOrdersTabEvents() {}
-
-async function loadOrders() {
-  const { data, error } = await restaurantClient
-    .from('orders')
-    .select('*')
-    .eq('restaurant_id', restaurant.id)
-    .order('created_at', { ascending: false })
-  if (error) showToast('Erro ao carregar pedidos.', 'error')
-  ordersState = data || []
-  const list = document.getElementById('orders-list')
-  if (list) list.innerHTML = renderOrdersList()
-}
-
-function subscribeOrders() {
-  // Não dá pra usar Supabase Realtime (postgres_changes) aqui: o RLS de
-  // "orders" (current_restaurant_token(), migration 0001) só libera leitura
-  // pra quem manda o header x-restaurant-token — e esse header só existe em
-  // requests REST normais (PostgREST), o serviço de Realtime não o recebe.
-  // Na prática, o canal "inscreve" com sucesso mas nunca recebe eventos de
-  // pedidos de outros clientes, porque a política nega a visibilidade da
-  // linha do ponto de vista do Realtime. Poll simples resolve sem abrir mão
-  // dessa proteção (deixar "orders" público quebraria a garantia de que só
-  // quem tem o token vê nome/telefone dos clientes).
-  ordersPollTimer = setInterval(loadOrders, 4000)
-}
-
-function unsubscribeOrders() {
-  if (ordersPollTimer) {
-    clearInterval(ordersPollTimer)
-    ordersPollTimer = null
-  }
+  container.innerHTML = productsTabHtml()
+  bindProductsTabEvents()
+  loadCategories()
+  loadProducts()
 }
 
 // ---- Aba de produtos (categorias + lista) ----
