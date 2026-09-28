@@ -91,12 +91,16 @@
       <div class="absolute top-0 right-0 w-[38rem] h-[38rem] rounded-full bg-brand-orange/25 blur-3xl" aria-hidden="true"></div>
 
       <div class="relative max-w-6xl mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-14 sm:pb-16">
-        <!-- lg:grid-cols com fração generosa pro Ari, mas o tamanho dele
-             real não vem mais daqui (ver comentário na imagem, abaixo) — só
-             dá o espaço mínimo pro texto não brigar com ele. -->
-        <div class="grid lg:grid-cols-[minmax(18rem,1fr)_2.2fr] gap-6 lg:gap-2 items-end">
-          <!-- Texto + CTA -->
-          <div class="text-center lg:text-left">
+        <!-- Reordenado por breakpoint: no mobile empilha na ordem do DOM
+             (letra → Ari → resto do texto, como pedido — Ari logo abaixo do
+             "Bora papear?", antes do resto). Em lg, os 3 blocos viram peças
+             de um grid: letra e resto ficam na coluna 1 (linhas 1 e 2, uma
+             embaixo da outra, como sempre foram) e o Ari ocupa a coluna 2
+             inteira (lg:row-span-2), do lado, igual antes — não muda o
+             desktop, só reorganiza quem vem em que ordem no mobile. -->
+        <div class="grid gap-6 lg:gap-2 items-end lg:grid-cols-[minmax(18rem,1fr)_2.2fr]">
+          <!-- 1. "Bora papear?" -->
+          <div class="text-center lg:text-left lg:col-start-1 lg:row-start-1">
             <!-- Arte pronta (images/hero-lettering.png, fundo transparente)
                  no lugar de texto — três tentativas de imitar essa letra à
                  mão em CSS (fonte cursiva, gradiente, sombra) não chegaram
@@ -106,8 +110,47 @@
               alt="Bora papear?"
               class="mx-auto lg:mx-[-0.5rem] w-64 sm:w-80 lg:w-[24rem] h-auto"
             />
+          </div>
 
-            <p class="font-display font-extrabold text-xl sm:text-2xl text-ink mt-1 leading-snug">
+          <!-- 2. Ari com o celular do cardápio + placa de QR Code — arte
+               pronta (images/hero-ari.png, fundo já transparente), sem
+               precisar recriar o mockup de celular em CSS por cima como
+               antes. "Ancorado" embaixo (items-end no grid pai) — a sombra
+               de mesa que já vem desenhada na própria arte precisa "pousar"
+               em algum lugar, não flutuar num mar de creme vazio.
+
+               Importante: o tamanho dele em lg é uma largura FIXA
+               (lg:w-.../xl:w-...), não mais "w-full" da coluna — com w-full,
+               toda vez que a coluna crescia (pra ele ficar maior) a borda
+               ESQUERDA da imagem também avançava sobre o texto, porque
+               w-full ignora justify-end e preenche a coluna inteira. Com
+               largura fixa, justify-end de fato empurra ele pro lado direito
+               da coluna (mais a sangria -mr por cima), sobrando espaço vazio
+               à esquerda — é esse vazio que dá folga pro texto. -->
+          <div class="relative flex justify-center lg:justify-end mt-6 lg:mt-0 lg:-mr-16 xl:-mr-24 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+            <div class="relative w-full max-w-2xl sm:max-w-3xl lg:w-[46rem] xl:w-[54rem]">
+              <img
+                src="images/hero-ari.png"
+                alt="Ari mostrando o cardápio digital do PapeiAI no celular, ao lado de uma placa de QR Code pra escanear"
+                class="relative w-full h-auto"
+              />
+              <!-- Balão só a partir de lg — no mobile, com o Ari maior e
+                   colado perto do texto (ordem nova), não sobrava vão de
+                   verdade em lugar nenhum da imagem pra ele "pousar" sem
+                   esbarrar em cabeça ou texto; mais simples tirar do que
+                   ficar caçando uma posição seguro em cada tamanho de tela. -->
+              <div
+                class="hidden lg:block absolute max-w-[11rem] bg-white text-left rounded-2xl rounded-bl-md shadow-xl border border-ink/10 px-3 py-2 fade-slide-in lg:top-[-12%] lg:right-[32%]"
+              >
+                <p class="text-xs font-medium text-ink leading-snug">Oi! Eu sou o <span class="text-brand-orange font-bold">Ari</span>, seu garçom de IA!</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Resto do texto: subtítulo, corpo, CTA, link e Escaneia/
+               Papeia/Pede. -->
+          <div class="text-center lg:text-left mt-6 lg:mt-0 lg:col-start-1 lg:row-start-2">
+            <p class="font-display font-extrabold text-xl sm:text-2xl text-ink leading-snug">
               Seu cardápio que <span class="text-brand-orange">conversa</span> com seus clientes.
             </p>
 
@@ -155,48 +198,6 @@
                 </div>
                 <p class="font-bold text-xs sm:text-sm text-ink">Pede</p>
                 <p class="text-[11px] sm:text-xs text-ink/55 mt-0.5 leading-snug">Escolha seus pratos e finalize o pedido.</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Ari com o celular do cardápio + placa de QR Code — arte pronta
-               (images/hero-ari.png, fundo já transparente), sem precisar
-               recriar o mockup de celular em CSS por cima como antes.
-               "Ancorado" embaixo (items-end no grid pai) — a sombra de mesa
-               que já vem desenhada na própria arte precisa "pousar" em
-               algum lugar, não flutuar num mar de creme vazio.
-
-               Importante: o tamanho dele em lg é uma largura FIXA
-               (lg:w-.../xl:w-...), não mais "w-full" da coluna — com w-full,
-               toda vez que a coluna crescia (pra ele ficar maior) a borda
-               ESQUERDA da imagem também avançava sobre o texto, porque
-               w-full ignora justify-end e preenche a coluna inteira. Com
-               largura fixa, justify-end de fato empurra ele pro lado direito
-               da coluna (mais a sangria -mr por cima), sobrando espaço vazio
-               à esquerda — é esse vazio que dá folga pro texto. -->
-          <!-- mt- no mobile/tablet: no celular a seção empilha (texto em
-               cima, Ari embaixo, um atrás do outro no fluxo normal) — sem
-               essa folga, um top negativo no balão (ver abaixo) invadia o
-               texto de cima em vez de "sair" da imagem por cima, porque não
-               tinha imagem nenhuma ali ainda pra ele sair de cima de. Some
-               em lg porque lá as colunas já ficam lado a lado. -->
-          <div class="relative flex justify-center lg:justify-end mt-10 sm:mt-8 lg:mt-0 lg:-mr-16 xl:-mr-24">
-            <div class="relative w-full max-w-2xl sm:max-w-3xl lg:w-[46rem] xl:w-[54rem]">
-              <img
-                src="images/hero-ari.png"
-                alt="Ari mostrando o cardápio digital do PapeiAI no celular, ao lado de uma placa de QR Code pra escanear"
-                class="relative w-full h-auto"
-              />
-              <!-- Posição em % (não rem fixo) — a imagem varia muito de
-                   tamanho entre breakpoints, e um offset fixo não
-                   acompanhava. Offset negativo bem menor no mobile (a folga
-                   acima, ver mt- no wrapper, já ajuda) — o valor de lg
-                   (-12%) era grande demais pra caber sem invadir o texto de
-                   cima quando empilhado. -->
-              <div
-                class="absolute max-w-[9rem] sm:max-w-[10rem] lg:max-w-[11rem] bg-white text-left rounded-2xl rounded-bl-md shadow-xl border border-ink/10 px-3 py-2 fade-slide-in top-[1%] sm:top-[-2%] lg:top-[-12%] right-[20%] sm:right-[26%] lg:right-[32%]"
-              >
-                <p class="text-xs font-medium text-ink leading-snug">Oi! Eu sou o <span class="text-brand-orange font-bold">Ari</span>, seu garçom de IA!</p>
               </div>
             </div>
           </div>
