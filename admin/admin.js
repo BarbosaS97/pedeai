@@ -277,6 +277,7 @@ function qrModalHtml() {
           <span class="truncate max-w-[200px]">${escapeHtml(menuUrl(r.slug))}</span>
           <button id="qr-copy-btn" title="Copiar link" class="text-neutral-400 hover:text-brand-blue transition shrink-0">⧉</button>
         </div>
+        <p class="text-[11px] text-neutral-400 -mt-1">Pra colar no espaço do QR Code dos acrílicos de mesa (folheto "Escaneie e papeia"): imprima este PNG num adesivo de <strong>25 × 25mm</strong> (faixa segura: 22–27mm).</p>
         <div class="flex gap-2">
           ${
             state.qrDataUrl

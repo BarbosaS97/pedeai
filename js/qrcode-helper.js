@@ -18,11 +18,15 @@ function menuUrl(slug) {
 }
 
 // Gera o QR Code 100% no cliente (sem chamar serviço externo), apontando
-// para a URL pública do cardápio.
+// para a URL pública do cardápio. width:640 dá margem de sobra pra imprimir
+// pequeno (ex: adesivo de ~25mm pra colar nos acrílicos de mesa, ver
+// admin.js/qrModalHtml — a ~650 DPI nesse tamanho, bem acima do mínimo de
+// 300 DPI recomendado pra impressão nítida) sem exagerar no tamanho do
+// arquivo do PNG gerado.
 async function generateMenuQrCode(slug) {
   const url = menuUrl(slug)
   return QRCode.toDataURL(url, {
-    width: 480,
+    width: 640,
     margin: 2,
     color: {
       dark: '#1F1147', // roxo escuro, combina com a identidade tecnológica da marca
