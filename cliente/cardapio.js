@@ -27,7 +27,7 @@ const ICON_PHONE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" 
 const ICON_CART = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2l2.6 12.6a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 8H6"/></svg>`
 const ICON_CHEVRON_RIGHT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`
 const ICON_CHAT_BUBBLE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 5.94 2 10.8c0 2.62 1.32 4.96 3.4 6.57-.11 1.2-.5 2.44-1.28 3.5a.5.5 0 0 0 .5.77c1.9-.42 3.4-1.24 4.5-2.03.9.24 1.87.36 2.88.36 5.52 0 10-3.94 10-8.8S17.52 2 12 2Z"/></svg>`
-const ICON_PLUS = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`
+const ICON_PLUS = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`
 const ICON_TRASH = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7"/></svg>`
 const ICON_SEND = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.4 20.6 22 12 3.4 3.4 3 10l13 2-13 2z"/></svg>`
 
@@ -178,12 +178,12 @@ function buildInitialChatMessage() {
 // serve, antes mesmo do cliente olhar os pratos.
 function ariIntroHtml() {
   return `
-    <div id="ari-intro" class="fade-slide-in bg-surface-card border border-surface-line rounded-2xl p-4 sm:p-5 flex items-center gap-4">
-      ${chatAvatarHtml('w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-brand-orange/40 shrink-0')}
+    <div id="ari-intro" class="fade-slide-in bg-surface-card border border-surface-line rounded-2xl p-3 sm:p-4 flex items-center gap-3">
+      ${chatAvatarHtml('w-12 h-12 sm:w-14 sm:h-14 ring-2 ring-brand-orange/40 shrink-0')}
       <div class="min-w-0">
-        <h2 class="text-white font-bold text-base sm:text-lg leading-snug">Sou o <span class="text-brand-orange">Ari</span>, seu garçom</h2>
-        <p class="text-neutral-400 text-xs sm:text-sm mt-0.5 leading-relaxed">Peça sugestões, tire dúvidas ou monte seu pedido — é só chamar.</p>
-        <button id="ari-intro-btn" class="mt-3 inline-flex items-center gap-2 bg-brand-orange text-white text-xs sm:text-sm font-semibold rounded-full pl-3.5 pr-3 py-2 shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition">
+        <h2 class="text-white font-bold text-sm sm:text-base leading-snug">Sou o <span class="text-brand-orange">Ari</span>, seu garçom</h2>
+        <p class="text-neutral-400 text-[11px] sm:text-xs mt-0.5 leading-relaxed">Peça sugestões, tire dúvidas ou monte seu pedido — é só chamar.</p>
+        <button id="ari-intro-btn" class="mt-2 inline-flex items-center gap-1.5 bg-brand-orange text-white text-[11px] sm:text-xs font-semibold rounded-full pl-3 pr-2.5 py-1.5 shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition [&>svg]:w-3.5 [&>svg]:h-3.5">
           ${ICON_CHAT_BUBBLE}
           Conversar com o Ari
           ${ICON_CHEVRON_RIGHT}
@@ -199,12 +199,12 @@ function chatHintHtml() {
   return `
     <div
       id="chat-hint"
-      class="fade-slide-in fixed right-4 z-10 max-w-[15rem] bg-surface-card border border-surface-line rounded-2xl rounded-br-md shadow-xl pl-4 pr-8 py-3 cursor-pointer"
-      style="bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));"
+      class="fade-slide-in fixed right-3 z-10 max-w-[13rem] bg-surface-card border border-surface-line rounded-2xl rounded-br-md shadow-xl pl-3.5 pr-7 py-2.5 cursor-pointer"
+      style="bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));"
     >
-      <button id="chat-hint-close" title="Fechar" class="absolute top-1.5 right-1.5 text-neutral-500 hover:text-neutral-300 transition w-6 h-6 flex items-center justify-center text-sm leading-none">✕</button>
-      <p class="font-semibold text-sm text-brand-orange">Fale com o Ari</p>
-      <p class="text-xs text-neutral-400 mt-0.5 leading-relaxed">Posso te ajudar a escolher algo delicioso!</p>
+      <button id="chat-hint-close" title="Fechar" class="absolute top-1 right-1 text-neutral-500 hover:text-neutral-300 transition w-5 h-5 flex items-center justify-center text-xs leading-none">✕</button>
+      <p class="font-semibold text-xs text-brand-orange">Fale com o Ari</p>
+      <p class="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">Posso te ajudar a escolher algo delicioso!</p>
     </div>
   `
 }
@@ -458,33 +458,33 @@ function pageHtml() {
            esquerda, mesa (se veio pela URL) discreta à direita. Sem barra de
            navegação inferior — o app não tem abas. -->
       <header class="sticky top-0 z-20 bg-surface/95 backdrop-blur border-b border-surface-line">
-        <div class="max-w-2xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3 min-w-0">
+        <div class="max-w-2xl mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
             ${
               restaurant.logo_url
-                ? `<img src="${escapeHtml(restaurant.logo_url)}" alt="${escapeHtml(restaurant.name)}" class="w-11 h-11 rounded-full object-cover border border-surface-line shrink-0" />`
+                ? `<img src="${escapeHtml(restaurant.logo_url)}" alt="${escapeHtml(restaurant.name)}" class="w-9 h-9 rounded-full object-cover border border-surface-line shrink-0" />`
                 : ''
             }
             <div class="min-w-0">
-              <p class="text-xs text-neutral-400">Oi${customerName ? `, ${escapeHtml(customerName)}` : ''}!</p>
-              <h1 class="text-lg font-extrabold text-white leading-tight truncate">${escapeHtml(restaurant.name)}</h1>
+              <p class="text-[11px] text-neutral-400 leading-tight">Oi${customerName ? `, ${escapeHtml(customerName)}` : ''}!</p>
+              <h1 class="text-sm font-extrabold text-white leading-tight truncate">${escapeHtml(restaurant.name)}</h1>
             </div>
           </div>
           ${
             numero
-              ? `<span class="shrink-0 text-[11px] font-semibold text-neutral-300 bg-surface-card border border-surface-line rounded-full px-3 py-1.5">Mesa ${escapeHtml(numero)}</span>`
+              ? `<span class="shrink-0 text-[10px] font-semibold text-neutral-300 bg-surface-card border border-surface-line rounded-full px-2.5 py-1">Mesa ${escapeHtml(numero)}</span>`
               : ''
           }
         </div>
       </header>
 
-      <main class="max-w-2xl mx-auto px-4 py-5 sm:px-6 sm:py-6 space-y-6">
+      <main class="max-w-2xl mx-auto px-3 py-4 sm:px-6 sm:py-5 space-y-4">
         ${ariIntroHtml()}
         ${menuContentHtml()}
       </main>
 
       <footer class="max-w-2xl mx-auto px-4 pb-4 -mt-2 flex items-center justify-center">
-        <img src="${LOGO_IMAGE_URL}" alt="PapeiAI — Cardápio Digital" class="h-6 w-auto opacity-70" />
+        <img src="${LOGO_IMAGE_URL}" alt="PapeiAI — Cardápio Digital" class="h-5 w-auto opacity-70" />
       </footer>
 
       <!-- Botão flutuante do Ari — avatar redondo com um brilho suave atrás
@@ -492,8 +492,8 @@ function pageHtml() {
            forma geométrica chamativa: mais simples, mais limpo, sem parte
            nenhuma "flutuando" sem apoio visual. -->
       <div
-        class="fixed right-4 z-30 ${chatOpen || expandedProduct || cartOpen ? 'hidden' : ''}"
-        style="bottom: calc(1rem + env(safe-area-inset-bottom, 0px));"
+        class="fixed right-3 z-30 ${chatOpen || expandedProduct || cartOpen ? 'hidden' : ''}"
+        style="bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));"
       >
         <span class="absolute inset-0 rounded-full bg-brand-orange/45 blur-xl scale-125" aria-hidden="true"></span>
         <button
@@ -502,8 +502,8 @@ function pageHtml() {
           aria-label="Falar com o Ari"
           class="relative block rounded-full ring-4 ring-brand-orange/25 shadow-brand-ai hover:scale-105 active:scale-95 transition"
         >
-          ${chatAvatarHtml('w-16 h-16 ring-2 ring-white')}
-          <span class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-brand-orange text-white flex items-center justify-center ring-2 ring-surface shadow-sm">
+          ${chatAvatarHtml('w-12 h-12 ring-2 ring-white')}
+          <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-brand-orange text-white flex items-center justify-center ring-2 ring-surface shadow-sm [&>svg]:w-3 [&>svg]:h-3">
             ${ICON_CHAT_BUBBLE}
           </span>
         </button>
@@ -540,7 +540,7 @@ function menuContentHtml() {
 
   const groups = buildMenuGroups()
   if (!groups) {
-    return `<div class="grid grid-cols-2 gap-3">${products.map((p) => productCardHtml(p)).join('')}</div>`
+    return `<div class="grid grid-cols-3 gap-2">${products.map((p) => productCardHtml(p)).join('')}</div>`
   }
 
   return `${categoryNavHtml(groups)}${groups.map(menuSectionHtml).join('')}`
@@ -554,18 +554,18 @@ function menuContentHtml() {
 function categoryNavHtml(groups) {
   if (groups.length <= 1) return ''
   return `
-    <nav id="category-nav" class="scroll-contain sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-surface/95 backdrop-blur border-b border-surface-line overflow-x-auto">
-      <div class="flex gap-4 w-max">
+    <nav id="category-nav" class="scroll-contain sticky top-0 z-20 -mx-3 sm:-mx-6 px-3 sm:px-6 py-2.5 bg-surface/95 backdrop-blur border-b border-surface-line overflow-x-auto">
+      <div class="flex gap-3 w-max">
         ${groups
           .map(
             (g, idx) => `
-          <a href="#secao-${g.id || 'outros'}" data-category-pill class="flex flex-col items-center gap-1.5 w-16 shrink-0">
-            <span data-pill-circle class="w-14 h-14 rounded-full flex items-center justify-center transition [&>svg]:w-6 [&>svg]:h-6 ${
+          <a href="#secao-${g.id || 'outros'}" data-category-pill class="flex flex-col items-center gap-1 w-12 shrink-0">
+            <span data-pill-circle class="w-10 h-10 rounded-full flex items-center justify-center transition [&>svg]:w-4 [&>svg]:h-4 ${
               idx === 0
                 ? 'bg-brand-orange text-white'
                 : 'bg-surface-card border border-surface-line text-neutral-400'
             }">${categoryStyle(g.name).icon}</span>
-            <span data-pill-label class="text-[11px] font-medium text-center leading-tight truncate w-full ${
+            <span data-pill-label class="text-[9px] font-medium text-center leading-tight truncate w-full ${
               idx === 0 ? 'text-white' : 'text-neutral-400'
             }">${escapeHtml(g.name)}</span>
           </a>`
@@ -579,15 +579,15 @@ function categoryNavHtml(groups) {
 function menuSectionHtml(g) {
   const { tagline } = categoryStyle(g.name)
   return `
-    <section id="secao-${g.id || 'outros'}" class="space-y-3 scroll-mt-16">
+    <section id="secao-${g.id || 'outros'}" class="space-y-2.5 scroll-mt-16">
       <div>
-        <div class="flex items-center gap-2">
-          <span class="w-1 h-5 rounded-full bg-brand-orange shrink-0"></span>
-          <h2 class="text-lg font-bold text-white">${escapeHtml(g.name)}</h2>
+        <div class="flex items-center gap-1.5">
+          <span class="w-1 h-4 rounded-full bg-brand-orange shrink-0"></span>
+          <h2 class="text-sm font-bold text-white">${escapeHtml(g.name)}</h2>
         </div>
-        <p class="text-sm text-neutral-400 mt-0.5 ml-3">${tagline}</p>
+        <p class="text-xs text-neutral-400 mt-0.5 ml-2.5">${tagline}</p>
       </div>
-      <div class="grid grid-cols-2 gap-3">${g.items.map((p) => productCardHtml(p)).join('')}</div>
+      <div class="grid grid-cols-3 gap-2">${g.items.map((p) => productCardHtml(p)).join('')}</div>
     </section>
   `
 }
@@ -612,27 +612,27 @@ function productImageHtml(p) {
 function productCardHtml(p) {
   if (p.image_url) {
     return `
-      <div data-expand="${p.id}" class="fade-slide-in bg-surface-card border border-surface-line rounded-2xl overflow-hidden cursor-pointer active:opacity-90 transition">
+      <div data-expand="${p.id}" class="fade-slide-in bg-surface-card border border-surface-line rounded-xl overflow-hidden cursor-pointer active:opacity-90 transition">
         <div class="relative aspect-square w-full bg-surface-raised">
           <img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy" class="w-full h-full object-cover" />
-          <button data-add="${p.id}" title="Adicionar" class="absolute bottom-2 right-2 w-9 h-9 rounded-full bg-brand-orange text-white flex items-center justify-center shadow-lg ring-2 ring-surface-card active:scale-90 transition">${ICON_PLUS}</button>
+          <button data-add="${p.id}" title="Adicionar" class="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full bg-brand-orange text-white flex items-center justify-center shadow-lg ring-1 ring-surface-card active:scale-90 transition">${ICON_PLUS}</button>
         </div>
-        <div class="p-3">
-          <p class="text-sm font-semibold text-white leading-snug line-clamp-1">${escapeHtml(p.name)}</p>
-          <p class="text-brand-orange font-bold text-sm mt-1">R$ ${formatBRL(p.price)}</p>
+        <div class="p-2">
+          <p class="text-[11px] font-semibold text-white leading-snug line-clamp-1">${escapeHtml(p.name)}</p>
+          <p class="text-brand-orange font-bold text-[11px] mt-0.5">R$ ${formatBRL(p.price)}</p>
         </div>
       </div>
     `
   }
   return `
-    <div data-expand="${p.id}" class="fade-slide-in bg-surface-card border border-surface-line rounded-2xl p-3.5 flex flex-col justify-between min-h-[8rem] cursor-pointer active:opacity-90 transition">
+    <div data-expand="${p.id}" class="fade-slide-in bg-surface-card border border-surface-line rounded-xl p-2.5 flex flex-col justify-between min-h-[5.5rem] cursor-pointer active:opacity-90 transition">
       <div>
-        <p class="text-sm font-semibold text-white leading-snug line-clamp-2">${escapeHtml(p.name)}</p>
-        ${p.description ? `<p class="text-xs text-neutral-400 line-clamp-2 mt-1">${escapeHtml(p.description)}</p>` : ''}
+        <p class="text-[11px] font-semibold text-white leading-snug line-clamp-2">${escapeHtml(p.name)}</p>
+        ${p.description ? `<p class="text-[10px] text-neutral-400 line-clamp-1 mt-0.5">${escapeHtml(p.description)}</p>` : ''}
       </div>
-      <div class="flex items-center justify-between mt-2 gap-2">
-        <span class="text-brand-orange font-bold text-sm">R$ ${formatBRL(p.price)}</span>
-        <button data-add="${p.id}" title="Adicionar" class="w-8 h-8 rounded-full bg-brand-orange text-white flex items-center justify-center shadow active:scale-90 transition shrink-0">${ICON_PLUS}</button>
+      <div class="flex items-center justify-between mt-1.5 gap-1">
+        <span class="text-brand-orange font-bold text-[11px] truncate">R$ ${formatBRL(p.price)}</span>
+        <button data-add="${p.id}" title="Adicionar" class="w-6 h-6 rounded-full bg-brand-orange text-white flex items-center justify-center shadow active:scale-90 transition shrink-0">${ICON_PLUS}</button>
       </div>
     </div>
   `
@@ -708,15 +708,15 @@ function cartBarHtml() {
         chatOpen || expandedProduct ? 'hidden' : ''
       } ${cartJustUpdated ? 'cart-pulse' : ''}"
     >
-      <div class="max-w-2xl mx-auto px-4 py-3.5 flex items-center justify-between gap-3">
-        <span class="flex items-center gap-3 font-semibold text-sm">
+      <div class="max-w-2xl mx-auto px-3.5 py-3 flex items-center justify-between gap-3">
+        <span class="flex items-center gap-2.5 font-semibold text-xs [&>span>svg]:w-[18px] [&>span>svg]:h-[18px]">
           <span class="relative shrink-0">
             ${ICON_CART}
-            <span class="absolute -top-2 -right-2 bg-white text-brand-orange text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center leading-none ${cartJustUpdated ? 'badge-bump' : ''}">${count}</span>
+            <span class="absolute -top-2 -right-2 bg-white text-brand-orange text-[9px] font-bold rounded-full min-w-[16px] h-[16px] px-1 flex items-center justify-center leading-none ${cartJustUpdated ? 'badge-bump' : ''}">${count}</span>
           </span>
           Ver carrinho
         </span>
-        <span class="flex items-center gap-1.5 font-bold">
+        <span class="flex items-center gap-1 font-bold text-sm [&>svg]:w-3.5 [&>svg]:h-3.5">
           R$ ${formatBRL(total)}
           ${ICON_CHEVRON_RIGHT}
         </span>

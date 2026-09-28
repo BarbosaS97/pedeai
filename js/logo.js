@@ -11,7 +11,7 @@
 const LOGO_IMAGE_URL = new URL('../images/logo.png', document.currentScript.src).href
 
 const LOGO_SIZE_CLASSES = {
-  sm: 'h-7',
+  sm: 'h-9',
   md: 'h-10 sm:h-12',
   lg: 'h-16 sm:h-20',
 }

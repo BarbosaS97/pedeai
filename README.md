@@ -56,12 +56,14 @@ manifest.json                 manifesto PWA (ícone/nome ao "Adicionar à Tela d
 index.html                    landing page pública (conversão — ver seção "Landing page e leads")
 landing.js
 images/
-  logo.png                      logo oficial "PapeiAI" (com a tagline "Cardápio Digital" já na arte)
-  avatar.png                    foto do Ari recortada (rosto), usada só no chat de verdade (cliente/cardapio.js)
-  avatar-full.png                foto inteira do Ari, usada na landing page (hero e mockups)
+  logo.png                      logo oficial "PapeiAI" (wordmark, fundo transparente)
+  avatar.png                    foto do Ari, corpo inteiro (2:3) — usada tanto no chat de verdade
+                                 (cliente/cardapio.js, com zoom/crop via CSS pro rosto) quanto no
+                                 CTA final da landing (sem crop)
+  hero-ari.png                   Ari + celular com o cardápio + ícones flutuantes, fundo já
+                                 transparente (941x1672 ≈ 9:16) — usada no hero da landing
   favicon.png                   ícone do navegador e da PWA (favicon + apple-touch-icon)
-  restaurante.jpg                foto de salão, fundo desfocado do hero da landing page — ⚠️ tem marca-d'água de banco de imagens, ver aviso abaixo
-  tela-branca.jpg                foto de mão com celular, usada na seção "Na mão do cliente" da landing (tela composta via CSS)
+  tela-branca.jpg                sem uso atualmente — sobrou de uma seção da landing que foi removida
 admin/
   index.html                   sua área: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas
   admin.js
@@ -184,17 +186,31 @@ Edge Function (ex: com [Resend](https://resend.com)) disparada por um
 tabela `leads` — a tabela e a policy de insert público já estão prontas pra
 isso, só falta essa peça.
 
-O hero usa `images/restaurante.jpg` desfocada como fundo (com o Ari "na
-beira" da seção, dissolvendo no rodapé via `mask-image`) e a seção "Na mão do
-cliente" usa `images/tela-branca.jpg` (foto real de uma mão segurando um
-celular de tela branca) — uma recriação bem simples do chat (barra roxa +
-"bolhas" sem texto, pra não depender de fonte ilegível em tamanho minúsculo)
-é posicionada por cima via CSS (`position: absolute` + `rotate()`, calibrado
-a olho pelas coordenadas da tela na foto), não é uma imagem composta de
-verdade. **Atenção**: `images/restaurante.jpg`, do jeito que foi fornecida,
-tem uma marca-d'água de banco de imagens visível (fica bem disfarçada atrás
-do blur e da sobreposição branca, mas ainda está lá) — troque por uma versão
-licenciada/sem marca-d'água antes de publicar de verdade.
+O hero mostra `images/hero-ari.png` (fundo já transparente de verdade,
+≈9:16), dissolvendo no rodapé via `mask-image`. Duas tentativas de usar um
+vídeo aqui no lugar (`videos/hero-ari.mp4`, hoje removido do repo) foram
+abandonadas: a primeira tinha fundo preto sólido e tentava removê-lo *ao
+vivo* no navegador (`<canvas>` + `getImageData`/`putImageData`, um
+chroma/luma key simples) — não ficou bom o bastante e só funciona servida por
+HTTP (quebra com `file://`, que é como dá pra abrir a página sem o Live
+Server); a segunda veio com fundo branco sólido do próprio exportador
+(**MP4/H.264 não tem canal alpha** — nenhum navegador decodifica
+transparência real nesse formato, então "sem fundo" nunca é transparente de
+verdade num MP4), branco esse que ficava visível contra o creme da página
+mesmo sendo uma cor próxima. Se um dia quiser tentar vídeo de novo, precisa
+ser num formato com alpha de verdade (WebM VP9 com transparência, ou ProRes
+4444) — nenhuma ferramenta usada até agora exportou nesses formatos.
+`images/tela-branca.jpg` (foto de mão com celular, usada numa seção "Na mão
+do cliente" que existiu numa versão anterior da landing) não é mais
+referenciada em lugar nenhum — a seção foi removida, o arquivo só ficou no
+repo sem uso.
+
+A landing usa uma paleta separada do resto do site — creme (`bg-cream`) +
+tinta quase-preta (`bg-ink`/`text-ink`) + laranja de destaque, com títulos
+grandes em Sora (`font-display`) — pra parecer uma marca de comida com
+personalidade própria, não uma ferramenta de IA genérica. Esses tokens
+(`cream`, `ink`, `font-display`, `font-script`) só existem no
+`tailwind.config` de `index.html`; nenhuma outra página os usa.
 
 ## Configuração
 

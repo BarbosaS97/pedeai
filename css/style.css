@@ -1,7 +1,7 @@
 /* style.css — sistema de design compartilhado, além dos utilitários do Tailwind (CDN). */
 
 :root {
-  --brand-orange: #ff6b35;
+  --brand-orange: #ff6823;
   --brand-red: #e63946;
   --brand-blue: #2563eb;
 }
@@ -256,7 +256,7 @@ textarea {
   --action-accent-bg: rgba(59, 130, 246, 0.16);
 }
 .action-card--note {
-  --action-accent: #ff6b35;
+  --action-accent: #ff6823;
   --action-accent-bg: rgba(255, 107, 53, 0.16);
 }
 @keyframes action-card-in {
