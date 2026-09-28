@@ -274,9 +274,17 @@ Logo oficial do PapeiAI em `images/logo.png` (renderizada nos cabeçalhos por
 `js/logo.js`), favicon/ícone de PWA em `images/favicon.png` (ligado em cada
 página via `<link rel="icon">`/`apple-touch-icon` e no `manifest.json` da
 raiz) e a foto do Ari em `images/avatar.png`, usada no chat
-(`cliente/cardapio.js`). Paleta laranja/vermelho (calor, convite) + roxo
-(tecnologia/IA), definida no `tailwind.config` inline de cada página
-(Tailwind via CDN).
+(`cliente/cardapio.js`). Paleta azul (marca/"Papei") + laranja-vermelho
+("AI"/Ari), definida no `tailwind.config` inline de cada página (Tailwind via
+CDN) — sem roxo, pra bater com as cores reais do logo.
+
+O cardápio público (`cliente/`) é a única área com **tema escuro** — fundo
+quase-preto (`bg-surface`, cartões em `bg-surface-card`/`bg-surface-raised`,
+tokens definidos só no `tailwind.config` de `cliente/index.html`), pensado
+pra parecer um app de delivery premium. `admin/`, `restaurante/` e a landing
+(`index.html` da raiz) continuam em tema claro — os tokens `surface-*` não
+existem no `tailwind.config` delas de propósito, pra não vazar o tema escuro
+pra área administrativa.
 
 Cada restaurante pode ter sua própria logo (seção "Identidade visual" na aba
 Produtos do painel, `restaurante/painel.js`), guardada em `restaurants.logo_url`

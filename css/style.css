@@ -209,9 +209,10 @@ textarea {
 }
 
 /* ---- Cartões de ação do garçom IA (ele mexeu no carrinho pela conversa) ----
-   Estilo "linha de recibo": cartão branco neutro, uma borda lateral colorida
-   e um selo com o ícone — mais discreto e "profissional" do que uma pílula
-   colorida cheia, mas ainda dá pra distinguir o tipo de ação num relance. */
+   Estilo "linha de recibo": cartão escuro neutro (o chat do cardápio é tema
+   escuro — ver cliente/cardapio.js), uma borda lateral colorida e um selo com
+   o ícone — mais discreto e "profissional" do que uma pílula colorida cheia,
+   mas ainda dá pra distinguir o tipo de ação num relance. */
 .action-card {
   display: flex;
   align-items: center;
@@ -220,11 +221,11 @@ textarea {
   font-weight: 600;
   padding: 0.5rem 0.75rem 0.5rem 0.65rem;
   border-radius: 0.7rem;
-  border: 1px solid #eeeeee;
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-left: 3px solid var(--action-accent, #a3a3a3);
-  background: #ffffff;
-  color: #262626;
-  box-shadow: 0 1px 2px rgba(23, 23, 23, 0.05);
+  background: #1c1a19;
+  color: #f5f5f5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   opacity: 0;
   animation: action-card-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -238,25 +239,25 @@ textarea {
   font-size: 0.7rem;
   line-height: 1;
   flex-shrink: 0;
-  background: var(--action-accent-bg, #f5f5f5);
-  color: var(--action-accent, #737373);
+  background: var(--action-accent-bg, rgba(255, 255, 255, 0.08));
+  color: var(--action-accent, #a3a3a3);
 }
 .action-card--add {
-  --action-accent: #10b981;
-  --action-accent-bg: #d1fae5;
+  --action-accent: #2ecc71;
+  --action-accent-bg: rgba(46, 204, 113, 0.16);
 }
 .action-card--remove {
   --action-accent: #ef4444;
-  --action-accent-bg: #fee2e2;
+  --action-accent-bg: rgba(239, 68, 68, 0.16);
   animation-name: action-card-in-side;
 }
 .action-card--qty {
   --action-accent: #3b82f6;
-  --action-accent-bg: #dbeafe;
+  --action-accent-bg: rgba(59, 130, 246, 0.16);
 }
 .action-card--note {
   --action-accent: #ff6b35;
-  --action-accent-bg: #ffe4d5;
+  --action-accent-bg: rgba(255, 107, 53, 0.16);
 }
 @keyframes action-card-in {
   from { opacity: 0; transform: translateY(8px) scale(0.97); }
@@ -294,7 +295,7 @@ textarea {
 
 /* ---- Destaque temporário da linha do carrinho que o chat acabou de mudar ---- */
 @keyframes row-highlight {
-  0% { background-color: rgba(255, 107, 53, 0.14); }
+  0% { background-color: rgba(255, 107, 53, 0.22); }
   100% { background-color: transparent; }
 }
 .row-highlight {

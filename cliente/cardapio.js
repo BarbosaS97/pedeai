@@ -27,6 +27,9 @@ const ICON_PHONE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" 
 const ICON_CART = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2l2.6 12.6a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 8H6"/></svg>`
 const ICON_CHEVRON_RIGHT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`
 const ICON_CHAT_BUBBLE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 5.94 2 10.8c0 2.62 1.32 4.96 3.4 6.57-.11 1.2-.5 2.44-1.28 3.5a.5.5 0 0 0 .5.77c1.9-.42 3.4-1.24 4.5-2.03.9.24 1.87.36 2.88.36 5.52 0 10-3.94 10-8.8S17.52 2 12 2Z"/></svg>`
+const ICON_PLUS = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`
+const ICON_TRASH = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m3 0-1 13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7"/></svg>`
+const ICON_SEND = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.4 20.6 22 12 3.4 3.4 3 10l13 2-13 2z"/></svg>`
 
 // Ícones das categorias (pílulas de filtro): o nome vem livre do restaurante
 // (ver categoryStyle, abaixo), então o ícone é escolhido por palavra-chave,
@@ -172,25 +175,15 @@ function buildInitialChatMessage() {
 // ---- Card de apresentação do Ari (acima das categorias) ----
 // Diferente do balão de dica (temporário, some sozinho), este card fica fixo
 // no topo do cardápio — é a primeira explicação de quem é o Ari e pra que
-// serve, antes mesmo do cliente olhar os pratos. Fundo azul-marinho escuro
-// (não é uma das cores "quentes" da marca) só pra dar contraste — a foto do
-// Ari (que já vem com um fundo escuro em degradê na própria arte, ver
-// avatar.png) se funde nele sem precisar de moldura/recorte.
+// serve, antes mesmo do cliente olhar os pratos.
 function ariIntroHtml() {
   return `
-    <div id="ari-intro" class="fade-slide-in relative rounded-2xl shadow-lg overflow-hidden flex items-stretch" style="background: linear-gradient(135deg, #16213f, #0e1830);">
-      <img
-        src="${CHAT_AVATAR_URL}"
-        alt="Ari"
-        class="w-24 sm:w-32 object-cover shrink-0"
-        style="object-position: 50% 15%;"
-      />
-      <div class="flex-1 min-w-0 p-4 sm:p-5 flex flex-col justify-center gap-2.5">
-        <div>
-          <h2 class="text-white font-bold text-base sm:text-lg leading-snug">Olá! Eu sou o <span class="text-brand-orange">Ari</span>,</h2>
-          <p class="text-white/70 text-xs sm:text-sm mt-0.5 leading-relaxed">seu garçom de IA. Tô aqui pra te ajudar a escolher o que pedir. Vamos nessa?</p>
-        </div>
-        <button id="ari-intro-btn" class="inline-flex items-center gap-2 bg-brand-orange text-white text-xs sm:text-sm font-semibold rounded-full pl-3.5 pr-3 py-2 sm:py-2.5 w-fit shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition">
+    <div id="ari-intro" class="fade-slide-in bg-surface-card border border-surface-line rounded-2xl p-4 sm:p-5 flex items-center gap-4">
+      ${chatAvatarHtml('w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-brand-orange/40 shrink-0')}
+      <div class="min-w-0">
+        <h2 class="text-white font-bold text-base sm:text-lg leading-snug">Sou o <span class="text-brand-orange">Ari</span>, seu garçom</h2>
+        <p class="text-neutral-400 text-xs sm:text-sm mt-0.5 leading-relaxed">Peça sugestões, tire dúvidas ou monte seu pedido — é só chamar.</p>
+        <button id="ari-intro-btn" class="mt-3 inline-flex items-center gap-2 bg-brand-orange text-white text-xs sm:text-sm font-semibold rounded-full pl-3.5 pr-3 py-2 shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition">
           ${ICON_CHAT_BUBBLE}
           Conversar com o Ari
           ${ICON_CHEVRON_RIGHT}
@@ -206,12 +199,12 @@ function chatHintHtml() {
   return `
     <div
       id="chat-hint"
-      class="fade-slide-in fixed right-4 z-10 max-w-[15rem] bg-white text-neutral-800 rounded-2xl rounded-br-md shadow-xl border border-neutral-100 pl-4 pr-8 py-3 cursor-pointer"
+      class="fade-slide-in fixed right-4 z-10 max-w-[15rem] bg-surface-card border border-surface-line rounded-2xl rounded-br-md shadow-xl pl-4 pr-8 py-3 cursor-pointer"
       style="bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));"
     >
-      <button id="chat-hint-close" title="Fechar" class="absolute top-1.5 right-1.5 text-neutral-300 hover:text-neutral-500 transition w-6 h-6 flex items-center justify-center text-sm leading-none">✕</button>
+      <button id="chat-hint-close" title="Fechar" class="absolute top-1.5 right-1.5 text-neutral-500 hover:text-neutral-300 transition w-6 h-6 flex items-center justify-center text-sm leading-none">✕</button>
       <p class="font-semibold text-sm text-brand-orange">Fale com o Ari</p>
-      <p class="text-xs text-neutral-500 mt-0.5 leading-relaxed">Posso te ajudar a escolher algo delicioso!</p>
+      <p class="text-xs text-neutral-400 mt-0.5 leading-relaxed">Posso te ajudar a escolher algo delicioso!</p>
     </div>
   `
 }
@@ -238,11 +231,30 @@ function dismissChatHint() {
 
 function mesaUnavailableHtml() {
   return `
-    <div class="min-h-[100dvh] flex items-center justify-center text-center px-6 bg-neutral-50">
+    <div class="min-h-[100dvh] flex items-center justify-center text-center px-6 bg-surface">
       <div class="max-w-sm">
         ${renderLogo({ size: 'md' })}
-        <p class="text-neutral-800 font-semibold mt-4">Esta mesa está temporariamente indisponível.</p>
-        <p class="text-neutral-500 text-sm mt-1">Chame um atendente.</p>
+        <p class="text-white font-semibold mt-4">Esta mesa está temporariamente indisponível.</p>
+        <p class="text-neutral-400 text-sm mt-1">Chame um atendente.</p>
+      </div>
+    </div>
+  `
+}
+
+// Versões escuras de loadingHtml()/notFoundHtml() (js/util.js) — aquelas são
+// compartilhadas com admin/ e restaurante/ (tema claro), então em vez de
+// escurecer o helper pra todo mundo, o cardápio usa sua própria versão só
+// pra essas duas telas iniciais (antes de saber se o restaurante existe).
+function cardapioLoadingHtml() {
+  return `<div class="min-h-[100dvh] bg-surface flex items-center justify-center text-neutral-400">Carregando...</div>`
+}
+
+function cardapioNotFoundHtml(message) {
+  return `
+    <div class="min-h-[100dvh] bg-surface flex items-center justify-center text-center px-4">
+      <div>
+        ${renderLogo({ size: 'md' })}
+        <p class="text-neutral-400 mt-4">${escapeHtml(message)}</p>
       </div>
     </div>
   `
@@ -250,11 +262,11 @@ function mesaUnavailableHtml() {
 
 async function init() {
   if (!slug) {
-    root.innerHTML = notFoundHtml('Restaurante não encontrado.')
+    root.innerHTML = cardapioNotFoundHtml('Restaurante não encontrado.')
     return
   }
 
-  root.innerHTML = loadingHtml()
+  root.innerHTML = cardapioLoadingHtml()
 
   const { data } = await supabaseClient
     .from('restaurants')
@@ -266,7 +278,7 @@ async function init() {
   restaurant = data || 'not_found'
 
   if (restaurant === 'not_found') {
-    root.innerHTML = notFoundHtml('Restaurante não encontrado.')
+    root.innerHTML = cardapioNotFoundHtml('Restaurante não encontrado.')
     return
   }
 
@@ -341,9 +353,9 @@ function renderPage() {
 
 function welcomeScreenHtml() {
   return `
-    <div class="relative min-h-[100dvh] overflow-hidden bg-neutral-50 flex flex-col">
-      <div class="absolute -top-28 -left-24 w-72 h-72 rounded-full bg-brand-blue/25 blur-3xl" aria-hidden="true"></div>
-      <div class="absolute -bottom-32 -right-20 w-80 h-80 rounded-full bg-brand-orange/25 blur-3xl" aria-hidden="true"></div>
+    <div class="relative min-h-[100dvh] overflow-hidden bg-surface flex flex-col">
+      <div class="absolute -top-28 -left-24 w-72 h-72 rounded-full bg-brand-blue/20 blur-3xl" aria-hidden="true"></div>
+      <div class="absolute -bottom-32 -right-20 w-80 h-80 rounded-full bg-brand-orange/20 blur-3xl" aria-hidden="true"></div>
 
       <div class="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
         <div class="w-full max-w-sm fade-slide-in">
@@ -355,20 +367,20 @@ function welcomeScreenHtml() {
               <img
                 src="${CHAT_AVATAR_URL}"
                 alt="Ari"
-                class="relative w-28 h-28 rounded-full object-cover ring-4 ring-white shadow-xl bg-brand-orange/20"
+                class="relative w-28 h-28 rounded-full object-cover ring-4 ring-surface shadow-xl bg-brand-orange/20"
                 style="object-position: 50% 12%; transform: scale(1.55); transform-origin: 50% 15%;"
               />
             </div>
-            <h1 class="text-2xl font-bold text-neutral-900 mt-4">Oi, eu sou o Ari</h1>
-            <p class="text-sm text-neutral-500 mt-2 leading-relaxed px-2">
+            <h1 class="text-2xl font-bold text-white mt-4">Oi, eu sou o Ari</h1>
+            <p class="text-sm text-neutral-400 mt-2 leading-relaxed px-2">
               Seu garçom pessoal no ${escapeHtml(restaurant.name)}. Vou te ajudar a escolher os
               pratos e montar o pedido, tudo por aqui.
             </p>
           </div>
 
-          <form id="welcome-form" class="bg-white border border-neutral-100 rounded-2xl shadow-xl p-6 space-y-3.5 mt-7">
+          <form id="welcome-form" class="bg-surface-card border border-surface-line rounded-2xl shadow-xl p-6 space-y-3.5 mt-7">
             <div class="relative">
-              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400">${ICON_PERSON}</span>
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500">${ICON_PERSON}</span>
               <input
                 id="welcome-name"
                 value="${escapeHtml(welcomeNameDraft)}"
@@ -376,11 +388,11 @@ function welcomeScreenHtml() {
                 aria-label="Primeiro nome"
                 autocomplete="given-name"
                 autofocus
-                class="w-full border border-neutral-300 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
+                class="w-full bg-surface-raised border border-surface-line text-white placeholder-neutral-500 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
               />
             </div>
             <div class="relative">
-              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400">${ICON_PHONE}</span>
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500">${ICON_PHONE}</span>
               <input
                 id="welcome-phone"
                 value="${escapeHtml(welcomePhoneDraft)}"
@@ -388,7 +400,7 @@ function welcomeScreenHtml() {
                 aria-label="Telefone com DDD"
                 inputmode="numeric"
                 autocomplete="tel"
-                class="w-full border border-neutral-300 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
+                class="w-full bg-surface-raised border border-surface-line text-white placeholder-neutral-500 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
               />
             </div>
             <button
@@ -440,30 +452,29 @@ function updateWelcomeSubmitState() {
 // ---- Cardápio ----
 
 function pageHtml() {
-  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0)
   return `
-    <div class="min-h-[100dvh] bg-neutral-50 pb-32">
-      <!-- Header: identidade do restaurante à esquerda, marca PapeiAI
-           centralizada, atalho pro carrinho à direita — grid de 3 colunas
-           (não flex+justify-between) pra logo ficar de fato centralizada,
-           não deslocada pelo tamanho desigual dos dois lados. -->
-      <header class="sticky top-0 z-20 bg-neutral-50/95 backdrop-blur border-b border-neutral-100">
-        <div class="max-w-2xl mx-auto px-4 sm:px-6 h-16 grid grid-cols-3 items-center gap-2">
-          <p class="justify-self-start text-sm font-semibold text-neutral-700 truncate">${escapeHtml(restaurant.name)}</p>
-          <img src="${LOGO_IMAGE_URL}" alt="PapeiAI" class="justify-self-center h-6 sm:h-7 w-auto" />
-          <button
-            id="header-cart-btn"
-            title="Ver carrinho"
-            aria-label="Ver carrinho"
-            class="justify-self-end relative w-10 h-10 rounded-full bg-white border border-neutral-200 flex items-center justify-center text-neutral-600 hover:border-brand-orange hover:text-brand-orange transition shrink-0"
-          >
-            ${ICON_CART}
+    <div class="min-h-[100dvh] bg-surface pb-32">
+      <!-- Header: saudação + nome do restaurante (e logo, se tiver) à
+           esquerda, mesa (se veio pela URL) discreta à direita. Sem barra de
+           navegação inferior — o app não tem abas. -->
+      <header class="sticky top-0 z-20 bg-surface/95 backdrop-blur border-b border-surface-line">
+        <div class="max-w-2xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
             ${
-              cartCount > 0
-                ? `<span class="absolute -top-1.5 -right-1.5 bg-brand-orange text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center leading-none ring-2 ring-neutral-50">${cartCount}</span>`
+              restaurant.logo_url
+                ? `<img src="${escapeHtml(restaurant.logo_url)}" alt="${escapeHtml(restaurant.name)}" class="w-11 h-11 rounded-full object-cover border border-surface-line shrink-0" />`
                 : ''
             }
-          </button>
+            <div class="min-w-0">
+              <p class="text-xs text-neutral-400">Oi${customerName ? `, ${escapeHtml(customerName)}` : ''}!</p>
+              <h1 class="text-lg font-extrabold text-white leading-tight truncate">${escapeHtml(restaurant.name)}</h1>
+            </div>
+          </div>
+          ${
+            numero
+              ? `<span class="shrink-0 text-[11px] font-semibold text-neutral-300 bg-surface-card border border-surface-line rounded-full px-3 py-1.5">Mesa ${escapeHtml(numero)}</span>`
+              : ''
+          }
         </div>
       </header>
 
@@ -492,7 +503,7 @@ function pageHtml() {
           class="relative block rounded-full ring-4 ring-brand-orange/25 shadow-brand-ai hover:scale-105 active:scale-95 transition"
         >
           ${chatAvatarHtml('w-16 h-16 ring-2 ring-white')}
-          <span class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-brand-orange text-white flex items-center justify-center ring-2 ring-white shadow-sm">
+          <span class="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-brand-orange text-white flex items-center justify-center ring-2 ring-surface shadow-sm">
             ${ICON_CHAT_BUBBLE}
           </span>
         </button>
@@ -529,27 +540,35 @@ function menuContentHtml() {
 
   const groups = buildMenuGroups()
   if (!groups) {
-    return `<div class="space-y-3">${products.map((p) => productCardHtml(p)).join('')}</div>`
+    return `<div class="grid grid-cols-2 gap-3">${products.map((p) => productCardHtml(p)).join('')}</div>`
   }
 
   return `${categoryNavHtml(groups)}${groups.map(menuSectionHtml).join('')}`
 }
 
-// Barra de "pílulas" pra pular direto pra uma seção — só compensa mostrar
-// quando há mais de uma seção; com uma só, seria repetir o título à toa.
+// Chips circulares pra pular direto pra uma seção — só compensa mostrar
+// quando há mais de uma seção; com uma só, seria repetir o título à toa. A
+// pílula tocada muda de estilo via JS (ver bindPageEvents, data-pill-circle/
+// data-pill-label), não por re-render — o scroll até a seção já acontece
+// sozinho, é o comportamento nativo do navegador pra link com "#âncora".
 function categoryNavHtml(groups) {
   if (groups.length <= 1) return ''
   return `
-    <nav id="category-nav" class="scroll-contain sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 bg-neutral-50/95 backdrop-blur border-b border-neutral-200 overflow-x-auto">
-      <div class="flex gap-2 w-max">
+    <nav id="category-nav" class="scroll-contain sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-surface/95 backdrop-blur border-b border-surface-line overflow-x-auto">
+      <div class="flex gap-4 w-max">
         ${groups
           .map(
-            (g, idx) =>
-              `<a href="#secao-${g.id || 'outros'}" data-category-pill class="inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap rounded-full px-3.5 py-2 transition ${
-                idx === 0
-                  ? 'bg-brand-orange border border-brand-orange text-white'
-                  : 'bg-white border border-neutral-200 text-neutral-600 hover:border-brand-orange hover:text-brand-orange'
-              }">${categoryStyle(g.name).icon}${escapeHtml(g.name)}</a>`
+            (g, idx) => `
+          <a href="#secao-${g.id || 'outros'}" data-category-pill class="flex flex-col items-center gap-1.5 w-16 shrink-0">
+            <span data-pill-circle class="w-14 h-14 rounded-full flex items-center justify-center transition [&>svg]:w-6 [&>svg]:h-6 ${
+              idx === 0
+                ? 'bg-brand-orange text-white'
+                : 'bg-surface-card border border-surface-line text-neutral-400'
+            }">${categoryStyle(g.name).icon}</span>
+            <span data-pill-label class="text-[11px] font-medium text-center leading-tight truncate w-full ${
+              idx === 0 ? 'text-white' : 'text-neutral-400'
+            }">${escapeHtml(g.name)}</span>
+          </a>`
           )
           .join('')}
       </div>
@@ -564,38 +583,56 @@ function menuSectionHtml(g) {
       <div>
         <div class="flex items-center gap-2">
           <span class="w-1 h-5 rounded-full bg-brand-orange shrink-0"></span>
-          <h2 class="text-lg font-bold text-neutral-900">${escapeHtml(g.name)}</h2>
+          <h2 class="text-lg font-bold text-white">${escapeHtml(g.name)}</h2>
         </div>
-        <p class="text-sm text-neutral-500 mt-0.5 ml-3">${tagline}</p>
+        <p class="text-sm text-neutral-400 mt-0.5 ml-3">${tagline}</p>
       </div>
-      <div class="space-y-3">${g.items.map((p) => productCardHtml(p)).join('')}</div>
+      <div class="grid grid-cols-2 gap-3">${g.items.map((p) => productCardHtml(p)).join('')}</div>
     </section>
   `
 }
 
-// Produto sem foto não reserva nenhum espaço de imagem (sem placeholder
-// cinza, sem ícone de "sem foto") — o card se reorganiza sozinho porque o
-// flex simplesmente fica com um filho a menos.
-function productImageHtml(p, size) {
+// Miniatura pequena e quadrada usada na linha do carrinho e no mini-card de
+// recomendação do chat (ver cartItemRowHtml/productMiniCardHtml) — o card do
+// cardápio em si não usa isso mais, tem a própria imagem em destaque (ver
+// productCardHtml). Produto sem foto não reserva nenhum espaço de imagem
+// (sem placeholder cinza) — a linha/card se reorganiza sozinho porque o flex
+// simplesmente fica com um filho a menos.
+function productImageHtml(p) {
   if (!p.image_url) return ''
-  const boxClass = size === 'sm' ? 'w-14 h-14' : 'w-16 h-16 sm:w-20 sm:h-20'
-  return `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="${boxClass} rounded-lg object-cover shrink-0" />`
+  return `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="w-14 h-14 rounded-lg object-cover shrink-0" />`
 }
 
+// Card do cardápio: com foto, a imagem ocupa o topo todo (quadrada) com o
+// botão "+" circular sobre o canto dela; sem foto, vira um cartão compacto
+// (só texto) do mesmo tamanho de grade, com o "+" no canto do próprio
+// cartão — a variação que o "ou" do briefing previu ("+ no canto inferior
+// direito da imagem, ou do card"). Nenhum dos dois usa productImageHtml():
+// aquele helper é só pra miniatura pequena (carrinho/mini-card do chat).
 function productCardHtml(p) {
+  if (p.image_url) {
+    return `
+      <div data-expand="${p.id}" class="fade-slide-in bg-surface-card border border-surface-line rounded-2xl overflow-hidden cursor-pointer active:opacity-90 transition">
+        <div class="relative aspect-square w-full bg-surface-raised">
+          <img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" loading="lazy" class="w-full h-full object-cover" />
+          <button data-add="${p.id}" title="Adicionar" class="absolute bottom-2 right-2 w-9 h-9 rounded-full bg-brand-orange text-white flex items-center justify-center shadow-lg ring-2 ring-surface-card active:scale-90 transition">${ICON_PLUS}</button>
+        </div>
+        <div class="p-3">
+          <p class="text-sm font-semibold text-white leading-snug line-clamp-1">${escapeHtml(p.name)}</p>
+          <p class="text-brand-orange font-bold text-sm mt-1">R$ ${formatBRL(p.price)}</p>
+        </div>
+      </div>
+    `
+  }
   return `
-    <div data-expand="${p.id}" class="fade-slide-in card-hover bg-white border border-neutral-200 rounded-xl p-3.5 sm:p-4 flex gap-3 sm:gap-4 cursor-pointer active:bg-neutral-50 transition">
-      ${productImageHtml(p)}
-      <div class="flex-1 min-w-0">
-        <div class="flex items-start justify-between gap-2">
-          <p class="font-semibold leading-snug">${escapeHtml(p.name)}</p>
-          <span class="text-neutral-300 shrink-0 mt-0.5" aria-hidden="true">›</span>
-        </div>
-        ${p.description ? `<p class="text-sm text-neutral-500 line-clamp-2 mt-0.5">${escapeHtml(p.description)}</p>` : ''}
-        <div class="flex items-center justify-between mt-2 gap-2">
-          <span class="font-semibold text-brand-orange">R$ ${formatBRL(p.price)}</span>
-          <button data-add="${p.id}" class="text-xs sm:text-sm font-medium bg-white border border-brand-orange text-brand-orange rounded-full px-3.5 sm:px-4 py-2 hover:bg-brand-orange hover:text-white active:scale-95 transition shrink-0">+ Adicionar</button>
-        </div>
+    <div data-expand="${p.id}" class="fade-slide-in bg-surface-card border border-surface-line rounded-2xl p-3.5 flex flex-col justify-between min-h-[8rem] cursor-pointer active:opacity-90 transition">
+      <div>
+        <p class="text-sm font-semibold text-white leading-snug line-clamp-2">${escapeHtml(p.name)}</p>
+        ${p.description ? `<p class="text-xs text-neutral-400 line-clamp-2 mt-1">${escapeHtml(p.description)}</p>` : ''}
+      </div>
+      <div class="flex items-center justify-between mt-2 gap-2">
+        <span class="text-brand-orange font-bold text-sm">R$ ${formatBRL(p.price)}</span>
+        <button data-add="${p.id}" title="Adicionar" class="w-8 h-8 rounded-full bg-brand-orange text-white flex items-center justify-center shadow active:scale-90 transition shrink-0">${ICON_PLUS}</button>
       </div>
     </div>
   `
@@ -609,29 +646,29 @@ function productDetailModalHtml() {
   const p = expandedProduct
   const cartItem = cart.find((i) => i.product.id === p.id)
   return `
-    <div id="detail-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div id="detail-box" class="modal-box bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90dvh] overflow-y-auto scroll-contain safe-bottom">
+    <div id="detail-overlay" class="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50">
+      <div id="detail-box" class="modal-box bg-surface rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[90dvh] overflow-y-auto scroll-contain safe-bottom border border-surface-line">
         <div class="relative">
           ${
             p.image_url
               ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="w-full h-44 sm:h-52 object-cover" />`
               : ''
           }
-          <button id="detail-close" title="Fechar" class="absolute top-3 right-3 z-10 bg-white/95 hover:bg-white text-neutral-600 rounded-full w-9 h-9 flex items-center justify-center shadow transition">✕</button>
+          <button id="detail-close" title="Fechar" class="absolute top-3 right-3 z-10 bg-surface-card/90 hover:bg-surface-card text-white rounded-full w-9 h-9 flex items-center justify-center shadow transition">✕</button>
         </div>
         <div class="p-5 ${p.image_url ? '' : 'pt-10'} space-y-3">
           <div>
-            <h3 class="text-lg font-bold leading-snug">${escapeHtml(p.name)}</h3>
+            <h3 class="text-lg font-bold text-white leading-snug">${escapeHtml(p.name)}</h3>
             <p class="text-brand-orange font-semibold mt-0.5">R$ ${formatBRL(p.price)}</p>
           </div>
-          ${p.description ? `<p class="text-sm text-neutral-600 leading-relaxed">${escapeHtml(p.description)}</p>` : ''}
+          ${p.description ? `<p class="text-sm text-neutral-400 leading-relaxed">${escapeHtml(p.description)}</p>` : ''}
           ${
             p.ingredients && p.ingredients.length > 0
               ? `
             <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-neutral-400 mb-1.5">Ingredientes</p>
+              <p class="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-1.5">Ingredientes</p>
               <div class="flex flex-wrap gap-1.5">
-                ${p.ingredients.map((i) => `<span class="text-xs bg-neutral-100 text-neutral-600 rounded-full px-2.5 py-1">${escapeHtml(i)}</span>`).join('')}
+                ${p.ingredients.map((i) => `<span class="text-xs bg-surface-card border border-surface-line text-neutral-300 rounded-full px-2.5 py-1">${escapeHtml(i)}</span>`).join('')}
               </div>
             </div>
           `
@@ -639,15 +676,15 @@ function productDetailModalHtml() {
           }
           <div>
             <div class="flex items-center justify-between mb-1">
-              <label for="pf-note" class="text-xs font-semibold uppercase tracking-wide text-neutral-400">Observações</label>
-              <span id="note-counter" class="text-xs text-neutral-400">${productNoteDraft.length}/140</span>
+              <label for="pf-note" class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Observações</label>
+              <span id="note-counter" class="text-xs text-neutral-500">${productNoteDraft.length}/140</span>
             </div>
             <textarea
               id="pf-note"
               rows="2"
               maxlength="140"
               placeholder="Ex: sem cebola, ponto da carne, tirar o queijo…"
-              class="w-full border border-neutral-300 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue transition resize-none"
+              class="w-full bg-surface-card border border-surface-line text-white placeholder-neutral-500 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition resize-none"
             >${escapeHtml(productNoteDraft)}</textarea>
           </div>
           <button id="detail-save-btn" class="w-full bg-brand-orange text-white font-semibold rounded-lg py-3 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition mt-1">
@@ -667,7 +704,7 @@ function cartBarHtml() {
   return `
     <button
       id="cart-bar-open"
-      class="fixed bottom-0 left-0 right-0 bg-brand-orange text-white shadow-[0_-4px_16px_rgba(0,0,0,0.15)] safe-bottom transition active:opacity-90 ${
+      class="fixed bottom-0 left-0 right-0 bg-brand-orange text-white shadow-[0_-4px_16px_rgba(0,0,0,0.35)] border-t border-white/10 safe-bottom transition active:opacity-90 ${
         chatOpen || expandedProduct ? 'hidden' : ''
       } ${cartJustUpdated ? 'cart-pulse' : ''}"
     >
@@ -692,22 +729,22 @@ function cartItemRowHtml(i) {
   const lineTotal = i.product.price * i.quantity
   const highlight = recentlyChangedProductIds.has(i.product.id) ? 'row-highlight' : ''
   return `
-    <div class="fade-slide-in flex gap-3 pb-3 border-b border-neutral-100 last:border-b-0 last:pb-0 rounded-lg px-1 -mx-1 ${highlight}">
-      ${productImageHtml(i.product, 'sm')}
+    <div class="fade-slide-in flex gap-3 pb-3 border-b border-surface-line last:border-b-0 last:pb-0 rounded-lg px-1 -mx-1 ${highlight}">
+      ${productImageHtml(i.product)}
       <div class="flex-1 min-w-0">
         <div data-edit-item="${i.product.id}" class="cursor-pointer">
           <div class="flex items-start justify-between gap-2">
-            <p class="font-medium text-sm leading-snug">${escapeHtml(i.product.name)}</p>
-            <button data-remove="${i.product.id}" title="Remover item" class="text-neutral-300 hover:text-brand-red transition shrink-0 w-9 h-9 -mt-1.5 -mr-1.5 flex items-center justify-center">🗑</button>
+            <p class="font-medium text-sm text-white leading-snug">${escapeHtml(i.product.name)}</p>
+            <button data-remove="${i.product.id}" title="Remover item" class="text-neutral-500 hover:text-brand-red transition shrink-0 w-9 h-9 -mt-1.5 -mr-1.5 flex items-center justify-center">${ICON_TRASH}</button>
           </div>
-          <p class="text-xs text-neutral-400">R$ ${formatBRL(i.product.price)} cada</p>
-          ${i.notes ? `<p class="text-xs text-neutral-500 italic mt-0.5">"${escapeHtml(i.notes)}"</p>` : ''}
+          <p class="text-xs text-neutral-500">R$ ${formatBRL(i.product.price)} cada</p>
+          ${i.notes ? `<p class="text-xs text-neutral-400 italic mt-0.5">"${escapeHtml(i.notes)}"</p>` : ''}
         </div>
         <div class="flex items-center justify-between mt-2">
           <div class="flex items-center gap-2">
-            <button data-dec="${i.product.id}" class="qty-btn w-9 h-9 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">−</button>
-            <span class="w-5 text-center text-sm tabular-nums">${i.quantity}</span>
-            <button data-inc="${i.product.id}" class="qty-btn w-9 h-9 text-base bg-neutral-100 hover:bg-neutral-200 rounded-lg">+</button>
+            <button data-dec="${i.product.id}" class="qty-btn w-9 h-9 text-base text-white bg-surface-raised hover:bg-white/15 rounded-lg">−</button>
+            <span class="w-5 text-center text-sm text-white tabular-nums">${i.quantity}</span>
+            <button data-inc="${i.product.id}" class="qty-btn w-9 h-9 text-base text-white bg-surface-raised hover:bg-white/15 rounded-lg">+</button>
           </div>
           <span class="font-semibold text-sm text-brand-orange">R$ ${formatBRL(lineTotal)}</span>
         </div>
@@ -726,11 +763,11 @@ function cartSheetHtml() {
   // na primeira vez que o carrinho é aberto depois da mudança.
   recentlyChangedProductIds.clear()
   return `
-    <div id="cart-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div id="cart-box" class="modal-box bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85dvh] flex flex-col overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-100 shrink-0">
-          <span class="font-semibold">🛒 Seu carrinho</span>
-          <button id="cart-close" title="Fechar" class="text-neutral-400 hover:text-neutral-600 transition text-xl leading-none w-9 h-9 flex items-center justify-center -mr-2">✕</button>
+    <div id="cart-overlay" class="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50">
+      <div id="cart-box" class="modal-box bg-surface border border-surface-line rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85dvh] flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-surface-line shrink-0">
+          <span class="inline-flex items-center gap-2 font-semibold text-white">${ICON_CART}Seu carrinho</span>
+          <button id="cart-close" title="Fechar" class="text-neutral-500 hover:text-neutral-300 transition text-xl leading-none w-9 h-9 flex items-center justify-center -mr-2">✕</button>
         </div>
         <div class="scroll-contain flex-1 overflow-y-auto px-4 py-3">
           ${itemsHtml}
@@ -738,10 +775,10 @@ function cartSheetHtml() {
         ${
           cart.length > 0
             ? `
-          <div class="safe-bottom border-t border-neutral-100 p-4 space-y-3 shrink-0">
+          <div class="safe-bottom border-t border-surface-line p-4 space-y-3 shrink-0">
             <div class="flex items-center justify-between">
-              <span class="text-sm text-neutral-500">Subtotal</span>
-              <span class="font-bold text-lg">R$ ${formatBRL(total)}</span>
+              <span class="text-sm text-neutral-400">Subtotal</span>
+              <span class="font-bold text-lg text-white">R$ ${formatBRL(total)}</span>
             </div>
             <button id="place-order-btn" ${placing ? 'disabled' : ''} class="w-full bg-brand-red text-white font-semibold rounded-lg py-3 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50">
               ${placing ? 'Enviando...' : 'Finalizar pedido'}
@@ -766,8 +803,8 @@ function chatModalHtml() {
   chatRenderedCount = chatMessages.length
 
   return `
-    <div id="chat-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div id="chat-box" class="modal-box bg-neutral-50 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[calc(var(--vvh,100dvh)*0.88)] sm:h-[34rem] flex flex-col overflow-hidden shadow-2xl">
+    <div id="chat-overlay" class="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50">
+      <div id="chat-box" class="modal-box bg-surface border border-surface-line rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md h-[calc(var(--vvh,100dvh)*0.88)] sm:h-[34rem] flex flex-col overflow-hidden shadow-2xl">
         <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-brand-orange to-brand-red text-white shrink-0">
           <div class="flex items-center gap-2.5 min-w-0">
             ${chatAvatarHtml('w-10 h-10 ring-2 ring-white/25')}
@@ -782,9 +819,9 @@ function chatModalHtml() {
           <div class="flex items-center gap-1 shrink-0">
             ${
               cartCount > 0
-                ? `<button id="chat-view-cart" title="Ver carrinho" class="relative bg-white/20 hover:bg-white/30 text-white transition w-12 h-12 flex items-center justify-center rounded-full text-[26px] shadow-sm">
-                    🛒
-                    <span class="absolute -top-1 -right-1 bg-brand-orange text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] px-1 flex items-center justify-center leading-none border-2 border-brand-red">${cartCount}</span>
+                ? `<button id="chat-view-cart" title="Ver carrinho" class="relative bg-white/20 hover:bg-white/30 text-white transition w-11 h-11 flex items-center justify-center rounded-full shadow-sm">
+                    ${ICON_CART}
+                    <span class="absolute -top-1 -right-1 bg-white text-brand-red text-xs font-bold rounded-full min-w-[20px] h-[20px] px-1 flex items-center justify-center leading-none">${cartCount}</span>
                   </button>`
                 : ''
             }
@@ -797,22 +834,22 @@ function chatModalHtml() {
             chatLoading
               ? `<div class="flex items-end gap-2 fade-slide-in">
                   ${chatAvatarHtml('w-7 h-7')}
-                  <div class="bg-white border border-neutral-100 shadow-sm text-neutral-400 rounded-2xl rounded-bl-md px-4 py-3"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
+                  <div class="bg-surface-card border border-surface-line text-neutral-400 rounded-2xl rounded-bl-md px-4 py-3"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
                 </div>`
               : ''
           }
         </div>
         ${chatSuggestionsHtml()}
-        <form id="chat-form" class="safe-bottom flex gap-2 p-3 bg-white border-t border-neutral-100 shrink-0">
+        <form id="chat-form" class="safe-bottom flex gap-2 p-3 bg-surface border-t border-surface-line shrink-0">
           <input
             id="chat-input"
             value="${escapeHtml(chatInput)}"
             placeholder="${notingOrder ? 'Anotando seu pedido…' : 'Ex: algo vegetariano e picante'}"
             autocomplete="off"
             ${notingOrder ? 'disabled' : ''}
-            class="flex-1 min-w-0 border border-neutral-300 rounded-full px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-blue transition disabled:bg-neutral-50 disabled:text-neutral-400"
+            class="flex-1 min-w-0 bg-surface-card border border-surface-line text-white placeholder-neutral-500 rounded-full px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition disabled:opacity-50"
           />
-          <button type="submit" ${chatLoading || notingOrder ? 'disabled' : ''} title="Enviar" class="bg-gradient-to-br from-brand-orange to-brand-red text-white rounded-full w-11 h-11 flex items-center justify-center text-base shadow-brand-ai hover:opacity-90 active:scale-95 transition disabled:opacity-50 shrink-0">➤</button>
+          <button type="submit" ${chatLoading || notingOrder ? 'disabled' : ''} title="Enviar" class="bg-gradient-to-br from-brand-orange to-brand-red text-white rounded-full w-11 h-11 flex items-center justify-center shadow-brand-ai hover:opacity-90 active:scale-95 transition disabled:opacity-50 shrink-0">${ICON_SEND}</button>
         </form>
       </div>
     </div>
@@ -829,11 +866,11 @@ function chatSuggestionsHtml() {
       : ['O que vocês recomendam?', 'Tem opção vegetariana?', 'Quero uma bebida']
   const busy = notingOrder || chatLoading
   return `
-    <div class="chip-scroll-fade scroll-contain shrink-0 px-3 py-2.5 flex gap-2 overflow-x-auto bg-white border-t border-neutral-100">
+    <div class="chip-scroll-fade scroll-contain shrink-0 px-3 py-2.5 flex gap-2 overflow-x-auto bg-surface border-t border-surface-line">
       ${suggestions
         .map(
           (s) =>
-            `<button data-suggest="${escapeHtml(s)}" ${busy ? 'disabled' : ''} class="text-xs font-medium bg-white border border-neutral-200 text-neutral-600 whitespace-nowrap rounded-full px-3.5 py-2 hover:border-brand-orange hover:text-brand-orange transition shrink-0 shadow-sm disabled:opacity-50">${escapeHtml(s)}</button>`
+            `<button data-suggest="${escapeHtml(s)}" ${busy ? 'disabled' : ''} class="text-xs font-medium bg-surface-card border border-surface-line text-neutral-300 whitespace-nowrap rounded-full px-3.5 py-2 hover:border-brand-orange hover:text-brand-orange transition shrink-0 disabled:opacity-50">${escapeHtml(s)}</button>`
         )
         .join('')}
     </div>
@@ -845,7 +882,7 @@ function chatMessageHtml(m, isNew) {
   if (m.role === 'user') {
     return `
       <div class="flex justify-end ${entrance}">
-        <div class="max-w-[80%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-brand-blue text-white shadow-sm">${escapeHtml(m.content)}</div>
+        <div class="max-w-[80%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-brand-orange text-white shadow-sm">${escapeHtml(m.content)}</div>
       </div>
     `
   }
@@ -853,7 +890,7 @@ function chatMessageHtml(m, isNew) {
     <div class="flex items-end gap-2 ${entrance}">
       ${chatAvatarHtml('w-7 h-7')}
       <div class="flex flex-col items-start gap-1.5 max-w-[80%] min-w-0">
-        <div class="rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-white text-neutral-800 shadow-sm border border-neutral-100">${escapeHtml(m.content)}</div>
+        <div class="rounded-2xl rounded-bl-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-line bg-surface-card text-neutral-200 border border-surface-line">${escapeHtml(m.content)}</div>
         ${m.actionCards && m.actionCards.length > 0 ? actionCardsHtml(m.actionCards, isNew) : ''}
         ${m.recommendedProducts && m.recommendedProducts.length > 0 ? recommendedProductsHtml(m.recommendedProducts) : ''}
       </div>
@@ -867,13 +904,13 @@ function chatMessageHtml(m, isNew) {
 // produto usado no cardápio (openProductDetail), nunca adiciona direto.
 function productMiniCardHtml(p) {
   return `
-    <div data-mini-product="${p.id}" class="flex items-center gap-2.5 bg-white border border-neutral-200 rounded-xl p-2 w-full cursor-pointer active:bg-neutral-50 transition">
-      ${productImageHtml(p, 'sm')}
+    <div data-mini-product="${p.id}" class="flex items-center gap-2.5 bg-surface border border-surface-line rounded-xl p-2 w-full cursor-pointer active:opacity-80 transition">
+      ${productImageHtml(p)}
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium leading-snug truncate">${escapeHtml(p.name)}</p>
+        <p class="text-sm font-medium text-white leading-snug truncate">${escapeHtml(p.name)}</p>
         <p class="text-xs font-semibold text-brand-orange mt-0.5">R$ ${formatBRL(p.price)}</p>
       </div>
-      <span class="text-neutral-300 shrink-0" aria-hidden="true">›</span>
+      <span class="text-neutral-500 shrink-0" aria-hidden="true">›</span>
     </div>
   `
 }
@@ -960,11 +997,19 @@ function bindPageEvents() {
       const pill = e.target.closest('[data-category-pill]')
       if (!pill) return
       categoryNav.querySelectorAll('[data-category-pill]').forEach((el) => {
-        el.classList.remove('bg-brand-orange', 'border-brand-orange', 'text-white')
-        el.classList.add('bg-white', 'border-neutral-200', 'text-neutral-600')
+        const circle = el.querySelector('[data-pill-circle]')
+        const label = el.querySelector('[data-pill-label]')
+        circle.classList.remove('bg-brand-orange', 'text-white')
+        circle.classList.add('bg-surface-card', 'border', 'border-surface-line', 'text-neutral-400')
+        label.classList.remove('text-white')
+        label.classList.add('text-neutral-400')
       })
-      pill.classList.remove('bg-white', 'border-neutral-200', 'text-neutral-600')
-      pill.classList.add('bg-brand-orange', 'border-brand-orange', 'text-white')
+      const activeCircle = pill.querySelector('[data-pill-circle]')
+      const activeLabel = pill.querySelector('[data-pill-label]')
+      activeCircle.classList.remove('bg-surface-card', 'border', 'border-surface-line', 'text-neutral-400')
+      activeCircle.classList.add('bg-brand-orange', 'text-white')
+      activeLabel.classList.remove('text-neutral-400')
+      activeLabel.classList.add('text-white')
     })
   }
 
@@ -999,11 +1044,6 @@ function bindPageEvents() {
       renderPage()
     })
   }
-
-  document.getElementById('header-cart-btn').addEventListener('click', () => {
-    cartOpen = true
-    renderPage()
-  })
 
   const cartOverlay = document.getElementById('cart-overlay')
   if (cartOverlay) {

@@ -21,7 +21,9 @@
          faixa de navegadores, 100dvh já reflete o teclado aberto sozinho, sem
          depender só do fallback via window.visualViewport (ver cardapio.js). -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="theme-color" content="#FF6B35" />
+    <!-- Tema escuro (só o cardápio do cliente, ver README/tailwind.config
+         abaixo) — a cor da barra do navegador/status bar acompanha. -->
+    <meta name="theme-color" content="#121212" />
     <title>PapeiAI — Cardápio Digital</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -36,6 +38,17 @@
           extend: {
             colors: {
               brand: { orange: '#FF6B35', red: '#E63946', blue: '#2563EB' },
+              // Tema escuro do cardápio público: fundo quase-preto com leve
+              // calor (não é cinza puro), cartões um tom acima do fundo, e
+              // uma borda quase invisível só pra separar o cartão do fundo
+              // sem precisar de sombra (sombra não "lê" direito em cima de
+              // um fundo já escuro).
+              surface: {
+                DEFAULT: '#121212',
+                card: '#1c1a19',
+                raised: '#242120',
+                line: 'rgba(255,255,255,0.07)',
+              },
             },
             fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
           },
@@ -45,7 +58,7 @@
     <link rel="stylesheet" href="../css/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   </head>
-  <body>
+  <body class="bg-surface">
     <div id="root"></div>
 
     <script src="../config.js"></script>
