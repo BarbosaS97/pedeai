@@ -183,12 +183,11 @@
               />
               <!-- Posição em % (não rem fixo) — a imagem varia muito de
                    tamanho entre breakpoints, e um offset fixo não
-                   acompanhava. right:6% mirava perto da borda direita da
-                   imagem, mas a cabeça do Ari nessa arte é mais larga/
-                   central do que na versão anterior — o balão caía direto em
-                   cima do rosto. Reposicionado pro vão entre a cabeça dele e
-                   o celular (~28-46% da largura), que fica vazio na arte. -->
-              <div class="absolute max-w-[10rem] sm:max-w-[11rem] bg-white text-left rounded-2xl rounded-bl-md shadow-xl border border-ink/10 px-3 py-2 fade-slide-in" style="top: 0%; right: 32%;">
+                   acompanhava. top:0% ainda ficava colado no topo da cabeça
+                   dele (que começa bem no topo da arte, sem vão acima) —
+                   top negativo empurra o balão pra fora da imagem por cima
+                   de vez, sem chance de encostar no rosto. -->
+              <div class="absolute max-w-[10rem] sm:max-w-[11rem] bg-white text-left rounded-2xl rounded-bl-md shadow-xl border border-ink/10 px-3 py-2 fade-slide-in" style="top: -12%; right: 32%;">
                 <p class="text-xs font-medium text-ink leading-snug">Oi! Eu sou o <span class="text-brand-orange font-bold">Ari</span>, seu garçom de IA!</p>
               </div>
             </div>
