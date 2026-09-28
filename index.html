@@ -129,6 +129,10 @@
                à esquerda — é esse vazio que dá folga pro texto. -->
           <div class="relative flex justify-center lg:justify-end mt-6 lg:mt-0 lg:-mr-16 xl:-mr-24 lg:col-start-2 lg:row-start-1 lg:row-span-2">
             <div class="relative w-full max-w-2xl sm:max-w-3xl lg:w-[46rem] xl:w-[54rem]">
+              <!-- Sombra sutil por baixo, antes da <img> no DOM (pinta atrás
+                   dela) — ajuda a disfarçar a linha reta do recorte no
+                   fundo da arte, sem chamar atenção pra ela. -->
+              <div class="absolute inset-x-[15%] bottom-1 h-4 bg-ink/10 blur-lg rounded-full" aria-hidden="true"></div>
               <img
                 src="images/hero-ari.png"
                 alt="Ari mostrando o cardápio digital do PapeiAI no celular, ao lado de uma placa de QR Code pra escanear"
