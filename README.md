@@ -86,7 +86,7 @@ js/                            módulos compartilhados pelas três áreas acima
   supabase-client.js            clientes Supabase (público + com token do restaurante)
   qrcode-helper.js              URL do cardápio e do painel + geração de QR Code no cliente
 supabase/
-  migrations/                  12 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante, leads, observações/destaque de produto, cor de destaque do restaurante)
+  migrations/                  13 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante, leads, observações/destaque de produto, cor de destaque do restaurante, WhatsApp do restaurante)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
   functions/admin-login/       Edge Function que verifica a senha do admin contra o secret SENHA_ADMIN
 ```
@@ -182,17 +182,39 @@ pedir. Tabela `mesas` na migration `0008`, que também muda
 `orders.table_number` de `int` pra `text` (pra caber o rótulo livre da
 mesa, não só um número).
 
-**Fluxo do cliente**: antes do cardápio, uma tela de boas-vindas pede
-primeiro nome e telefone (com máscara e validação) — guardados no
-`localStorage` do navegador, então visitas futuras no mesmo aparelho pulam
-direto pro cardápio. Esses dados também vão junto de cada pedido
-(`orders.customer_name`/`customer_phone`, migration `0006`) — o painel do
-restaurante não tem mais uma aba de pedidos (removida; só a aba Produtos
-existe hoje em `restaurante/painel.js`), mas os pedidos continuam sendo
-gravados normalmente em `orders`/`order_items`. O carrinho é uma bottom sheet
-(mesmo padrão do chat) com observação por item
+**Fluxo do cliente**: antes do cardápio, uma tela de boas-vindas pede só o
+primeiro nome, e é opcional — pode enviar em branco (só barra 1 caractere
+avulso, ver `isWelcomeValid()`). Sem campo de telefone: o pedido não depende
+mais de contato do cliente, já que agora pode ir direto pro WhatsApp do
+restaurante (ver abaixo). O nome, se preenchido, é guardado no `localStorage`
+do navegador (visitas futuras no mesmo aparelho pulam direto pro cardápio) e
+vai junto de cada pedido (`orders.customer_name`, migration `0006`); em
+branco, o Ari nunca menciona nome nenhum e o cabeçalho do cardápio também não
+mostra saudação com nome. O painel do restaurante não tem mais uma aba de
+pedidos (removida; só a aba Produtos existe hoje em `restaurante/painel.js`),
+mas os pedidos continuam sendo gravados normalmente em `orders`/`order_items`.
+O carrinho é uma bottom sheet (mesmo padrão do chat) com observação por item
 (`order_items.notes`, já existia desde a migration `0003`, só não era usada),
 controle de quantidade e remoção.
+
+**Pedido direto no WhatsApp** (migration `0013`, `restaurants.whatsapp`):
+quando o restaurante cadastra um número de WhatsApp (no admin, ao cadastrar
+ou depois pelo botão "✎" na lista — `admin/admin.js` — ou no próprio painel,
+seção "Identidade visual" — `restaurante/painel.js`), o carrinho do cardápio
+ganha um segundo botão, "Enviar pedido no WhatsApp", ao lado de "Finalizar
+pedido". Os dois salvam o pedido normalmente em `orders`/`order_items`
+(mesmo histórico, mesma validação); o botão do WhatsApp faz isso e, além
+disso, abre `https://wa.me/55<numero>?text=...` com um resumo do pedido
+(itens, observação, mesa, subtotal) pronto pra enviar — o cliente só confirma
+o envio lá. Sem WhatsApp cadastrado, esse botão simplesmente não aparece. O
+número é guardado só como dígitos (DDD + número, 10-11 dígitos, sem "+55" —
+mesmo padrão usado antes pro telefone do cliente, agora removido); o "+55" é
+prefixado só na hora de montar o link (`whatsappOrderLink()`,
+`cliente/cardapio.js`). Detalhe técnico: a aba do WhatsApp é aberta **antes**
+do `await` que salva o pedido (com `window.open('', '_blank')`, navegada pro
+link de verdade só depois) — Safari/iOS só permite `window.open()` como
+reação síncrona direta a um clique; abrir depois de esperar o Supabase
+seria bloqueado silenciosamente como pop-up.
 
 **Landing page e leads**: `index.html` (raiz) é uma landing page só de
 conversão — apresenta o produto (avatar do Ari com balão de fala, benefícios)
@@ -261,7 +283,7 @@ secret no Dashboard; não precisa editar nem versionar nenhum arquivo.
 Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https://supabase.com/dashboard) do projeto (`thwnhgpjysykkoblbtrd`):
 
 1. **Migrations** → menu **SQL Editor** → **New query**. Abra cada arquivo de
-   `supabase/migrations/` (nessa ordem: `0001` a `0012`), cole o conteúdo
+   `supabase/migrations/` (nessa ordem: `0001` a `0013`), cole o conteúdo
    inteiro do arquivo e clique **Run**. Rode uma de cada vez, na ordem — cada
    uma depende de tabelas/extensões criadas na anterior. O botão
    "Mesas" do admin e a validação de `?mesa=` no cardápio só funcionam depois
@@ -279,7 +301,12 @@ Sem Node local, o caminho mais simples é o próprio [Supabase Dashboard](https:
    destaque" na Identidade visual do painel só funciona depois da `0012`
    (coluna `restaurants.theme_color`) — antes disso, salvar a cor falha com
    erro de coluna inexistente (o cardápio e o painel continuam funcionando
-   normalmente com o laranja padrão, que é só um fallback em CSS).
+   normalmente com o laranja padrão, que é só um fallback em CSS). O campo
+   "WhatsApp do restaurante" (no admin e na Identidade visual do painel) e o
+   botão "Enviar pedido no WhatsApp" do carrinho só funcionam depois da
+   `0013` (coluna `restaurants.whatsapp`) — antes disso, salvar o número
+   falha com erro de coluna inexistente (o botão do carrinho simplesmente
+   não aparece, já que depende desse campo estar preenchido).
 2. **Secrets** → menu **Edge Functions** → **Manage secrets** → adicione
    `DEEPSEEK_API_KEY` com a chave da DeepSeek e `SENHA_ADMIN` com a senha que
    você quer usar pra entrar em `admin/index.html`. Nenhum dos dois secrets

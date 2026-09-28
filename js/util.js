@@ -49,6 +49,19 @@ function applyThemeColor(hex) {
   document.documentElement.style.setProperty('--brand-orange-rgb', `${r} ${g} ${b}`)
 }
 
+// Mascara um telefone brasileiro enquanto a pessoa digita — "(11) 91234-5678".
+// Sem código de país: usado tanto pro WhatsApp do restaurante
+// (admin/admin.js, restaurante/painel.js — restaurants.whatsapp, migration
+// 0013) quanto, antes, pro telefone do cliente no cardápio (removido).
+function maskPhone(value) {
+  const digits = (value || '').replace(/\D/g, '').slice(0, 11)
+  if (digits.length === 0) return ''
+  if (digits.length <= 2) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+}
+
 function loadingHtml(text) {
   return `<div class="min-h-screen flex items-center justify-center text-neutral-400">${escapeHtml(
     text || 'Carregando...'

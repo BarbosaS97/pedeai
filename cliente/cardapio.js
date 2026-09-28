@@ -33,8 +33,11 @@ function chatAvatarHtml(sizeClass) {
 
 // Ícones de contorno simples (sem emoji) usados no formulário de boas-vindas.
 const ICON_PERSON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`
-const ICON_PHONE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`
 const ICON_CART = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2.5 3h2l2.6 12.6a2 2 0 0 0 2 1.6h8.2a2 2 0 0 0 2-1.6L21 8H6"/></svg>`
+// Ícone estilo WhatsApp (bolha de fala com o "gancho" do telefone) — usado só
+// no botão "Enviar pedido no WhatsApp" do carrinho, quando o restaurante tem
+// número cadastrado (restaurants.whatsapp, migration 0013).
+const ICON_WHATSAPP = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.16 2 11.29c0 2.01.73 3.86 1.98 5.39L2.6 21.4a.5.5 0 0 0 .62.62l4.9-1.43a10.4 10.4 0 0 0 3.88.76c5.52 0 10-4.16 10-9.29S17.52 2 12 2Zm5.2 13.13c-.22.62-1.28 1.19-1.77 1.24-.45.05-.91.23-3.06-.64-2.59-1.05-4.25-3.7-4.38-3.87-.13-.17-1.05-1.4-1.05-2.66 0-1.27.67-1.89.9-2.15.22-.25.48-.31.64-.31.16 0 .32 0 .46.01.15.01.35-.06.55.42.22.53.73 1.83.79 1.96.06.13.1.29.02.46-.08.17-.13.28-.25.43-.13.15-.27.34-.38.46-.13.13-.26.27-.11.53.15.26.67 1.1 1.44 1.79.99.88 1.82 1.15 2.08 1.28.26.13.41.11.56-.07.15-.18.64-.75.81-1.01.17-.26.34-.21.56-.13.23.09 1.47.7 1.72.83.26.13.43.19.49.3.06.11.06.6-.16 1.22Z"/></svg>`
 const ICON_CHEVRON_RIGHT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>`
 const ICON_CHAT_BUBBLE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 5.94 2 10.8c0 2.62 1.32 4.96 3.4 6.57-.11 1.2-.5 2.44-1.28 3.5a.5.5 0 0 0 .5.77c1.9-.42 3.4-1.24 4.5-2.03.9.24 1.87.36 2.88.36 5.52 0 10-3.94 10-8.8S17.52 2 12 2Z"/></svg>`
 const ICON_PLUS = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`
@@ -111,14 +114,15 @@ let staggerTimeoutId = null
 // é o que causava o efeito de "adicionou duas vezes"/piscada ao usar o chat.
 let chatRenderedCount = 0
 
-// Identificação do cliente (nome + telefone), pedida uma vez na tela de
-// boas-vindas antes do cardápio. Guardada no navegador (localStorage) pra não
-// precisar perguntar de novo numa próxima visita no mesmo aparelho.
+// Identificação do cliente (só o primeiro nome, opcional), pedida uma vez na
+// tela de boas-vindas antes do cardápio. Guardada no navegador (localStorage)
+// pra não precisar perguntar de novo numa próxima visita no mesmo aparelho.
+// Sem telefone — o pedido agora pode ir direto pro WhatsApp do restaurante
+// (ver placeOrder/whatsappOrderLink), então não precisa mais coletar contato
+// do cliente aqui.
 let showWelcome = true
 let customerName = ''
-let customerPhone = ''
 let welcomeNameDraft = ''
-let welcomePhoneDraft = ''
 
 // O garçom IA responde em texto simples por instrução do prompt (ver
 // ai-waiter/index.ts), mas modelos de linguagem às vezes escapam essa regra e
@@ -135,14 +139,14 @@ function stripMarkdown(text) {
     .replace(/^#{1,6}\s+/gm, '')
 }
 
-// ---- Identidade do cliente (nome + telefone) ----
+// ---- Identidade do cliente (primeiro nome, opcional) ----
 
 function loadStoredCustomer() {
   try {
     const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    if (parsed && typeof parsed.name === 'string' && typeof parsed.phone === 'string') return parsed
+    if (parsed && typeof parsed.name === 'string') return parsed
   } catch {
     // localStorage indisponível (modo privado, storage bloqueado etc.) — cai
     // no fluxo normal de pedir os dados de novo, sem quebrar a página.
@@ -150,35 +154,23 @@ function loadStoredCustomer() {
   return null
 }
 
-function saveCustomer(name, phone) {
+function saveCustomer(name) {
   try {
-    localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ name, phone }))
+    localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ name }))
   } catch {
     // Sem storage disponível: segue o pedido normalmente, só não vai lembrar
     // na próxima visita.
   }
 }
 
-function maskPhone(value) {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length === 0) return ''
-  if (digits.length <= 2) return `(${digits}`
-  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
-  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
-}
-
 function isValidName(name) {
   return name.trim().length >= 2
 }
 
-function isValidPhone(phone) {
-  const digits = phone.replace(/\D/g, '')
-  return digits.length === 10 || digits.length === 11
-}
-
+// Nome é opcional: vazio passa direto; só barra 1 caractere avulso (evita
+// salvar "lixo" de toque sem querer no campo).
 function isWelcomeValid() {
-  return isValidName(welcomeNameDraft) && isValidPhone(welcomePhoneDraft)
+  return welcomeNameDraft.trim().length === 0 || isValidName(welcomeNameDraft)
 }
 
 function buildInitialChatMessage() {
@@ -342,7 +334,6 @@ async function init() {
   const stored = loadStoredCustomer()
   if (stored) {
     customerName = stored.name
-    customerPhone = stored.phone
     showWelcome = false
     chatMessages = [{ role: 'assistant', content: buildInitialChatMessage() }]
   }
@@ -383,12 +374,14 @@ function welcomeScreenHtml() {
           <div class="text-center mt-7">
             <div class="relative w-28 h-28 mx-auto">
               <div class="absolute inset-0 rounded-full bg-gradient-to-br from-brand-orange to-brand-red blur-xl opacity-40"></div>
-              <img
-                src="${CHAT_AVATAR_URL}"
-                alt="Ari"
-                class="relative w-28 h-28 rounded-full object-cover ring-4 ring-surface shadow-xl bg-brand-orange/20"
-                style="object-position: 50% 12%; transform: scale(1.55); transform-origin: 50% 15%;"
-              />
+              <div class="relative w-28 h-28 rounded-full overflow-hidden ring-4 ring-surface shadow-xl bg-brand-orange/20">
+                <img
+                  src="${CHAT_AVATAR_URL}"
+                  alt="Ari"
+                  class="w-full h-full object-cover"
+                  style="object-position: 50% 12%; transform: scale(1.55); transform-origin: 50% 15%;"
+                />
+              </div>
             </div>
             <h1 class="text-2xl font-bold text-white mt-4">Oi, eu sou o Ari</h1>
             <p class="text-sm text-neutral-400 mt-2 leading-relaxed px-2">
@@ -403,22 +396,10 @@ function welcomeScreenHtml() {
               <input
                 id="welcome-name"
                 value="${escapeHtml(welcomeNameDraft)}"
-                placeholder="Seu primeiro nome"
-                aria-label="Primeiro nome"
+                placeholder="Seu primeiro nome (opcional)"
+                aria-label="Primeiro nome (opcional)"
                 autocomplete="given-name"
                 autofocus
-                class="w-full bg-surface-raised border border-surface-line text-white placeholder-neutral-500 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
-              />
-            </div>
-            <div class="relative">
-              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-500">${ICON_PHONE}</span>
-              <input
-                id="welcome-phone"
-                value="${escapeHtml(welcomePhoneDraft)}"
-                placeholder="(11) 91234-5678"
-                aria-label="Telefone com DDD"
-                inputmode="numeric"
-                autocomplete="tel"
                 class="w-full bg-surface-raised border border-surface-line text-white placeholder-neutral-500 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
               />
             </div>
@@ -443,19 +424,11 @@ function bindWelcomeEvents() {
     updateWelcomeSubmitState()
   })
 
-  document.getElementById('welcome-phone').addEventListener('input', (e) => {
-    const masked = maskPhone(e.target.value)
-    welcomePhoneDraft = masked
-    e.target.value = masked
-    updateWelcomeSubmitState()
-  })
-
   document.getElementById('welcome-form').addEventListener('submit', (e) => {
     e.preventDefault()
     if (!isWelcomeValid()) return
     customerName = welcomeNameDraft.trim()
-    customerPhone = welcomePhoneDraft
-    saveCustomer(customerName, customerPhone)
+    saveCustomer(customerName)
     chatMessages = [{ role: 'assistant', content: buildInitialChatMessage() }]
     showWelcome = false
     renderPage()
@@ -842,6 +815,11 @@ function cartSheetHtml() {
             <button id="place-order-btn" ${placing ? 'disabled' : ''} class="w-full bg-brand-red text-white font-semibold rounded-lg py-3 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50">
               ${placing ? 'Enviando...' : 'Finalizar pedido'}
             </button>
+            ${
+              restaurant.whatsapp
+                ? `<button id="place-order-whatsapp-btn" ${placing ? 'disabled' : ''} class="w-full bg-emerald-600 text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 flex items-center justify-center gap-2">${ICON_WHATSAPP}Enviar pedido no WhatsApp</button>`
+                : ''
+            }
           </div>
         `
             : ''
@@ -1132,7 +1110,21 @@ function bindPageEvents() {
   )
 
   const placeBtn = document.getElementById('place-order-btn')
-  if (placeBtn) placeBtn.addEventListener('click', placeOrder)
+  if (placeBtn) placeBtn.addEventListener('click', () => placeOrder(false))
+  const placeWaBtn = document.getElementById('place-order-whatsapp-btn')
+  if (placeWaBtn) {
+    placeWaBtn.addEventListener('click', () => {
+      // Abre a aba EM BRANCO já aqui, ainda dentro do clique — Safari/iOS (e
+      // outros bloqueadores de pop-up) só permitem window.open() como reação
+      // direta e síncrona a um gesto do usuário; como placeOrder() é async
+      // (espera o insert no Supabase antes de saber o link do WhatsApp), abrir
+      // depois do await quase sempre seria bloqueado silenciosamente. Só
+      // navegamos essa aba pro link de verdade quando o pedido termina de
+      // salvar (ver placeOrder).
+      const waWindow = window.open('', '_blank')
+      placeOrder(true, waWindow)
+    })
+  }
 
   const chatOverlay = document.getElementById('chat-overlay')
   if (chatOverlay) {
@@ -1259,7 +1251,38 @@ function removeFromCart(productId) {
   renderPage()
 }
 
-async function placeOrder() {
+// Texto do pedido formatado pra mandar no WhatsApp — mesma informação que já
+// vai pro banco (itens, observação, mesa, subtotal), só em texto simples.
+function buildWhatsAppOrderMessage(total) {
+  const linhas = cart.map(
+    (i) =>
+      `${i.quantity}x ${i.product.name}${i.notes ? ` (${i.notes})` : ''} — R$ ${formatBRL(i.product.price * i.quantity)}`
+  )
+  const partes = [
+    `Novo pedido — ${restaurant.name}`,
+    numero ? `Mesa ${numero}` : null,
+    customerName ? `Cliente: ${customerName}` : null,
+    '',
+    ...linhas,
+    '',
+    `Subtotal: R$ ${formatBRL(total)}`,
+  ].filter((linha) => linha !== null)
+  return partes.join('\n')
+}
+
+// Link "https://wa.me/<numero>?text=<mensagem>" com o pedido pronto pra
+// enviar — null se o restaurante não tiver WhatsApp cadastrado
+// (restaurants.whatsapp, migration 0013). O número é guardado só com DDD
+// (10-11 dígitos, mesmo padrão de telefone usado no resto do app, sem +55) —
+// o código do país é prefixado aqui, só na hora de montar o link.
+function whatsappOrderLink(total) {
+  const digits = (restaurant.whatsapp || '').replace(/\D/g, '')
+  if (!digits) return null
+  const phoneWithCountry = digits.length <= 11 ? `55${digits}` : digits
+  return `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(buildWhatsAppOrderMessage(total))}`
+}
+
+async function placeOrder(viaWhatsApp, waWindow) {
   placing = true
   renderPage()
   try {
@@ -1282,7 +1305,6 @@ async function placeOrder() {
       table_number: numero || null,
       total,
       customer_name: customerName || null,
-      customer_phone: customerPhone || null,
     })
     if (orderError) throw orderError
 
@@ -1297,6 +1319,13 @@ async function placeOrder() {
     const { error: itemsError } = await supabaseClient.from('order_items').insert(items)
     if (itemsError) throw itemsError
 
+    // "Enviar pedido no WhatsApp": o pedido é salvo no banco igual ao
+    // "Finalizar pedido" normal (fica no histórico do restaurante), e além
+    // disso abre o WhatsApp com o resumo já pronto pra enviar — o cliente só
+    // confirma o envio lá. Calculado antes de limpar o carrinho, que precisa
+    // dos itens ainda no estado.
+    const waLink = viaWhatsApp ? whatsappOrderLink(total) : null
+
     placing = false
     cart = []
     cartOpen = false
@@ -1310,10 +1339,16 @@ async function placeOrder() {
     chatMessages = [{ role: 'assistant', content: 'Pedido enviado! Se quiser pedir mais alguma coisa, é só me chamar. 🙂' }]
     renderPage()
     showToast('Pedido enviado com sucesso!', 'success')
+    // Navega a aba já aberta (ver bindPageEvents) pro link de verdade — não
+    // abre uma aba nova aqui, que seria bloqueada por já não estar mais
+    // "dentro" do clique original.
+    if (waLink && waWindow) waWindow.location.href = waLink
+    else if (waWindow) waWindow.close() // pediu WhatsApp mas o restaurante não tem número: fecha a aba em branco
   } catch (err) {
     placing = false
     renderPage()
     showToast('Erro ao enviar pedido: ' + errorMessage(err), 'error', 5000)
+    if (waWindow) waWindow.close() // pedido falhou: não deixa a aba em branco perdida
   }
 }
 

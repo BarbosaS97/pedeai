@@ -13,9 +13,12 @@ const state = {
   creating: false,
   formError: '',
   nameDraft: '',
+  whatsappDraft: '',
   searchQuery: '',
   qrRestaurant: null,
   qrDataUrl: null,
+  whatsappRestaurant: null,
+  whatsappEditDraft: '',
   mesasRestaurant: null,
   mesasList: [],
   mesasLoading: false,
@@ -94,17 +97,26 @@ function dashboardHtml() {
 
         <section class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
           <h2 class="font-semibold text-lg mb-4">Cadastrar restaurante</h2>
-          <form id="create-form" class="flex flex-col sm:flex-row gap-3">
-            <input
-              id="name-input"
-              value="${escapeHtml(state.nameDraft)}"
-              placeholder="Nome do restaurante"
-              class="flex-1 border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
-            />
+          <form id="create-form" class="space-y-3">
+            <div class="flex flex-col sm:flex-row gap-3">
+              <input
+                id="name-input"
+                value="${escapeHtml(state.nameDraft)}"
+                placeholder="Nome do restaurante"
+                class="flex-1 border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
+              />
+              <input
+                id="create-whatsapp-input"
+                value="${escapeHtml(state.whatsappDraft)}"
+                placeholder="WhatsApp (opcional)"
+                inputmode="numeric"
+                class="sm:w-52 border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
+              />
+            </div>
             <button
               type="submit"
               ${state.creating ? 'disabled' : ''}
-              class="bg-brand-orange text-white font-semibold rounded-lg px-5 py-2.5 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 whitespace-nowrap"
+              class="w-full sm:w-auto bg-brand-orange text-white font-semibold rounded-lg px-5 py-2.5 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 whitespace-nowrap"
             >
               ${state.creating ? 'Criando...' : '+ Cadastrar'}
             </button>
@@ -127,6 +139,7 @@ function dashboardHtml() {
 
       ${state.qrRestaurant ? qrModalHtml() : ''}
       ${state.mesasRestaurant ? mesasModalHtml() : ''}
+      ${state.whatsappRestaurant ? whatsappModalHtml() : ''}
     </div>
   `
 }
@@ -175,6 +188,15 @@ function restaurantListHtml() {
                 <span>🧑‍🍳</span>
                 <a href="${escapeHtml(panelUrl(r.access_token))}" target="_blank" rel="noreferrer" class="underline truncate text-brand-blue hover:opacity-80 transition">Abrir painel do restaurante</a>
                 <button data-copy-id="${r.id}" data-copy-kind="panel" title="Copiar link do painel" class="text-neutral-400 hover:text-brand-blue transition shrink-0">⧉</button>
+              </div>
+              <div class="flex items-center gap-1.5 text-neutral-500">
+                <span>📱</span>
+                ${
+                  r.whatsapp
+                    ? `<span class="truncate">${escapeHtml(maskPhone(r.whatsapp))}</span>`
+                    : '<span class="italic text-neutral-400">Sem WhatsApp cadastrado</span>'
+                }
+                <button data-action="whatsapp" data-id="${r.id}" title="Editar WhatsApp" class="text-neutral-400 hover:text-brand-blue transition shrink-0">✎</button>
               </div>
             </div>
           </div>
@@ -264,6 +286,35 @@ function qrModalHtml() {
           <button id="qr-close-btn" class="flex-1 bg-neutral-100 text-neutral-600 text-sm font-semibold rounded-lg py-2 hover:bg-neutral-200 transition">Fechar</button>
         </div>
       </div>
+    </div>
+  `
+}
+
+// ---- WhatsApp do restaurante (restaurants.whatsapp, migration 0013) ----
+// Número que recebe os pedidos enviados pelo botão "Enviar pedido no
+// WhatsApp" do carrinho (cliente/cardapio.js). O restaurante também pode
+// editar isso sozinho no próprio painel (restaurante/painel.js) — esse modal
+// aqui é só pra você (admin) poder cadastrar/corrigir sem depender disso.
+function whatsappModalHtml() {
+  const r = state.whatsappRestaurant
+  return `
+    <div id="whatsapp-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <form id="whatsapp-form" class="modal-box bg-white rounded-2xl p-6 max-w-sm w-full space-y-4">
+        <h3 class="font-semibold text-lg">WhatsApp — ${escapeHtml(r.name)}</h3>
+        <p class="text-sm text-neutral-500">Número que recebe os pedidos enviados pelo cardápio direto no WhatsApp. Deixe em branco para remover.</p>
+        <input
+          id="whatsapp-modal-input"
+          value="${escapeHtml(maskPhone(state.whatsappEditDraft))}"
+          placeholder="(11) 91234-5678"
+          inputmode="numeric"
+          autofocus
+          class="w-full border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
+        />
+        <div class="flex gap-2 pt-1">
+          <button type="submit" class="flex-1 bg-brand-blue text-white font-semibold rounded-lg py-2 hover:opacity-90 transition">Salvar</button>
+          <button type="button" id="whatsapp-close-btn" class="flex-1 bg-neutral-100 text-neutral-600 font-semibold rounded-lg py-2 hover:bg-neutral-200 transition">Cancelar</button>
+        </div>
+      </form>
     </div>
   `
 }
@@ -508,6 +559,10 @@ function bindEvents() {
   document.getElementById('name-input').addEventListener('input', (e) => {
     state.nameDraft = e.target.value
   })
+  document.getElementById('create-whatsapp-input').addEventListener('input', (e) => {
+    state.whatsappDraft = maskPhone(e.target.value)
+    e.target.value = state.whatsappDraft
+  })
 
   document.getElementById('create-form').addEventListener('submit', handleCreate)
 
@@ -549,6 +604,19 @@ function bindEvents() {
     })
     bindMesasListEvents()
   }
+
+  const whatsappOverlay = document.getElementById('whatsapp-overlay')
+  if (whatsappOverlay) {
+    whatsappOverlay.addEventListener('click', (e) => {
+      if (e.target === whatsappOverlay) closeWhatsappModal()
+    })
+    document.getElementById('whatsapp-close-btn').addEventListener('click', closeWhatsappModal)
+    document.getElementById('whatsapp-form').addEventListener('submit', handleWhatsappSubmit)
+    document.getElementById('whatsapp-modal-input').addEventListener('input', (e) => {
+      state.whatsappEditDraft = maskPhone(e.target.value)
+      e.target.value = state.whatsappEditDraft
+    })
+  }
 }
 
 function bindRestaurantListEvents() {
@@ -559,6 +627,7 @@ function bindRestaurantListEvents() {
       const action = btn.getAttribute('data-action')
       if (action === 'qr') openQrModal(restaurant)
       if (action === 'mesas') openMesasModal(restaurant)
+      if (action === 'whatsapp') openWhatsappModal(restaurant)
       if (action === 'toggle') toggleActive(restaurant)
       if (action === 'regen') regenerateToken(restaurant)
     })
@@ -649,12 +718,14 @@ async function handleCreate(e) {
   render()
 
   const slug = slugify(name)
-  const { error } = await supabaseClient.from('restaurants').insert({ name, slug })
+  const whatsapp = state.whatsappDraft.replace(/\D/g, '') || null
+  const { error } = await supabaseClient.from('restaurants').insert({ name, slug, whatsapp })
 
   if (error) {
     state.formError = error.message
   } else {
     state.nameDraft = ''
+    state.whatsappDraft = ''
     showToast(`"${name}" cadastrado!`, 'success')
   }
   state.creating = false
@@ -699,6 +770,28 @@ function closeQrModal() {
   state.qrRestaurant = null
   state.qrDataUrl = null
   render()
+}
+
+function openWhatsappModal(r) {
+  state.whatsappRestaurant = r
+  state.whatsappEditDraft = r.whatsapp || ''
+  render()
+}
+
+function closeWhatsappModal() {
+  state.whatsappRestaurant = null
+  render()
+}
+
+async function handleWhatsappSubmit(e) {
+  e.preventDefault()
+  const digits = state.whatsappEditDraft.replace(/\D/g, '')
+  const id = state.whatsappRestaurant.id
+  const { error } = await supabaseClient.from('restaurants').update({ whatsapp: digits || null }).eq('id', id)
+  if (error) showToast('Erro ao salvar WhatsApp.', 'error')
+  else showToast('WhatsApp atualizado!', 'success')
+  closeWhatsappModal()
+  await loadRestaurants()
 }
 
 render()

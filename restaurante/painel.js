@@ -27,6 +27,7 @@ let productHasImage = true // controla se o campo de upload aparece no formulár
 
 let logoSaving = false
 let themeColorSaving = false
+let whatsappSaving = false
 
 async function init() {
   if (!accessToken) {
@@ -186,6 +187,14 @@ function identityManagerHtml() {
           ${themeColorSaving ? '<span class="text-xs text-neutral-400">Salvando...</span>' : ''}
         </div>
       </div>
+      <div class="pt-4 border-t border-neutral-100 space-y-2.5">
+        <p class="text-sm font-semibold text-neutral-700">WhatsApp do restaurante</p>
+        <p class="text-sm text-neutral-500 leading-relaxed">Número que recebe os pedidos enviados pelo cliente direto no WhatsApp, pelo botão no carrinho do cardápio. Deixe em branco pra esse botão não aparecer pro cliente.</p>
+        <div class="flex items-center gap-3 flex-wrap">
+          <input type="text" id="whatsapp-input" value="${escapeHtml(maskPhone(restaurant.whatsapp || ''))}" maxlength="16" placeholder="(11) 91234-5678" inputmode="numeric" ${whatsappSaving ? 'disabled' : ''} class="w-48 border border-neutral-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue transition disabled:opacity-50" />
+          ${whatsappSaving ? '<span class="text-xs text-neutral-400">Salvando...</span>' : ''}
+        </div>
+      </div>
     </div>
   `
 }
@@ -281,6 +290,36 @@ async function saveThemeColor(rawValue) {
 
   restaurant.theme_color = normalized
   showToast('Cor de destaque atualizada!', 'success')
+  renderIdentityManager()
+}
+
+// Salva o WhatsApp (restaurants.whatsapp, migration 0013). Só dígitos (DDD +
+// número, 10 ou 11), mesma constraint do banco. Vazio remove o número — o
+// botão "Enviar pedido no WhatsApp" some do carrinho do cliente nesse caso.
+async function saveWhatsapp(rawValue) {
+  const digits = rawValue.replace(/\D/g, '')
+  if (digits && digits.length !== 10 && digits.length !== 11) {
+    showToast('WhatsApp inválido — use DDD + número (10 ou 11 dígitos).', 'error')
+    renderIdentityManager()
+    return
+  }
+  const normalized = digits || null
+  if (normalized === (restaurant.whatsapp || null)) return
+
+  whatsappSaving = true
+  renderIdentityManager()
+
+  const { error } = await restaurantClient.from('restaurants').update({ whatsapp: normalized }).eq('id', restaurant.id)
+  whatsappSaving = false
+
+  if (error) {
+    showToast('Erro ao salvar WhatsApp.', 'error')
+    renderIdentityManager()
+    return
+  }
+
+  restaurant.whatsapp = normalized
+  showToast('WhatsApp atualizado!', 'success')
   renderIdentityManager()
 }
 
@@ -665,12 +704,20 @@ function bindProductsTabEvents() {
       const colorInput = document.getElementById('theme-color-input')
       if (colorInput) colorInput.value = normalized
       applyThemeColor(normalized)
+      return
+    }
+    if (e.target.id === 'whatsapp-input') {
+      e.target.value = maskPhone(e.target.value)
     }
   })
   identityManager.addEventListener('keydown', (e) => {
     if (e.target.id === 'theme-color-text' && e.key === 'Enter') {
       e.preventDefault()
       saveThemeColor(e.target.value)
+    }
+    if (e.target.id === 'whatsapp-input' && e.key === 'Enter') {
+      e.preventDefault()
+      saveWhatsapp(e.target.value)
     }
   })
   // "blur" não borbulha (bubble) — precisa de capture (terceiro argumento
@@ -679,6 +726,7 @@ function bindProductsTabEvents() {
     'blur',
     (e) => {
       if (e.target.id === 'theme-color-text') saveThemeColor(e.target.value)
+      if (e.target.id === 'whatsapp-input') saveWhatsapp(e.target.value)
     },
     true
   )
