@@ -222,20 +222,31 @@ link de verdade só depois) — Safari/iOS só permite `window.open()` como
 reação síncrona direta a um clique; abrir depois de esperar o Supabase
 seria bloqueado silenciosamente como pop-up.
 
-**Landing page e leads**: `index.html` (raiz) é uma landing page só de
-conversão — apresenta o produto (avatar do Ari com balão de fala, benefícios)
-e tem um único caminho de ação: um botão que abre um formulário (nome,
-telefone, email). Ela não tem nenhum link pro admin, painel ou cardápio — não
-dá acesso ao sistema. Ao enviar, o formulário (`landing.js`) grava o lead
-direto na tabela `leads` (migration `0010`), sem Edge Function nem envio de
-email — pra conferir quem preencheu, é só abrir a aba **Leads da landing
-page** que aparece no topo do painel admin (`admin/admin.js`), com nome,
-telefone (`tel:`) e email (`mailto:`) de cada um, mais recente primeiro. Se
-um dia você quiser receber um email a cada lead novo, dá pra adicionar uma
-Edge Function (ex: com [Resend](https://resend.com)) disparada por um
-[Database Webhook](https://supabase.com/docs/guides/database/webhooks) na
-tabela `leads` — a tabela e a policy de insert público já estão prontas pra
-isso, só falta essa peça.
+**Landing page e contato**: `index.html` (raiz) é uma landing page só de
+conversão — apresenta o produto (avatar do Ari, benefícios, vídeo de
+demonstração) e tem um único caminho de ação: todo botão `.js-cta` (nav,
+hero, CTA final) abre o WhatsApp do PapeiAI (`wa.me`, número + mensagem
+prontos em `WHATSAPP_NUMBER`/`WHATSAPP_MESSAGE`, `landing.js`) numa aba nova.
+Ela não tem nenhum link pro admin, painel ou cardápio — não dá acesso ao
+sistema.
+
+Antes disso, a landing usava um formulário (nome/telefone/email) que gravava
+o lead na tabela `leads` (migration `0010`) — trocado pelo contato direto no
+WhatsApp por ser mais rápido pro visitante e não depender de alguém do time
+abrir o admin depois pra ligar de volta. A tabela `leads`, a policy de insert
+público e a aba **Leads da landing page** no admin (`admin/admin.js`)
+continuam no código (não fazem mal ficarem paradas) — só não recebem mais
+nada de novo a partir da landing; qualquer lead que já tinha sido capturado
+antes dessa troca continua visível lá.
+
+**Vídeo de demonstração** (`videos/demo-cardapio.mp4`, seção "Veja
+funcionando"): vídeo vertical (celular) com o cardápio de verdade rodando,
+já com legendas/destaques gravados na própria arte — por isso não tem mockup
+de celular por cima, o vídeo já É a tela. Sem autoplay (arquivo pesado,
+~20MB, e ninguém pediu som/movimento automático) — usa `controls` +
+`preload="metadata"` (só baixa o suficiente pra mostrar o `poster`
+até a pessoa tocar em play) e `images/video-poster.png` (frame do próprio
+vídeo, extraído com OpenCV) como capa estática antes do play.
 
 O hero usa duas artes prontas com fundo já transparente, em vez de recriar
 tudo em CSS/texto: `images/hero-lettering.png` (a letra "Bora papear?"
