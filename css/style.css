@@ -390,12 +390,17 @@ html[data-theme='dark'] ::placeholder {
   color: #78716c;
 }
 
-/* o logo é um PNG com "Papei" em azul-escuro: sobre fundo escuro sumiria,
-   então ganha uma plaquinha clara atrás */
-html[data-theme='dark'] img[alt^='PapeiAI'] {
-  background: rgb(255 255 255 / 0.92);
-  border-radius: 10px;
-  padding: 3px 8px;
+/* Logo: duas versões no DOM (js/logo.js); no escuro entra a de "Papei" claro. */
+.logo-on-dark {
+  display: none;
+}
+html[data-theme='dark'] .logo-on-light,
+html[data-logo='dark'] .logo-on-light {
+  display: none;
+}
+html[data-theme='dark'] .logo-on-dark,
+html[data-logo='dark'] .logo-on-dark {
+  display: block;
 }
 
 /* ---- Tela de login / primeiro acesso do painel (restaurante/auth.js) ----
