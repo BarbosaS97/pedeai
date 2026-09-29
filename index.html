@@ -65,9 +65,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   </head>
   <body class="bg-cream">
-    <!-- Página só de conversão: sem login, sem link pro admin/painel/cardápio —
-         o único caminho de ação aqui é abrir o formulário de contato
-         (qualquer botão com a classe .js-cta, ver landing.js). Nenhum dado
+    <!-- Página só de conversão: sem link pro admin/cardápio — o caminho de ação
+         é abrir o formulário de contato (qualquer botão com a classe
+         .js-cta, ver landing.js). Único link extra: "Entrar" no topo, que
+         leva restaurantes já cadastrados pro login do painel. Nenhum dado
          de uso, avaliação ou cliente é inventado — os mockups abaixo mostram
          telas reais do produto, com conteúdo ilustrativo.
 
@@ -81,16 +82,20 @@
     <header class="sticky top-0 z-40 bg-cream/90 backdrop-blur border-b border-ink/10">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         <div id="header-logo-slot" class="shrink-0"></div>
-        <nav class="hidden md:flex items-center gap-7 text-sm font-semibold text-ink/70">
+        <nav class="hidden lg:flex items-center gap-7 text-sm font-semibold text-ink/70 whitespace-nowrap">
           <a href="#como-funciona" class="hover:text-ink transition">Como funciona</a>
           <a href="#beneficios" class="hover:text-ink transition">Benefícios</a>
           <a href="#veja-funcionando" class="hover:text-ink transition">Veja funcionando</a>
           <a href="#para-quem" class="hover:text-ink transition">Para quem é</a>
         </nav>
-        <button class="js-cta shrink-0 bg-brand-orange text-white text-sm font-bold rounded-full px-4 sm:px-5 py-2.5 shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition">
-          <span class="sm:hidden">Conhecer</span>
-          <span class="hidden sm:inline">Quero conhecer o PapeiAI</span>
-        </button>
+        <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <!-- Acesso do restaurante já cadastrado: leva pra tela de login do painel. -->
+          <a href="restaurante/index.html" class="text-sm font-bold text-ink rounded-full px-3 sm:px-4 py-2.5 border border-ink/20 hover:bg-ink hover:text-cream hover:border-ink active:scale-[0.98] transition">Entrar</a>
+          <button class="js-cta bg-brand-orange text-white text-sm font-bold rounded-full px-4 sm:px-5 py-2.5 shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition">
+            <span class="sm:hidden">Conhecer</span>
+            <span class="hidden sm:inline">Quero conhecer o PapeiAI</span>
+          </button>
+        </div>
       </div>
     </header>
 

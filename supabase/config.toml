@@ -22,3 +22,13 @@ verify_jwt = false
 [auth.email]
 enable_confirmations = true
 double_confirm_changes = false
+
+# Modelos de e-mail em português (HTML com a marca). No projeto hospedado, cole
+# o conteúdo de cada arquivo em Authentication → Emails → Templates — ver README.
+[auth.email.template.email_change]
+subject = "Confirme seu e-mail no PapeiAI"
+content_path = "./supabase/templates/email_change.html"
+
+[auth.email.template.recovery]
+subject = "Redefina sua senha do PapeiAI"
+content_path = "./supabase/templates/recovery.html"
