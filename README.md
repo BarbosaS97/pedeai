@@ -36,7 +36,7 @@ dinâmicas do app original:
 | --- | --- | --- |
 | [index.html](index.html) | — | Landing page pública, só de conversão (formulário de contato) — sem link nenhum pro admin/painel/cardápio |
 | [admin/index.html](admin/index.html) | `/admin` | **Você**: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas |
-| `admin/mesas-print.html?restaurant=<id>` | — | Folha A4 com um QR Code por mesa, pronta pra imprimir/salvar como PDF |
+| `admin/mesas-print.html?restaurant_id=<id>` | — | Artes de mesa (arte base + QR Code + número), 8 por folha A4 paisagem, prontas pra imprimir/salvar como PDF |
 | `restaurante/index.html?token=<access_token>` | `/r/:accessToken` | **Restaurante**: painel de produtos |
 | `cliente/index.html?slug=<slug>` | `/:slug` | **Cliente**: cardápio público, com o Ari (garçom IA) |
 | `cliente/index.html?slug=<slug>&mesa=<numero>` | `/:slug/mesa/:numero` | Cardápio público de uma mesa específica — `numero` precisa bater com uma mesa ativa cadastrada no admin |
@@ -75,7 +75,7 @@ images/
 admin/
   index.html                   sua área: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas
   admin.js
-  mesas-print.html              folha A4 com um QR Code por mesa (?restaurant=<id>)
+  mesas-print.html              artes de mesa, 8 por folha A4 (?restaurant_id=<id> | ?slug= | ?access_token=)
   mesas-print.js
   mesas-print.css                layout de impressão (unidades físicas, @page, @media print)
 restaurante/
@@ -178,8 +178,8 @@ restaurante), você digita quantas mesas o salão tem e clica "Gerar" — cria a
 mesas `1`..`N` (dá pra rodar de novo com um número maior só pra adicionar
 mais, sem duplicar as que já existem). Cada mesa pode ser renomeada pra um
 rótulo livre (ex: "8 — Varanda"), ativada/desativada ou excluída. O botão
-"Baixar folha de impressão" abre `admin/mesas-print.html`, que gera uma folha
-A4 com um QR Code por mesa (`cliente/index.html?slug=X&mesa=Y`) — usa
+"Gerar artes das mesas" abre `admin/mesas-print.html`, que gera uma folha
+A4 paisagem, 8 artes por folha, cada uma com o QR Code da mesa (`cliente/index.html?slug=X&mesa=Y`) — usa
 `window.print()` do próprio navegador pra imprimir ou salvar como PDF, sem
 biblioteca nenhuma. No cardápio, `?mesa=Y` é conferido contra a tabela
 `mesas` (existe? está ativa?) antes de liberar o cardápio — mesa inexistente

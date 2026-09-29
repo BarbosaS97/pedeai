@@ -1,7 +1,14 @@
-/* mesas-print.css — folha A4 com QR Code por mesa, pronta pra imprimir/
-   salvar como PDF. Página utilitária, isolada do design system do resto do
-   site (Tailwind) de propósito: layout de impressão precisa de controle
-   fino em unidades físicas (mm/cm), não em utilitários pensados pra tela. */
+/* mesas-print.css — artes de mesa (images/arte-mesa-base.png) em folhas A4
+   paisagem, 8 por folha (4×2), prontas pra imprimir/salvar como PDF.
+   Página utilitária, isolada do design system do resto do site (Tailwind) de
+   propósito: layout de impressão precisa de controle fino em unidades físicas
+   (mm), não em utilitários pensados pra tela.
+
+   Geometria: a arte base tem 874×1240 px (proporção 0,705, um pouco mais
+   "larga" que A7). Ela é mantida sem distorção: 70 mm de largura → 99,3 mm de
+   altura. Quatro colunas com 3 mm entre elas e duas linhas cabem numa A4
+   paisagem (297×210 mm). Os elementos sobrepostos (QR Code, número) usam
+   coordenadas em % da arte, medidas em pixels da imagem base. */
 
 * {
   box-sizing: border-box;
@@ -57,7 +64,7 @@ body {
   max-width: 46em;
 }
 .print-btn {
-  background: #7c3aed;
+  background: #ea580c;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -68,54 +75,121 @@ body {
   cursor: pointer;
   white-space: nowrap;
 }
-.print-btn:hover {
+.print-btn:hover:not(:disabled) {
   opacity: 0.9;
 }
+.print-btn:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
 
-/* ---- Folha A4 ---- */
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #525252;
+}
+.progress[hidden] {
+  display: none;
+}
+.progress-bar {
+  width: 200px;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e5e5;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: #ea580c;
+  transition: width 0.1s linear;
+}
+
+/* ---- Folha A4 paisagem ---- */
+.pages {
+  overflow-x: auto;
+  padding: 16px 0;
+}
+
 .page {
-  width: 210mm;
-  min-height: 297mm;
-  margin: 16px auto;
+  width: 297mm;
+  height: 210mm;
+  margin: 0 auto 16px;
   background: #fff;
-  padding: 12mm;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-}
-
-.sheet {
+  /* 4 células de 73 mm (70 mm de arte + 1,5 mm de cada lado) = 292 mm;
+     2 células de 102,3 mm = 204,6 mm. O resto vira margem da folha. */
+  padding: 2.7mm 2.5mm;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6mm;
+  grid-template-columns: repeat(4, 73mm);
+  grid-template-rows: repeat(2, 102.3mm);
+  align-content: start;
+  justify-content: start;
+  break-after: page;
+  page-break-after: always;
 }
 
-.mesa-card {
-  border: 1.5px dashed #a3a3a3;
-  border-radius: 3mm;
-  padding: 5mm 3mm;
-  text-align: center;
-  break-inside: avoid;
-  page-break-inside: avoid;
+/* A célula é a arte + 1,5 mm de folga em volta. A borda tracejada cinza fica
+   no meio dos 3 mm entre duas artes: é a linha de corte. */
+.cell {
+  padding: 1.5mm;
+  outline: 0.2mm dashed #c4c4c4;
+  outline-offset: -0.1mm;
 }
 
-.mesa-number {
-  font-size: 15pt;
-  font-weight: 800;
-  margin: 0 0 3mm;
-  word-break: break-word;
-  line-height: 1.15;
+.art {
+  position: relative;
+  width: 70mm;
+  aspect-ratio: 874 / 1240;
+  container-type: inline-size;
+  overflow: hidden;
 }
 
-.mesa-qr {
-  width: 45mm;
-  height: 45mm;
-  margin: 0 auto;
+.art-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   display: block;
 }
 
-.mesa-restaurant {
-  font-size: 8pt;
-  color: #737373;
-  margin: 3mm 0 0;
+/* Miolo branco da moldura do QR Code na arte base: x 68→424, y 671→1015
+   (de 874×1240 px). Cobre o texto "ESPAÇO PARA O QR CODE" e os cantos laranja
+   sem encostar na borda azul da moldura. */
+.qr-plate {
+  position: absolute;
+  left: 7.78%;
+  top: 54.11%;
+  width: 40.73%;
+  height: 27.74%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qr-canvas {
+  /* !important: a lib qrcode grava width/height inline no canvas. */
+  height: 100% !important;
+  width: auto !important;
+  aspect-ratio: 1 / 1;
+  image-rendering: pixelated;
+}
+
+/* Número da mesa: começa em x=250 (logo depois da palavra "Mesa") e apoia a
+   base do texto (y≈1124) logo acima da linha em branco (y≈1128). A fonte é
+   proporcional à largura da arte (53 px de 874 = cap-height do "Mesa"). */
+.mesa-num {
+  position: absolute;
+  left: 28.6%;
+  top: 86.9%;
+  font-size: calc(53 / 874 * 100cqw * var(--scale, 1));
+  font-weight: 600;
+  line-height: 1;
+  color: #10265f;
+  white-space: nowrap;
 }
 
 @media print {
@@ -125,15 +199,21 @@ body {
   .no-print {
     display: none !important;
   }
+  .pages {
+    overflow: visible;
+    padding: 0;
+  }
   .page {
     box-shadow: none;
     margin: 0;
-    width: auto;
-    min-height: auto;
-    padding: 0;
+  }
+  /* Sem isso o Chrome/Edge tira o fundo das imagens/cores ao imprimir. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   @page {
-    size: A4;
-    margin: 12mm;
+    size: A4 landscape;
+    margin: 0;
   }
 }

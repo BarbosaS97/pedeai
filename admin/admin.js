@@ -357,7 +357,7 @@ function mesasModalHtml() {
 
         ${
           state.mesasList.length > 0
-            ? `<a href="mesas-print.html?restaurant=${encodeURIComponent(r.id)}" target="_blank" rel="noreferrer" class="block text-center bg-brand-orange text-white text-sm font-semibold rounded-lg py-2.5 hover:opacity-90 transition">Baixar folha de impressão</a>`
+            ? `<a href="mesas-print.html?restaurant_id=${encodeURIComponent(r.id)}" target="_blank" rel="noreferrer" class="block text-center bg-brand-orange text-white text-sm font-semibold rounded-lg py-2.5 hover:opacity-90 transition">Gerar artes das mesas</a>`
             : ''
         }
       </div>
@@ -439,7 +439,7 @@ function refreshMesasModal() {
   if (state.mesasList.length > 0 && !existingPrintBtn) {
     box.insertAdjacentHTML(
       'beforeend',
-      `<a href="mesas-print.html?restaurant=${encodeURIComponent(state.mesasRestaurant.id)}" target="_blank" rel="noreferrer" class="block text-center bg-brand-orange text-white text-sm font-semibold rounded-lg py-2.5 hover:opacity-90 transition">Baixar folha de impressão</a>`
+      `<a href="mesas-print.html?restaurant_id=${encodeURIComponent(state.mesasRestaurant.id)}" target="_blank" rel="noreferrer" class="block text-center bg-brand-orange text-white text-sm font-semibold rounded-lg py-2.5 hover:opacity-90 transition">Gerar artes das mesas</a>`
     )
   } else if (state.mesasList.length === 0 && existingPrintBtn) {
     existingPrintBtn.remove()
