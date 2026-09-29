@@ -17,6 +17,10 @@ let productsSearch = ''
 let productsSort = 'category' // 'category' | 'name' | 'price'
 let categoriesState = []
 let newCategoryName = ''
+let newCategoryIcon = null
+// Quem está com o banco de ícones aberto: 'new' (formulário de nova categoria),
+// o id de uma categoria existente, ou null (fechado).
+let iconPickerFor = null
 let renamingCategoryId = null
 let renamingCategoryDraft = ''
 let editingProduct = null
@@ -97,6 +101,7 @@ function renderPanel() {
             <div id="header-identity" class="flex items-center gap-3 min-w-0">${headerIdentityHtml()}</div>
             <div class="flex items-center gap-3 shrink-0">
               <a href="${escapeHtml(menuUrl(restaurant.slug))}" target="_blank" rel="noreferrer" class="text-xs text-brand-blue underline hover:opacity-80 transition">Ver cardápio público ↗</a>
+              ${themeToggleHtml()}
               <button id="logout-btn" title="Sair (limpa o link deste painel do navegador)" class="text-neutral-400 hover:text-brand-red hover:bg-neutral-100 transition w-9 h-9 flex items-center justify-center rounded-full shrink-0">${ICON_LOGOUT}</button>
             </div>
           </div>
@@ -141,11 +146,14 @@ function productsTabHtml() {
   return `
     <div class="space-y-4">
       <div id="identity-manager">${identityManagerHtml()}</div>
-      <div class="flex items-center justify-between">
-        <h2 class="text-xl font-extrabold text-neutral-900">Produtos</h2>
-        <button id="new-product-btn" class="bg-brand-orange text-white text-sm font-semibold rounded-lg px-4 py-2 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition">+ Novo produto</button>
-      </div>
       <div id="categories-manager">${categoriesManagerHtml()}</div>
+      <div class="flex items-center justify-between gap-3 pt-2">
+        <div>
+          <h2 class="text-xl font-extrabold text-neutral-900"><span class="text-brand-orange">2.</span> Produtos</h2>
+          <p class="text-xs text-neutral-500 mt-0.5">Cadastre os itens e escolha a categoria de cada um.</p>
+        </div>
+        <button id="new-product-btn" class="shrink-0 bg-brand-orange text-white text-sm font-semibold rounded-lg px-4 py-2 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition">+ Novo produto</button>
+      </div>
       <div id="products-toolbar">${productsToolbarHtml()}</div>
       <div id="products-list" class="space-y-5">${skeletonCardsHtml(2)}</div>
     </div>
@@ -327,25 +335,32 @@ async function saveWhatsapp(rawValue) {
 
 function categoriesManagerHtml() {
   return `
-    <div class="bg-white border border-neutral-200 rounded-xl p-3.5 space-y-2">
-      <p class="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Categorias (seções do cardápio)</p>
-      <div class="flex items-center gap-2 overflow-x-auto scroll-contain pb-1">
-        ${categoriesState.map(categoryChipHtml).join('')}
-        <form id="new-category-form" class="flex items-center gap-1.5 shrink-0">
-          <input
-            id="new-category-input"
-            value="${escapeHtml(newCategoryName)}"
-            placeholder="Nova categoria"
-            class="w-32 border border-neutral-300 rounded-full px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
-          />
-          <button type="submit" title="Adicionar categoria" class="shrink-0 bg-brand-blue text-white text-sm font-semibold rounded-full w-7 h-7 flex items-center justify-center hover:opacity-90 transition">+</button>
-        </form>
+    <div class="bg-white border border-neutral-200 rounded-2xl p-5 sm:p-6 space-y-4">
+      <div>
+        <h2 class="text-xl font-extrabold text-neutral-900"><span class="text-brand-orange">1.</span> Categorias</h2>
+        <p class="text-xs text-neutral-500 mt-0.5">Comece por aqui: são as seções do cardápio (Bebidas, Sobremesas...). Cada uma tem um ícone que aparece pro cliente.</p>
       </div>
+
       ${
         categoriesState.length === 0
-          ? '<p class="text-xs text-neutral-400">Sem categorias ainda — produtos aparecem numa lista única, sem seções, até você criar a primeira.</p>'
-          : ''
+          ? '<p class="text-sm text-neutral-500 bg-neutral-50 border border-dashed border-neutral-300 rounded-xl px-4 py-3">Nenhuma categoria ainda — crie a primeira abaixo. Sem categorias, os produtos aparecem numa lista única, sem seções.</p>'
+          : `<div class="flex flex-wrap gap-2">${categoriesState.map(categoryChipHtml).join('')}</div>`
       }
+
+      <form id="new-category-form" class="flex flex-wrap items-center gap-2 pt-4 border-t border-neutral-100">
+        <button type="button" data-open-icon-picker="new" title="Escolher ícone da categoria" class="shrink-0 h-10 pl-2 pr-3 rounded-lg border ${iconPickerFor === 'new' ? 'border-brand-orange text-brand-orange' : 'border-neutral-300 text-neutral-600'} hover:border-brand-orange hover:text-brand-orange flex items-center gap-2 text-sm transition [&>span>svg]:w-5 [&>span>svg]:h-5">
+          <span class="w-7 h-7 rounded-md bg-brand-orange/10 text-brand-orange flex items-center justify-center">${categoryIconSvg(newCategoryIcon, 20) || '<span class="text-sm leading-none">☺</span>'}</span>
+          Ícone
+        </button>
+        <input
+          id="new-category-input"
+          value="${escapeHtml(newCategoryName)}"
+          placeholder="Nome da categoria (ex: Bebidas)"
+          class="flex-1 min-w-[10rem] h-10 border border-neutral-300 rounded-lg px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
+        />
+        <button type="submit" class="shrink-0 h-10 bg-brand-blue text-white text-sm font-semibold rounded-lg px-4 hover:opacity-90 transition">+ Adicionar categoria</button>
+      </form>
+      ${iconPickerHtml()}
     </div>
   `
 }
@@ -361,11 +376,41 @@ function categoryChipHtml(c) {
     `
   }
   return `
-    <span class="inline-flex items-center gap-0.5 bg-neutral-100 text-neutral-700 text-sm rounded-full pl-3 pr-1 py-1 shrink-0">
-      ${escapeHtml(c.name)}
+    <span class="inline-flex items-center gap-1 bg-neutral-100 text-neutral-800 text-sm font-medium rounded-full pl-1.5 pr-1 py-1">
+      <button data-open-icon-picker="${c.id}" title="Trocar ícone" class="w-7 h-7 rounded-full bg-brand-orange/10 text-brand-orange hover:bg-brand-orange/20 flex items-center justify-center transition [&>svg]:w-4 [&>svg]:h-4">${categoryIconSvg(c.icon) || '<span class="text-xs leading-none">☺</span>'}</button>
+      <span class="px-1">${escapeHtml(c.name)}</span>
       <button data-edit-category="${c.id}" title="Renomear" class="text-neutral-400 hover:text-brand-blue w-7 h-7 flex items-center justify-center rounded-full transition">✎</button>
       <button data-delete-category="${c.id}" title="Excluir" class="text-neutral-400 hover:text-brand-red w-7 h-7 flex items-center justify-center rounded-full transition">✕</button>
     </span>
+  `
+}
+
+// Banco de ícones (js/category-icons.js): grade que abre logo abaixo da lista
+// de categorias, tanto pra nova categoria quanto pra trocar o ícone de uma
+// existente. "Automático" (icon = null) deixa o cardápio escolher pelo nome.
+function iconPickerHtml() {
+  if (!iconPickerFor) return ''
+  const current = iconPickerFor === 'new' ? newCategoryIcon : categoriesState.find((c) => c.id === iconPickerFor)?.icon
+  const options = CATEGORY_ICONS.map(
+    (i) => `
+      <button type="button" data-icon-choice="${i.key}" title="${escapeHtml(i.label)}"
+        class="w-10 h-10 rounded-lg border flex items-center justify-center transition ${
+          current === i.key
+            ? 'border-brand-orange bg-brand-orange/10 text-brand-orange'
+            : 'border-neutral-200 text-neutral-500 hover:border-brand-orange hover:text-brand-orange'
+        }">${categoryIconSvg(i.key, 20)}</button>`
+  ).join('')
+  return `
+    <div class="bg-neutral-50 border border-neutral-200 rounded-xl p-3 space-y-2">
+      <div class="flex items-center justify-between">
+        <p class="text-xs text-neutral-500">Escolha o ícone que aparece no cardápio</p>
+        <div class="flex items-center gap-1">
+          <button type="button" data-icon-choice="" class="text-xs px-2 py-1 rounded-full transition ${!current ? 'bg-brand-orange/10 text-brand-orange' : 'text-neutral-500 hover:bg-neutral-100'}">Automático</button>
+          <button type="button" data-close-icon-picker class="text-neutral-400 hover:bg-neutral-100 w-6 h-6 rounded-full text-xs transition" title="Fechar">✕</button>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-1.5">${options}</div>
+    </div>
   `
 }
 
@@ -395,10 +440,17 @@ async function handleCategoriesManagerSubmit(e) {
     if (!name) return
     const { error } = await restaurantClient
       .from('categories')
-      .insert({ restaurant_id: restaurant.id, name, sort_order: categoriesState.length })
+      .insert({
+        restaurant_id: restaurant.id,
+        name,
+        sort_order: categoriesState.length,
+        ...(newCategoryIcon ? { icon: newCategoryIcon } : {}),
+      })
     if (error) showToast('Erro ao criar categoria.', 'error')
     else showToast('Categoria criada!', 'success')
     newCategoryName = ''
+    newCategoryIcon = null
+    iconPickerFor = null
     await loadCategories()
     return
   }
@@ -417,7 +469,38 @@ async function handleCategoriesManagerSubmit(e) {
   }
 }
 
-function handleCategoriesManagerClick(e) {
+async function handleCategoriesManagerClick(e) {
+  const openPicker = e.target.closest('[data-open-icon-picker]')
+  if (openPicker) {
+    const target = openPicker.getAttribute('data-open-icon-picker')
+    iconPickerFor = iconPickerFor === target ? null : target
+    renderCategoriesManager()
+    return
+  }
+
+  if (e.target.closest('[data-close-icon-picker]')) {
+    iconPickerFor = null
+    renderCategoriesManager()
+    return
+  }
+
+  const choice = e.target.closest('[data-icon-choice]')
+  if (choice) {
+    const key = choice.getAttribute('data-icon-choice') || null
+    if (iconPickerFor === 'new') {
+      newCategoryIcon = key
+      iconPickerFor = null
+      renderCategoriesManager()
+    } else if (iconPickerFor) {
+      const id = iconPickerFor
+      iconPickerFor = null
+      const { error } = await restaurantClient.from('categories').update({ icon: key }).eq('id', id)
+      if (error) showToast('Erro ao trocar o ícone da categoria.', 'error')
+      await loadCategories()
+    }
+    return
+  }
+
   const editBtn = e.target.closest('[data-edit-category]')
   if (editBtn) {
     const cat = categoriesState.find((c) => c.id === editBtn.getAttribute('data-edit-category'))
@@ -425,6 +508,11 @@ function handleCategoriesManagerClick(e) {
     renamingCategoryId = cat.id
     renamingCategoryDraft = cat.name
     renderCategoriesManager()
+    // Foca e seleciona o nome inteiro: deixa claro que dá pra editar e
+    // permite digitar por cima direto.
+    const renameInput = document.querySelector('[data-rename-input]')
+    renameInput?.focus()
+    renameInput?.select()
     return
   }
 

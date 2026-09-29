@@ -36,6 +36,7 @@ function render() {
 function loginHtml() {
   return `
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-blue/10 via-neutral-50 to-brand-orange/10 px-4">
+      ${themeToggleHtml('fixed top-4 right-4')}
       <form id="login-form" class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm space-y-5 fade-slide-in">
         <div class="flex justify-center mb-1">${renderLogo({ size: 'lg', showSlogan: true })}</div>
         <div class="flex items-center justify-center gap-1.5 text-neutral-500 text-sm">
@@ -72,7 +73,10 @@ function dashboardHtml() {
           ${renderLogo({ size: 'sm' })}
           <p class="text-xs text-neutral-400 mt-0.5">Painel do administrador</p>
         </div>
-        <button id="logout-btn" class="text-sm text-neutral-500 hover:text-brand-red transition">Sair</button>
+        <div class="flex items-center gap-2">
+          ${themeToggleHtml()}
+          <button id="logout-btn" class="text-sm text-neutral-500 hover:text-brand-red transition">Sair</button>
+        </div>
       </header>
 
       <main class="max-w-4xl mx-auto px-6 py-8 space-y-6">

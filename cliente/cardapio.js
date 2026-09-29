@@ -60,7 +60,13 @@ const ICON_SPARKLE = `<svg width="15" height="15" viewBox="0 0 24 24" fill="curr
 // Palavra-chave no nome da categoria (livre, cadastrado pelo restaurante) →
 // ícone + frase de efeito da seção. Cobre os nomes mais comuns; qualquer
 // outro nome cai no fallback genérico, sem quebrar nada.
-function categoryStyle(name) {
+function categoryStyle(name, iconKey) {
+  const style = categoryKeywordStyle(name)
+  // Ícone escolhido pelo dono no painel (categories.icon) vence o automático.
+  return { ...style, icon: categoryIconSvg(iconKey) || style.icon }
+}
+
+function categoryKeywordStyle(name) {
   const n = name.toLowerCase()
   if (n.includes('entrada') || n.includes('starter'))
     return { icon: ICON_CAT_STARTER, tagline: 'Comece sua experiência com muito sabor.' }
@@ -518,7 +524,7 @@ function pageHtml() {
 function buildMenuGroups() {
   if (categories.length === 0) return null
   const groups = categories
-    .map((c) => ({ id: c.id, name: c.name, items: products.filter((p) => p.category_id === c.id) }))
+    .map((c) => ({ id: c.id, name: c.name, icon: c.icon, items: products.filter((p) => p.category_id === c.id) }))
     .filter((g) => g.items.length > 0)
   const uncategorized = products.filter((p) => !p.category_id || !categories.some((c) => c.id === p.category_id))
   if (uncategorized.length > 0) groups.push({ id: null, name: 'Outros', items: uncategorized })
@@ -596,7 +602,7 @@ function categoryNavHtml(groups) {
               idx === 0
                 ? 'bg-brand-orange text-white'
                 : 'bg-surface-card border border-surface-line text-neutral-400'
-            }">${categoryStyle(g.name).icon}</span>
+            }">${categoryStyle(g.name, g.icon).icon}</span>
             <span data-pill-label class="text-[9px] font-medium text-center leading-tight truncate w-full ${
               idx === 0 ? 'text-white' : 'text-neutral-400'
             }">${escapeHtml(g.name)}</span>
@@ -609,7 +615,7 @@ function categoryNavHtml(groups) {
 }
 
 function menuSectionHtml(g) {
-  const { tagline } = categoryStyle(g.name)
+  const { tagline } = categoryStyle(g.name, g.icon)
   return `
     <section id="secao-${g.id || 'outros'}" class="space-y-2.5 scroll-mt-16">
       <div>

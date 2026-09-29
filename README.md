@@ -87,6 +87,8 @@ cliente/
 css/style.css                 estilos base (além dos utilitários do Tailwind via CDN)
 js/                            módulos compartilhados pelas três áreas acima
   util.js                       helpers (escapeHtml, formatBRL, errorMessage, loadingHtml, notFoundHtml)
+  category-icons.js             banco de ícones das categorias (categories.icon, migration 0014)
+  theme.js                      tema claro/escuro do admin e do painel (botão no topo)
   logo.js                       renderiza a logo oficial (images/logo.png) nos cabeçalhos
   slug.js                       geração de slug a partir do nome do restaurante
   supabase-client.js            clientes Supabase (público + com token do restaurante)
@@ -469,7 +471,7 @@ tudo que hoje é `brand-orange` — botões, badges (ex: "Destaque"), preços,
 avatar/bolha do chat do Ari, FAB — tanto no cardápio público quanto no
 próprio painel. Vermelho (erro/exclusão/gradiente) e azul (links) continuam
 fixos, só a cor de destaque é editável; o tema do cardápio continua **sempre
-escuro** (isso não é um dark/light toggle). Tecnicamente, como o Tailwind vem
+escuro** (o botão de tema claro/escuro existe só no admin e no painel do restaurante — `js/theme.js` + overrides `html[data-theme='dark']` em `css/style.css`; sem escolha salva, segue a preferência do sistema). Tecnicamente, como o Tailwind vem
 por CDN sem build, isso é feito sem trocar nenhuma classe: `brand.orange` no
 `tailwind.config` de `cliente/index.html`/`restaurante/index.html` é definido
 como `rgb(var(--brand-orange-rgb) / <alpha-value>)`, e `applyThemeColor()`
