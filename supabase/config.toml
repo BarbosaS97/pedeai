@@ -14,6 +14,11 @@ verify_jwt = false
 [functions.restaurant-finish-setup]
 verify_jwt = false
 
+# Relatório da aba "Análise" do portal mestre: valida o token de sessão do admin
+# (emitido pelo admin-login) por dentro, então também roda sem JWT do Supabase.
+[functions.admin-stats]
+verify_jwt = false
+
 # Primeiro acesso do restaurante: o e-mail novo é confirmado por link enviado
 # via Resend (SMTP). "double_confirm_changes = false" é ESSENCIAL: com true o
 # Supabase também pede confirmação no e-mail antigo, que aqui é o sintético

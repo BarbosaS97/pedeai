@@ -96,6 +96,7 @@ supabase/
   migrations/                  13 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante, leads, observações/destaque de produto, cor de destaque do restaurante, WhatsApp do restaurante)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
   functions/admin-login/       Edge Function que verifica a senha do admin contra o secret SENHA_ADMIN
+  functions/admin-stats/       relatório da aba Análise (exige o token de sessão do admin)
   functions/admin-generate-access/   gera login + senha provisórios do restaurante (exige a senha do admin)
   functions/restaurant-finish-setup/ conclui o primeiro acesso do restaurante (desliga must_reset)
 ```
@@ -448,6 +449,20 @@ Os links antigos `restaurante/index.html?token=...` **deixam de funcionar**: ger
 6. **Deploy**: rode a migration `0015_restaurant_auth.sql` e publique as Edge Functions `admin-generate-access` e `restaurant-finish-setup` (mesmo processo das outras; ambas com "Verify JWT" desligado, e usam `SENHA_ADMIN` + as variáveis `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` que o Supabase já injeta).
 
 **Limitações conhecidas**: o Supabase limita o envio de e-mails por conta própria (429, tratado na tela); proteção contra força bruta no login: ver a próxima seção. A escrita em `restaurants`/`mesas`/`leads` pelo admin continua sem Supabase Auth (gate de senha no frontend — ver abaixo).
+
+## Análise por restaurante (portal mestre)
+
+Aba **Análise** do admin: controle interno de uso, por restaurante, com filtro de período (Hoje / 7 / 14 / 30 / 90 dias ou datas livres), busca, ordenação, detalhe diário e **Exportar CSV**.
+
+| Métrica | De onde vem |
+|---|---|
+| **Tokens da IA** (entrada, saída, cache, total, por mensagem) e mensagens | O `ai-waiter` grava uma linha em `ai_usage` a cada mensagem do cliente, com o `usage` que a DeepSeek devolve (soma das tentativas, se houve repetição) |
+| **Aberturas do cardápio** e visitantes únicos | O cardápio grava em `menu_events` uma abertura por sessão do navegador (recarregar não conta); visitante = id aleatório guardado no aparelho, sem dado pessoal |
+| Produtos, categorias, mesas, pedidos, cancelados, faturamento, última atividade | Tabelas que já existiam |
+
+**Como é protegido:** `ai_usage` e `menu_events` não têm policy de leitura (o navegador não lê nada); tudo passa pela Edge Function `admin-stats`, que só responde com o **token de sessão** assinado que o `admin-login` devolve (validade de 8 h; trocar `SENHA_ADMIN` invalida todos). Se a sessão expirar, a aba pede pra sair e entrar de novo.
+
+**Publicar** (nesta ordem): migration `0017_usage_analytics.sql`; funções `admin-stats` (nova), `admin-login` e `ai-waiter` (atualizadas; `admin-stats` com "Verify JWT" desligado); depois o site. Os números começam do zero: só existem a partir da publicação. A métrica de aberturas é "macia" (a tabela aceita inserts anônimos de restaurante ativo, então dá pra inflar chamando a API) — serve pra acompanhar uso, não pra cobrança.
 
 ## Turnstile e limite de tentativas
 

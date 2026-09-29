@@ -179,6 +179,50 @@ const RESPONDER_TOOLS = [
   },
 ]
 
+// Consumo de tokens de UMA mensagem do cliente (soma das chamadas ao modelo,
+// que podem ser 2 se a primeira veio inválida). Vira uma linha em
+// public.ai_usage (migration 0017), que alimenta a aba "Análise" do portal
+// mestre. O DeepSeek devolve `usage` em toda resposta.
+interface UsageAcc {
+  prompt: number
+  completion: number
+  total: number
+  cacheHit: number
+  calls: number
+}
+
+function newUsageAcc(): UsageAcc {
+  return { prompt: 0, completion: 0, total: 0, cacheHit: 0, calls: 0 }
+}
+
+function addUsage(acc: UsageAcc, usage: Record<string, unknown> | undefined) {
+  acc.calls += 1
+  if (!usage) return
+  const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.trunc(v)) : 0)
+  acc.prompt += n(usage.prompt_tokens)
+  acc.completion += n(usage.completion_tokens)
+  acc.total += n(usage.total_tokens) || n(usage.prompt_tokens) + n(usage.completion_tokens)
+  acc.cacheHit += n(usage.prompt_cache_hit_tokens)
+}
+
+// Nunca deixa a métrica derrubar a resposta pro cliente: erro aqui só vai pro log.
+async function recordUsage(restaurantId: string, acc: UsageAcc) {
+  if (acc.calls === 0) return
+  try {
+    const { error } = await supabase.from('ai_usage').insert({
+      restaurant_id: restaurantId,
+      prompt_tokens: acc.prompt,
+      completion_tokens: acc.completion,
+      total_tokens: acc.total,
+      cache_hit_tokens: acc.cacheHit,
+      api_calls: acc.calls,
+    })
+    if (error) console.error('ai_usage insert error:', error.message)
+  } catch (err) {
+    console.error('ai_usage insert error:', err)
+  }
+}
+
 function deepseekApiKey(): string {
   const key = Deno.env.get('DEEPSEEK_API_KEY')
   if (!key) throw new Error('DEEPSEEK_API_KEY não configurada nos secrets do Supabase')
@@ -189,7 +233,7 @@ function deepseekApiKey(): string {
 // Tenta via function calling (mais confiável); se o provedor não devolver
 // tool_calls por algum motivo, cai pra ler o conteúdo da mensagem como texto
 // solto — o chamador trata os dois casos do mesmo jeito depois.
-async function deepseekStructuredReply(messages: { role: string; content: string }[]): Promise<string> {
+async function deepseekStructuredReply(messages: { role: string; content: string }[], usage: UsageAcc): Promise<string> {
   const res = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -211,6 +255,7 @@ async function deepseekStructuredReply(messages: { role: string; content: string
     throw new Error(`DeepSeek chat error ${res.status}: ${await res.text()}`)
   }
   const data = await res.json()
+  addUsage(usage, data.usage)
   const message = data.choices?.[0]?.message
   const toolCall = message?.tool_calls?.[0]
   if (toolCall?.function?.arguments) {
@@ -432,7 +477,8 @@ function tryParseJson(raw: string): Record<string, unknown> | null {
 // de campo errado...), tenta mais UMA vez com um lembrete reforçado antes de cair no fallback
 // genérico — na prática isso reduz bem os "não consegui entender" que não deveriam ter acontecido.
 async function getStructuredReply(
-  baseMessages: { role: string; content: string }[]
+  baseMessages: { role: string; content: string }[],
+  usage: UsageAcc
 ): Promise<{ resposta: string; acoesBrutas: unknown[]; produtosRecomendadosBrutos: unknown[] }> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const messages =
@@ -447,7 +493,7 @@ async function getStructuredReply(
             },
           ]
 
-    const raw = await deepseekStructuredReply(messages)
+    const raw = await deepseekStructuredReply(messages, usage)
     const parsed = tryParseJson(raw)
     const resposta = extractResposta(parsed)
 
@@ -576,7 +622,15 @@ Deno.serve(async (req) => {
       { role: 'user', content: mensagem },
     ]
 
-    const { resposta: respostaBruta, acoesBrutas, produtosRecomendadosBrutos } = await getStructuredReply(messages)
+    const usage = newUsageAcc()
+    let reply: Awaited<ReturnType<typeof getStructuredReply>>
+    try {
+      reply = await getStructuredReply(messages, usage)
+    } finally {
+      // grava o consumo mesmo se a 2ª tentativa falhar (a 1ª já gastou tokens)
+      await recordUsage(restaurant.id, usage)
+    }
+    const { resposta: respostaBruta, acoesBrutas, produtosRecomendadosBrutos } = reply
     let resposta = respostaBruta
 
     const acoesValidadas: CartAction[] = []

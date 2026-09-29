@@ -15,6 +15,7 @@ const state = {
   nameDraft: '',
   whatsappDraft: '',
   searchQuery: '',
+  view: 'restaurants', // 'restaurants' | 'analytics' (admin/analytics.js)
   statusFilter: 'all', // 'all' | 'active' | 'inactive' | 'noaccess' — ver RESTAURANT_FILTERS
   qrRestaurant: null,
   qrDataUrl: null,
@@ -115,27 +116,12 @@ function statCardHtml(label, value, { tone = 'text-neutral-900', hint = '', id =
   `
 }
 
-function dashboardHtml() {
+function restaurantsViewHtml() {
   const total = state.restaurants.length
   const active = state.restaurants.filter((r) => r.is_active).length
   const noAccess = state.restaurants.filter((r) => !r.auth_user_id).length
 
   return `
-    <div class="min-h-screen bg-neutral-50">
-      <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-neutral-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-        <div class="min-w-0">
-          ${renderLogo({ size: 'sm' })}
-          <p class="text-xs text-neutral-400 mt-0.5 truncate">Painel do administrador</p>
-        </div>
-        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
-          ${themeToggleHtml()}
-          <button id="logout-btn" title="Sair" class="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-brand-red hover:bg-neutral-100 transition rounded-full h-9 px-3">
-            ${aIcon('logout')}<span class="hidden sm:inline">Sair</span>
-          </button>
-        </div>
-      </header>
-
-      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-4 sm:space-y-6">
         <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           ${statCardHtml('Restaurantes', total)}
           ${statCardHtml('Ativos agora', active, { tone: 'text-emerald-600' })}
@@ -200,6 +186,28 @@ function dashboardHtml() {
             <div id="leads-list" class="lg:max-h-[34rem] lg:overflow-y-auto lg:pr-1">${state.leadsLoading ? skeletonCardsHtml(2) : leadsListHtml()}</div>
           </section>
         </div>
+  `
+}
+
+function dashboardHtml() {
+  return `
+    <div class="min-h-screen bg-neutral-50">
+      <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-neutral-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+        <div class="min-w-0">
+          ${renderLogo({ size: 'sm' })}
+          <p class="text-xs text-neutral-400 mt-0.5 truncate">Painel do administrador</p>
+        </div>
+        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+          ${themeToggleHtml()}
+          <button id="logout-btn" title="Sair" class="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-brand-red hover:bg-neutral-100 transition rounded-full h-9 px-3">
+            ${aIcon('logout')}<span class="hidden sm:inline">Sair</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-4 sm:space-y-6">
+        ${adminTabsHtml()}
+        ${state.view === 'analytics' ? analyticsViewHtml() : restaurantsViewHtml()}
       </main>
 
       ${state.qrRestaurant ? qrModalHtml() : ''}
@@ -715,8 +723,25 @@ function bindEvents() {
 
   document.getElementById('logout-btn').addEventListener('click', () => {
     sessionStorage.removeItem(ADMIN_SESSION_KEY)
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY)
     location.reload()
   })
+
+  document.querySelectorAll('[data-admin-view]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const view = btn.getAttribute('data-admin-view')
+      if (view === state.view) return
+      state.view = view
+      render()
+      if (view === 'analytics' && !analytics.data) loadAnalytics()
+    })
+  })
+
+  // A visão "Análise" tem os próprios controles; o resto abaixo é da visão de restaurantes.
+  if (state.view === 'analytics') {
+    bindAnalyticsEvents()
+    return
+  }
 
   document.getElementById('name-input').addEventListener('input', (e) => {
     state.nameDraft = e.target.value
@@ -884,6 +909,7 @@ async function handleLogin(e) {
 
     if (data.ok) {
       sessionStorage.setItem(ADMIN_SESSION_KEY, 'true')
+      if (data.token) sessionStorage.setItem(ADMIN_TOKEN_KEY, data.token)
       state.authenticated = true
       render()
       loadRestaurants()

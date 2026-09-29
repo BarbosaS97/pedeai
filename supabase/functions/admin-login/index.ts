@@ -29,7 +29,8 @@
 // README).
 //
 // Request body: { senha: string, turnstile_token?: string }
-// Response body: { ok: boolean, error?: 'captcha_failed' | 'rate_limited', retry_after?: number }
+// Response body: { ok: boolean, token?: string, error?: 'captcha_failed' | 'rate_limited', retry_after?: number }
+//   (token = sessão assinada de 8 h, usada pela Edge Function admin-stats)
 //
 // Arquivo autocontido (sem imports de ../_shared/), mesmo padrão do
 // ai-waiter — pra poder ser colado direto no editor de Edge Functions do
@@ -65,6 +66,36 @@ function timingSafeEqual(a: string, b: string): boolean {
     diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
   }
   return diff === 0
+}
+
+// ---- Token de sessão do admin ----
+// Depois de uma senha certa devolvemos um token assinado (HMAC-SHA256, chave
+// derivada do SENHA_ADMIN), válido por 8 h. Quem valida é a Edge Function
+// admin-stats (aba "Análise"), que assim NÃO depende só do "true" no
+// sessionStorage do navegador. Trocar o SENHA_ADMIN invalida todos os tokens.
+// Formato: <payload base64url({exp})>.<hmac base64url>
+const ADMIN_TOKEN_TTL_SECONDS = 8 * 60 * 60
+const encoder = new TextEncoder()
+
+function b64urlEncode(bytes: Uint8Array): string {
+  let bin = ''
+  bytes.forEach((b) => (bin += String.fromCharCode(b)))
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+async function signAdminToken(secret: string): Promise<string> {
+  const payload = b64urlEncode(
+    encoder.encode(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + ADMIN_TOKEN_TTL_SECONDS }))
+  )
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(`${secret}|admin-session`),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  const sig = b64urlEncode(new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(payload))))
+  return `${payload}.${sig}`
 }
 
 function clientIp(req: Request): string {
@@ -128,7 +159,7 @@ Deno.serve(async (req) => {
 
     if (ok) {
       await supabase.rpc('rate_limit_reset', { p_key: ipKey })
-      return json({ ok: true })
+      return json({ ok: true, token: await signAdminToken(expected) })
     }
 
     const { data: ipBlock } = await supabase.rpc('rate_limit_register_failure', {

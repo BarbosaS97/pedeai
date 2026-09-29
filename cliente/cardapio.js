@@ -147,6 +147,40 @@ function stripMarkdown(text) {
 
 // ---- Identidade do cliente (primeiro nome, opcional) ----
 
+// Conta uma abertura do cardápio (tabela menu_events, migration 0017) pra aba
+// "Análise" do portal mestre. Uma vez por SESSÃO do navegador (recarregar a
+// página não conta de novo) e com um id de visitante aleatório guardado no
+// aparelho, só pra contar visitantes únicos — nenhum dado pessoal. Falha em
+// silêncio: métrica nunca pode atrapalhar o cliente. O insert não usa
+// .select() de propósito (RETURNING exigiria policy de leitura).
+function trackMenuOpen() {
+  try {
+    const sessionKey = `papeiai_opened_${restaurant.id}`
+    if (sessionStorage.getItem(sessionKey)) return
+    sessionStorage.setItem(sessionKey, '1')
+
+    let visitorId = null
+    try {
+      visitorId = localStorage.getItem('papeiai_visitor')
+      if (!visitorId) {
+        visitorId = crypto.randomUUID()
+        localStorage.setItem('papeiai_visitor', visitorId)
+      }
+    } catch {
+      visitorId = crypto.randomUUID() // storage bloqueado: conta como visitante novo
+    }
+
+    supabaseClient
+      .from('menu_events')
+      .insert({ restaurant_id: restaurant.id, event_type: 'menu_open', visitor_id: visitorId, mesa: numero || null })
+      .then(({ error }) => {
+        if (error) console.warn('menu_events:', error.message)
+      })
+  } catch {
+    // sem sessionStorage etc.: simplesmente não conta
+  }
+}
+
 function loadStoredCustomer() {
   try {
     const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY)
@@ -317,6 +351,8 @@ async function init() {
       return
     }
   }
+
+  trackMenuOpen()
 
   const { data: prods } = await supabaseClient
     .from('products')
