@@ -15,6 +15,7 @@ const state = {
   nameDraft: '',
   whatsappDraft: '',
   searchQuery: '',
+  statusFilter: 'all', // 'all' | 'active' | 'inactive' | 'noaccess' — ver RESTAURANT_FILTERS
   qrRestaurant: null,
   qrDataUrl: null,
   whatsappRestaurant: null,
@@ -70,83 +71,134 @@ function loginHtml() {
   `
 }
 
+// ---- Ícones do dashboard (SVG de traço, herdam a cor do texto) ----
+const A_ICON_PATHS = {
+  link: '<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  panel: '<path d="M3 9l1-5h16l1 5"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/>',
+  phone:
+    '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/>',
+  copy: '<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="3"/><path d="m22 7-10 6L2 7"/>',
+  refresh: '<path d="M21 12a9 9 0 0 1-15.4 6.4L3 16"/><path d="M3 21v-5h5"/><path d="M3 12A9 9 0 0 1 18.4 5.6L21 8"/><path d="M21 3v5h-5"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+}
+
+function aIcon(name, size = 16) {
+  return `<svg class="shrink-0" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${A_ICON_PATHS[name]}</svg>`
+}
+
+const A_ICON_WHATSAPP = `<svg class="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.16 2 11.29c0 2.01.73 3.86 1.98 5.39L2.6 21.4a.5.5 0 0 0 .62.62l4.9-1.43a10.4 10.4 0 0 0 3.88.76c5.52 0 10-4.16 10-9.29S17.52 2 12 2Zm5.2 13.13c-.22.62-1.28 1.19-1.77 1.24-.45.05-.91.23-3.06-.64-2.59-1.05-4.25-3.7-4.38-3.87-.13-.17-1.05-1.4-1.05-2.66 0-1.27.67-1.89.9-2.15.22-.25.48-.31.64-.31.16 0 .32 0 .46.01.15.01.35-.06.55.42.22.53.73 1.83.79 1.96.06.13.1.29.02.46-.08.17-.13.28-.25.43-.13.15-.27.34-.38.46-.13.13-.26.27-.11.53.15.26.67 1.1 1.44 1.79.99.88 1.82 1.15 2.08 1.28.26.13.41.11.56-.07.15-.18.64-.75.81-1.01.17-.26.34-.21.56-.13.23.09 1.47.7 1.72.83.26.13.43.19.49.3.06.11.06.6-.16 1.22Z"/></svg>`
+
+const RESTAURANT_FILTERS = [
+  { key: 'all', label: 'Todos' },
+  { key: 'active', label: 'Ativos' },
+  { key: 'inactive', label: 'Inativos' },
+  { key: 'noaccess', label: 'Sem acesso' },
+]
+
+function restaurantMatchesFilter(r, key) {
+  if (key === 'active') return r.is_active
+  if (key === 'inactive') return !r.is_active
+  if (key === 'noaccess') return !r.auth_user_id
+  return true
+}
+
+function statCardHtml(label, value, { tone = 'text-neutral-900', hint = '', id = '' } = {}) {
+  return `
+    <div class="bg-white rounded-2xl border border-neutral-200 p-4">
+      <p class="text-xs text-neutral-400 font-medium">${label}</p>
+      <p ${id ? `id="${id}" ` : ''}class="text-2xl sm:text-3xl font-bold ${tone} mt-1">${value}</p>
+      ${hint ? `<p class="text-[11px] text-neutral-400 mt-0.5">${hint}</p>` : ''}
+    </div>
+  `
+}
+
 function dashboardHtml() {
   const total = state.restaurants.length
   const active = state.restaurants.filter((r) => r.is_active).length
+  const noAccess = state.restaurants.filter((r) => !r.auth_user_id).length
 
   return `
     <div class="min-h-screen bg-neutral-50">
-      <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
-        <div>
+      <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-neutral-200 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+        <div class="min-w-0">
           ${renderLogo({ size: 'sm' })}
-          <p class="text-xs text-neutral-400 mt-0.5">Painel do administrador</p>
+          <p class="text-xs text-neutral-400 mt-0.5 truncate">Painel do administrador</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1 sm:gap-2 shrink-0">
           ${themeToggleHtml()}
-          <button id="logout-btn" class="text-sm text-neutral-500 hover:text-brand-red transition">Sair</button>
+          <button id="logout-btn" title="Sair" class="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-brand-red hover:bg-neutral-100 transition rounded-full h-9 px-3">
+            ${aIcon('logout')}<span class="hidden sm:inline">Sair</span>
+          </button>
         </div>
       </header>
 
-      <main class="max-w-4xl mx-auto px-6 py-8 space-y-6">
-        <section class="grid grid-cols-2 gap-4">
-          <div class="bg-white rounded-xl border border-neutral-200 p-4">
-            <p class="text-xs text-neutral-400 font-medium">Restaurantes</p>
-            <p class="text-2xl font-bold text-neutral-900 mt-1">${total}</p>
-          </div>
-          <div class="bg-white rounded-xl border border-neutral-200 p-4">
-            <p class="text-xs text-neutral-400 font-medium">Ativos agora</p>
-            <p class="text-2xl font-bold text-emerald-600 mt-1">${active}</p>
-          </div>
+      <main class="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-8 space-y-4 sm:space-y-6">
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          ${statCardHtml('Restaurantes', total)}
+          ${statCardHtml('Ativos agora', active, { tone: 'text-emerald-600' })}
+          ${statCardHtml('Sem acesso gerado', noAccess, { tone: noAccess > 0 ? 'text-amber-500' : 'text-neutral-900', hint: noAccess > 0 ? 'Gere o acesso provisório' : '' })}
+          ${statCardHtml('Leads', state.leads.length, { tone: 'text-brand-blue', hint: 'da landing page', id: 'stat-leads' })}
         </section>
 
-        <section class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
-          <div class="flex items-center justify-between gap-3 mb-4">
-            <h2 class="font-semibold text-lg">Leads da landing page (${state.leads.length})</h2>
-            <button id="leads-refresh-btn" title="Atualizar" class="text-xs text-brand-blue hover:opacity-80 transition shrink-0">🔄 Atualizar</button>
-          </div>
-          <div id="leads-list">${state.leadsLoading ? skeletonCardsHtml(2) : leadsListHtml()}</div>
-        </section>
+        <!-- Mobile: cadastrar → restaurantes → leads. lg+: lista à esquerda (as
+             2 linhas), cadastrar e leads empilhados na coluna da direita. -->
+        <div class="grid gap-4 sm:gap-6 grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_21rem] lg:grid-rows-[auto_1fr] lg:items-start">
+          <section class="bg-white rounded-2xl shadow-sm border border-neutral-200 p-4 sm:p-6 lg:col-start-2 lg:row-start-1">
+            <h2 class="font-semibold text-lg mb-3 sm:mb-4">Cadastrar restaurante</h2>
+            <form id="create-form" class="space-y-3">
+              <div class="flex flex-col sm:flex-row lg:flex-col gap-3">
+                <input
+                  id="name-input"
+                  value="${escapeHtml(state.nameDraft)}"
+                  placeholder="Nome do restaurante"
+                  autocomplete="off"
+                  class="flex-1 min-w-0 border border-neutral-300 rounded-lg px-4 py-3 sm:py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
+                />
+                <input
+                  id="create-whatsapp-input"
+                  value="${escapeHtml(state.whatsappDraft)}"
+                  placeholder="WhatsApp (opcional)"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  class="sm:w-52 lg:w-full border border-neutral-300 rounded-lg px-4 py-3 sm:py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
+                />
+              </div>
+              <p id="slug-preview" class="text-xs text-neutral-400 break-all min-h-[1rem]">${slugPreviewText(state.nameDraft)}</p>
+              <button
+                type="submit"
+                ${state.creating ? 'disabled' : ''}
+                class="w-full bg-brand-orange text-white font-semibold rounded-lg px-5 py-3 sm:py-2.5 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 whitespace-nowrap"
+              >
+                ${state.creating ? 'Criando...' : '+ Cadastrar'}
+              </button>
+            </form>
+            ${state.formError ? `<p class="text-brand-red text-sm mt-2 flex items-start gap-1.5">⚠️ <span>${escapeHtml(state.formError)}</span></p>` : ''}
+          </section>
 
-        <section class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
-          <h2 class="font-semibold text-lg mb-4">Cadastrar restaurante</h2>
-          <form id="create-form" class="space-y-3">
-            <div class="flex flex-col sm:flex-row gap-3">
-              <input
-                id="name-input"
-                value="${escapeHtml(state.nameDraft)}"
-                placeholder="Nome do restaurante"
-                class="flex-1 border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
-              />
-              <input
-                id="create-whatsapp-input"
-                value="${escapeHtml(state.whatsappDraft)}"
-                placeholder="WhatsApp (opcional)"
-                inputmode="numeric"
-                class="sm:w-52 border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
-              />
+          <section class="bg-white rounded-2xl shadow-sm border border-neutral-200 p-4 sm:p-6 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+            <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+              <h2 class="font-semibold text-lg">Restaurantes (${total})</h2>
+              ${
+                total > 0
+                  ? `<input id="search-input" type="search" value="${escapeHtml(state.searchQuery)}" placeholder="Buscar por nome..." class="border border-neutral-300 rounded-lg px-3 py-2 text-sm w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-brand-blue transition" />`
+                  : ''
+              }
             </div>
-            <button
-              type="submit"
-              ${state.creating ? 'disabled' : ''}
-              class="w-full sm:w-auto bg-brand-orange text-white font-semibold rounded-lg px-5 py-2.5 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 whitespace-nowrap"
-            >
-              ${state.creating ? 'Criando...' : '+ Cadastrar'}
-            </button>
-          </form>
-          ${state.formError ? `<p class="text-brand-red text-sm mt-2 flex items-center gap-1.5">⚠️ ${escapeHtml(state.formError)}</p>` : ''}
-        </section>
+            ${total > 0 ? `<div id="restaurant-filters" class="-mx-4 px-4 sm:mx-0 sm:px-0 mb-4 flex gap-2 overflow-x-auto scroll-contain pb-1">${restaurantFiltersHtml()}</div>` : ''}
+            <div id="restaurant-list">${state.loading ? skeletonCardsHtml(3) : restaurantListHtml()}</div>
+          </section>
 
-        <section class="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
-          <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
-            <h2 class="font-semibold text-lg">Restaurantes (${total})</h2>
-            ${
-              total > 0
-                ? `<input id="search-input" value="${escapeHtml(state.searchQuery)}" placeholder="Buscar por nome..." class="border border-neutral-300 rounded-lg px-3 py-1.5 text-sm w-full sm:w-56 focus:outline-none focus:ring-2 focus:ring-brand-blue transition" />`
-                : ''
-            }
-          </div>
-          <div id="restaurant-list">${state.loading ? skeletonCardsHtml(3) : restaurantListHtml()}</div>
-        </section>
+          <section class="bg-white rounded-2xl shadow-sm border border-neutral-200 p-4 sm:p-6 lg:col-start-2 lg:row-start-2">
+            <div class="flex items-center justify-between gap-3 mb-3 sm:mb-4">
+              <h2 class="font-semibold text-lg">Leads (${state.leads.length})</h2>
+              <button id="leads-refresh-btn" title="Atualizar" class="flex items-center gap-1.5 text-xs text-brand-blue hover:bg-brand-blue/10 transition shrink-0 rounded-lg px-2.5 py-2">${aIcon('refresh', 14)}Atualizar</button>
+            </div>
+            <p class="text-xs text-neutral-400 -mt-2 mb-3">Contatos que preencheram o formulário da landing page.</p>
+            <div id="leads-list" class="lg:max-h-[34rem] lg:overflow-y-auto lg:pr-1">${state.leadsLoading ? skeletonCardsHtml(2) : leadsListHtml()}</div>
+          </section>
+        </div>
       </main>
 
       ${state.qrRestaurant ? qrModalHtml() : ''}
@@ -157,10 +209,30 @@ function dashboardHtml() {
   `
 }
 
+// "cardapio/<slug>" que o nome digitado vai gerar — o dono do admin vê o
+// endereço antes de cadastrar (e nota, por exemplo, nomes que colidem).
+function slugPreviewText(name) {
+  const slug = name.trim() ? slugify(name) : ''
+  return slug ? `Endereço do cardápio: <span class="font-medium text-neutral-500">…/cardapio/${escapeHtml(slug)}</span>` : ''
+}
+
+function restaurantFiltersHtml() {
+  return RESTAURANT_FILTERS.map((f) => {
+    const count = state.restaurants.filter((r) => restaurantMatchesFilter(r, f.key)).length
+    const on = state.statusFilter === f.key
+    return `<button type="button" data-filter="${f.key}" class="shrink-0 text-sm font-medium rounded-full px-3.5 py-1.5 border transition ${
+      on
+        ? 'bg-brand-blue text-white border-brand-blue'
+        : 'bg-white text-neutral-600 border-neutral-300 hover:border-brand-blue hover:text-brand-blue'
+    }">${f.label} <span class="${on ? 'text-white/80' : 'text-neutral-400'}">${count}</span></button>`
+  }).join('')
+}
+
 function filteredRestaurants() {
   const q = state.searchQuery.trim().toLowerCase()
-  if (!q) return state.restaurants
-  return state.restaurants.filter((r) => r.name.toLowerCase().includes(q))
+  return state.restaurants.filter(
+    (r) => restaurantMatchesFilter(r, state.statusFilter) && (!q || r.name.toLowerCase().includes(q))
+  )
 }
 
 function restaurantStatusPill(isActive) {
@@ -169,58 +241,70 @@ function restaurantStatusPill(isActive) {
     : '<span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-neutral-200 text-neutral-500"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>Inativo</span>'
 }
 
+function restaurantInfoRow(icon, content) {
+  return `<div class="flex items-center gap-2 min-w-0 text-neutral-500"><span class="text-neutral-400">${icon}</span>${content}</div>`
+}
+
+const A_COPY_BTN =
+  'shrink-0 w-8 h-8 -my-1 flex items-center justify-center rounded-lg text-neutral-400 hover:text-brand-blue hover:bg-neutral-100 transition'
+
 function restaurantListHtml() {
   if (state.restaurants.length === 0) {
-    return emptyStateHtml('🍽️', 'Nenhum restaurante cadastrado ainda. Cadastre o primeiro acima.')
+    return emptyStateHtml('🍽️', 'Nenhum restaurante cadastrado ainda. Cadastre o primeiro ao lado (ou acima, no celular).')
   }
   const list = filteredRestaurants()
   if (list.length === 0) {
-    return emptyStateHtml('🔍', `Nenhum restaurante encontrado para "${state.searchQuery}".`)
+    const q = state.searchQuery.trim()
+    return emptyStateHtml('🔍', q ? `Nenhum restaurante encontrado para "${q}".` : 'Nenhum restaurante neste filtro.')
   }
   return `
     <div class="space-y-3">
       ${list
         .map(
           (r) => `
-        <div class="card-hover fade-slide-in flex flex-col sm:flex-row sm:items-center gap-4 bg-white border border-neutral-200 rounded-xl px-4 py-4 shadow-sm">
-          <div class="w-11 h-11 rounded-full bg-brand-blue/10 text-brand-blue font-bold flex items-center justify-center text-lg shrink-0">
-            ${escapeHtml(r.name.trim().charAt(0).toUpperCase() || '?')}
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <p class="font-semibold text-neutral-900 truncate">${escapeHtml(r.name)}</p>
-              ${restaurantStatusPill(r.is_active)}
+        <article class="card-hover fade-slide-in bg-white border border-neutral-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+          <div class="flex items-start gap-3 sm:gap-4">
+            ${
+              r.logo_url
+                ? `<img src="${escapeHtml(r.logo_url)}" alt="" class="w-12 h-12 rounded-full object-cover border border-neutral-200 shrink-0" />`
+                : `<div class="w-12 h-12 rounded-full bg-brand-blue/10 text-brand-blue font-bold flex items-center justify-center text-lg shrink-0">${escapeHtml(r.name.trim().charAt(0).toUpperCase() || '?')}</div>`
+            }
+            <div class="min-w-0 flex-1">
+              <div class="flex items-start justify-between gap-2">
+                <h3 class="font-semibold text-neutral-900 leading-snug break-words min-w-0">${escapeHtml(r.name)}</h3>
+                <span class="shrink-0 mt-0.5">${restaurantStatusPill(r.is_active)}</span>
+              </div>
+              <div class="mt-2 space-y-1 text-sm">
+                ${restaurantInfoRow(
+                  aIcon('link'),
+                  `<a href="${escapeHtml(menuShareUrl(r.slug))}" target="_blank" rel="noreferrer" class="underline truncate hover:text-brand-blue transition">Ver cardápio público</a>
+                   <button data-copy-id="${r.id}" data-copy-kind="menu" title="Copiar link do cardápio" aria-label="Copiar link do cardápio" class="${A_COPY_BTN}">${aIcon('copy', 15)}</button>`
+                )}
+                ${restaurantInfoRow(
+                  aIcon('panel'),
+                  `<a href="${escapeHtml(panelUrl())}" target="_blank" rel="noreferrer" class="underline truncate text-brand-blue hover:opacity-80 transition">Abrir painel</a>
+                   <button data-copy-id="${r.id}" data-copy-kind="panel" title="Copiar link do painel" aria-label="Copiar link do painel" class="${A_COPY_BTN}">${aIcon('copy', 15)}</button>
+                   ${r.auth_user_id ? '' : '<span class="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Sem acesso</span>'}`
+                )}
+                ${restaurantInfoRow(
+                  aIcon('phone'),
+                  `${
+                    r.whatsapp
+                      ? `<span class="truncate">${escapeHtml(maskPhone(r.whatsapp))}</span>`
+                      : '<span class="italic text-neutral-400 truncate">Sem WhatsApp</span>'
+                  }
+                   <button data-action="whatsapp" data-id="${r.id}" title="Editar WhatsApp" aria-label="Editar WhatsApp" class="${A_COPY_BTN}">${aIcon('edit', 15)}</button>`
+                )}
+              </div>
             </div>
-            <div class="mt-1.5 space-y-1 text-xs">
-              <div class="flex items-center gap-1.5 text-neutral-500">
-                <span>🔗</span>
-                <a href="${escapeHtml(menuShareUrl(r.slug))}" target="_blank" rel="noreferrer" class="underline truncate hover:text-brand-blue transition">Ver cardápio público</a>
-                <button data-copy-id="${r.id}" data-copy-kind="menu" title="Copiar link do cardápio" class="text-neutral-400 hover:text-brand-blue transition shrink-0">⧉</button>
-              </div>
-              <div class="flex items-center gap-1.5 text-neutral-500">
-                <span>🧑‍🍳</span>
-                <a href="${escapeHtml(panelUrl())}" target="_blank" rel="noreferrer" class="underline truncate text-brand-blue hover:opacity-80 transition">Abrir painel do restaurante</a>
-                <button data-copy-id="${r.id}" data-copy-kind="panel" title="Copiar link do painel" class="text-neutral-400 hover:text-brand-blue transition shrink-0">⧉</button>
-                ${r.auth_user_id ? '' : '<span class="italic text-neutral-400 shrink-0">· sem acesso gerado</span>'}
-              </div>
-              <div class="flex items-center gap-1.5 text-neutral-500">
-                <span>📱</span>
-                ${
-                  r.whatsapp
-                    ? `<span class="truncate">${escapeHtml(maskPhone(r.whatsapp))}</span>`
-                    : '<span class="italic text-neutral-400">Sem WhatsApp cadastrado</span>'
-                }
-                <button data-action="whatsapp" data-id="${r.id}" title="Editar WhatsApp" class="text-neutral-400 hover:text-brand-blue transition shrink-0">✎</button>
-              </div>
-            </div>
           </div>
-          <div class="flex sm:flex-col gap-2 shrink-0">
-            <button data-action="qr" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-blue/10 text-brand-blue font-medium rounded-lg px-3 py-1.5 hover:bg-brand-blue/20 transition">QR Code</button>
-            <button data-action="mesas" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-orange/10 text-brand-orange font-medium rounded-lg px-3 py-1.5 hover:bg-brand-orange/20 transition">Mesas</button>
-            <button data-action="toggle" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-neutral-100 text-neutral-600 font-medium rounded-lg px-3 py-1.5 hover:bg-neutral-200 transition">${r.is_active ? 'Desativar' : 'Ativar'}</button>
-            <button data-action="access" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-red/10 text-brand-red font-medium rounded-lg px-3 py-1.5 hover:bg-brand-red/20 transition">Gerar acesso provisório</button>
+          <div class="mt-4 pt-4 border-t border-neutral-100 grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+            <button data-action="qr" data-id="${r.id}" class="text-sm bg-brand-blue/10 text-brand-blue font-medium rounded-lg px-3 sm:px-3.5 min-h-[44px] sm:min-h-0 py-2 leading-tight hover:bg-brand-blue/20 transition">QR Code</button>
+            <button data-action="mesas" data-id="${r.id}" class="text-sm bg-brand-orange/10 text-brand-orange font-medium rounded-lg px-3 sm:px-3.5 min-h-[44px] sm:min-h-0 py-2 leading-tight hover:bg-brand-orange/20 transition">Mesas</button>
+            <button data-action="toggle" data-id="${r.id}" class="text-sm bg-neutral-100 text-neutral-600 font-medium rounded-lg px-3 sm:px-3.5 min-h-[44px] sm:min-h-0 py-2 leading-tight hover:bg-neutral-200 transition">${r.is_active ? 'Desativar' : 'Ativar'}</button>
+            <button data-action="access" data-id="${r.id}" class="text-sm bg-brand-red/10 text-brand-red font-medium rounded-lg px-3 sm:px-3.5 min-h-[44px] sm:min-h-0 py-2 leading-tight hover:bg-brand-red/20 transition">Gerar acesso provisório</button>
           </div>
-        </div>
+        </article>
       `
         )
         .join('')}
@@ -235,22 +319,28 @@ function leadsListHtml() {
     return emptyStateHtml('📭', 'Nenhum lead ainda. Assim que alguém preencher o formulário da landing page, aparece aqui.')
   }
   return `
-    <div class="space-y-2">
+    <div class="space-y-2.5">
       ${state.leads
-        .map(
-          (l) => `
-        <div class="fade-slide-in flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 border border-neutral-200 rounded-lg px-4 py-3">
-          <div class="flex-1 min-w-0">
-            <p class="font-medium text-neutral-900 truncate">${escapeHtml(l.name)}</p>
-            <p class="text-xs text-neutral-400">${new Date(l.created_at).toLocaleString('pt-BR')}</p>
+        .map((l) => {
+          const digits = l.phone.replace(/\D/g, '')
+          return `
+        <div class="fade-slide-in border border-neutral-200 rounded-xl px-4 py-3 space-y-2">
+          <div class="flex items-baseline justify-between gap-3">
+            <p class="font-medium text-neutral-900 break-words min-w-0">${escapeHtml(l.name)}</p>
+            <p class="text-[11px] text-neutral-400 shrink-0">${new Date(l.created_at).toLocaleDateString('pt-BR')}</p>
           </div>
-          <div class="flex items-center gap-3 text-sm shrink-0">
-            <a href="tel:${escapeHtml(l.phone.replace(/\D/g, ''))}" class="text-brand-blue hover:underline">${escapeHtml(l.phone)}</a>
-            <a href="mailto:${escapeHtml(l.email)}" class="text-brand-blue hover:underline truncate max-w-[10rem]">${escapeHtml(l.email)}</a>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
+            <a href="tel:${escapeHtml(digits)}" class="inline-flex items-center gap-1.5 text-brand-blue hover:underline whitespace-nowrap">${aIcon('phone', 14)}${escapeHtml(l.phone)}</a>
+            <a href="mailto:${escapeHtml(l.email)}" class="inline-flex items-center gap-1.5 text-brand-blue hover:underline min-w-0"><span class="shrink-0">${aIcon('mail', 14)}</span><span class="break-words min-w-0">${escapeHtml(l.email)}</span></a>
           </div>
+          ${
+            digits.length >= 10
+              ? `<a href="https://wa.me/55${escapeHtml(digits)}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition rounded-lg px-3 py-1.5">${A_ICON_WHATSAPP}Chamar no WhatsApp</a>`
+              : ''
+          }
         </div>
       `
-        )
+        })
         .join('')}
     </div>
   `
@@ -270,7 +360,10 @@ async function loadLeads() {
   if (list) list.innerHTML = leadsListHtml()
   const refreshBtn = document.getElementById('leads-refresh-btn')
   const header = refreshBtn ? refreshBtn.previousElementSibling : null
-  if (header) header.textContent = `Leads da landing page (${state.leads.length})`
+  if (header) header.textContent = `Leads (${state.leads.length})`
+  // O card "Leads" do topo também mostra a contagem.
+  const statLeads = document.getElementById('stat-leads')
+  if (statLeads) statLeads.textContent = state.leads.length
 }
 
 function qrModalHtml() {
@@ -625,6 +718,7 @@ function bindEvents() {
 
   document.getElementById('name-input').addEventListener('input', (e) => {
     state.nameDraft = e.target.value
+    document.getElementById('slug-preview').innerHTML = slugPreviewText(state.nameDraft)
   })
   document.getElementById('create-whatsapp-input').addEventListener('input', (e) => {
     state.whatsappDraft = maskPhone(e.target.value)
@@ -640,6 +734,20 @@ function bindEvents() {
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       state.searchQuery = e.target.value
+      document.getElementById('restaurant-list').innerHTML = restaurantListHtml()
+      bindRestaurantListEvents()
+    })
+  }
+
+  // Filtros por status (Todos / Ativos / Inativos / Sem acesso): só a barra de
+  // chips e a lista são redesenhadas — a busca digitada não se perde.
+  const filters = document.getElementById('restaurant-filters')
+  if (filters) {
+    filters.addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-filter]')
+      if (!chip) return
+      state.statusFilter = chip.getAttribute('data-filter')
+      filters.innerHTML = restaurantFiltersHtml()
       document.getElementById('restaurant-list').innerHTML = restaurantListHtml()
       bindRestaurantListEvents()
     })
