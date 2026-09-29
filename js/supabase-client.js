@@ -12,23 +12,12 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   throw new Error('Configure SUPABASE_URL e SUPABASE_ANON_KEY em config.js')
 }
 
-// Cliente público: usado no admin/index.html (após o gate de senha) e no
-// cardápio público (cliente/index.html).
+// Cliente único do site: admin (após o gate de senha), cardápio público
+// (cliente/index.html) e painel do restaurante (com login).
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-// Cliente "autenticado por token" para o painel do restaurante
-// (restaurante/index.html?token=...). Envia o token como header
-// x-restaurant-token, que as policies de RLS (current_restaurant_token(),
-// migrations 0002/0003) usam para liberar insert/update/delete apenas nas
-// linhas do restaurante dono do token.
-function createRestaurantClient(accessToken) {
-  return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: {
-      headers: {
-        'x-restaurant-token': accessToken,
-      },
-    },
-  })
-}
+// Este mesmo client guarda a sessão do Supabase Auth (localStorage): é ele que
+// o painel do restaurante usa depois do login (restaurante/auth.js) — a RLS
+// reconhece o dono por auth.uid(), ver migration 0015.
 
 const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1`

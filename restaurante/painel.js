@@ -1,7 +1,6 @@
-// painel.js — página restaurante/index.html?token=... (equivalente ao antigo /r/:accessToken)
+// painel.js — página restaurante/index.html (login em restaurante/auth.js)
 
 const root = document.getElementById('root')
-const accessToken = new URLSearchParams(location.search).get('token')
 
 let restaurantClient = null
 let restaurant = null
@@ -34,28 +33,22 @@ let themeColorSaving = false
 let whatsappSaving = false
 
 async function init() {
-  if (!accessToken) {
-    root.innerHTML = notFoundHtml('Link inválido ou revogado. Fale com o administrador.')
-    return
-  }
+  // Sessão do Supabase Auth (localStorage) — o mesmo client do resto do site.
+  // A RLS identifica o dono por auth.uid() (migration 0015); não há mais
+  // token na URL nem header customizado.
+  restaurantClient = supabaseClient
 
-  // Cliente autenticado via header x-restaurant-token (ver js/supabase-client.js).
-  // As policies de RLS (current_restaurant_token(), migrations 0002/0003) usam
-  // esse token para liberar escrita apenas nas linhas deste restaurante.
-  restaurantClient = createRestaurantClient(accessToken)
+  root.innerHTML = loadingHtml()
+  const user = await authGate(root)
 
   root.innerHTML = loadingHtml()
 
-  const { data } = await restaurantClient
-    .from('restaurants')
-    .select('*')
-    .eq('access_token', accessToken)
-    .maybeSingle()
+  const { data } = await restaurantClient.from('restaurants').select('*').eq('auth_user_id', user.id).maybeSingle()
 
   restaurant = data || 'not_found'
 
   if (restaurant === 'not_found') {
-    root.innerHTML = notFoundHtml('Link inválido ou revogado. Fale com o administrador.')
+    root.innerHTML = notFoundHtml('Nenhum restaurante vinculado a este login. Fale com o administrador.')
     return
   }
 
@@ -102,7 +95,7 @@ function renderPanel() {
             <div class="flex items-center gap-3 shrink-0">
               <a href="${escapeHtml(menuUrl(restaurant.slug))}" target="_blank" rel="noreferrer" class="text-xs text-brand-blue underline hover:opacity-80 transition">Ver cardápio público ↗</a>
               ${themeToggleHtml()}
-              <button id="logout-btn" title="Sair (limpa o link deste painel do navegador)" class="text-neutral-400 hover:text-brand-red hover:bg-neutral-100 transition w-9 h-9 flex items-center justify-center rounded-full shrink-0">${ICON_LOGOUT}</button>
+              <button id="logout-btn" title="Sair" class="text-neutral-400 hover:text-brand-red hover:bg-neutral-100 transition w-9 h-9 flex items-center justify-center rounded-full shrink-0">${ICON_LOGOUT}</button>
             </div>
           </div>
         </div>
@@ -117,18 +110,15 @@ function renderPanel() {
   renderTabContent()
 }
 
-// "Sair" não existe como sessão de verdade neste MVP (sem Supabase Auth) — o
-// acesso É o link com ?token=. Isso só limpa o token da barra de endereço
-// deste navegador, então avisamos antes: sem o link salvo em outro lugar
-// (ex: o admin, que gerou o link original), não dá pra voltar.
 async function handleLogout() {
   const confirmed = await showConfirm({
     title: 'Sair',
-    message: 'Isso limpa o link deste painel neste navegador. Você vai precisar do link original (com o token) para entrar de novo.',
+    message: 'Você vai precisar entrar de novo com seu e-mail e senha.',
     confirmLabel: 'Sair',
     danger: true,
   })
   if (!confirmed) return
+  await supabaseClient.auth.signOut()
   location.href = location.pathname
 }
 
@@ -1042,8 +1032,8 @@ async function handleProductFormSubmit(e) {
 
     if (imageFile) {
       // Path com prefixo do restaurant_id: as policies de storage.objects
-      // (migration 0003) exigem que (storage.foldername(name))[1] seja o id
-      // de um restaurante cujo access_token bate com o header enviado.
+      // (migration 0015) exigem que (storage.foldername(name))[1] seja o id
+      // de um restaurante do usuário logado.
       const path = `${restaurant.id}/${crypto.randomUUID()}-${imageFile.name}`
       const { error: uploadError } = await restaurantClient.storage.from('products').upload(path, imageFile)
       if (uploadError) throw uploadError

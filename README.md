@@ -37,12 +37,11 @@ dinâmicas do app original:
 | [index.html](index.html) | — | Landing page pública, só de conversão (formulário de contato) — sem link nenhum pro admin/painel/cardápio |
 | [admin/index.html](admin/index.html) | `/admin` | **Você**: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas |
 | `admin/mesas-print.html?restaurant_id=<id>` | — | Artes de mesa (arte base + QR Code + número), 8 por folha A4 paisagem, prontas pra imprimir/salvar como PDF |
-| `restaurante/index.html?token=<access_token>` | `/r/:accessToken` | **Restaurante**: painel de produtos |
+| [restaurante/index.html](restaurante/index.html) | `/r` | **Restaurante**: login (e-mail + senha) e painel de produtos — ver "Autenticação do restaurante" |
 | `cliente/index.html?slug=<slug>` | `/:slug` | **Cliente**: cardápio público, com o Ari (garçom IA) |
 | `cliente/index.html?slug=<slug>&mesa=<numero>` | `/:slug/mesa/:numero` | Cardápio público de uma mesa específica — `numero` precisa bater com uma mesa ativa cadastrada no admin |
 
-`restaurante/` e `cliente/` sempre precisam do parâmetro na URL (`token` e
-`slug`, respectivamente) — os links certos, já prontos, aparecem na tela do
+`cliente/` sempre precisa do parâmetro `slug` na URL (`restaurante/` pede login) — os links certos, já prontos, aparecem na tela do
 admin depois que você cadastra um restaurante (o QR Code e o link "Painel:
 ..." ficam clicáveis ali). Abrir `restaurante/index.html` ou
 `cliente/index.html` sem parâmetro mostra a tela de "link inválido"/"não
@@ -75,11 +74,11 @@ images/
 admin/
   index.html                   sua área: cadastra restaurantes, gera QR Codes/links de painel e gerencia mesas
   admin.js
-  mesas-print.html              artes de mesa, 8 por folha A4 (?restaurant_id=<id> | ?slug= | ?access_token=)
+  mesas-print.html              artes de mesa, 8 por folha A4 (?restaurant_id=<id> | ?slug=)
   mesas-print.js
   mesas-print.css                layout de impressão (unidades físicas, @page, @media print)
 restaurante/
-  index.html                   painel do restaurante (?token=...)
+  index.html                   painel do restaurante (login em auth.js)
   painel.js
 cliente/
   index.html                   cardápio público (?slug=...&mesa=...)
@@ -91,12 +90,14 @@ js/                            módulos compartilhados pelas três áreas acima
   theme.js                      tema claro/escuro do admin e do painel (botão no topo)
   logo.js                       renderiza a logo oficial (images/logo.png) nos cabeçalhos
   slug.js                       geração de slug a partir do nome do restaurante
-  supabase-client.js            clientes Supabase (público + com token do restaurante)
+  supabase-client.js            client Supabase único (guarda também a sessão do login do restaurante)
   qrcode-helper.js              URL do cardápio e do painel + geração de QR Code no cliente
 supabase/
   migrations/                  13 migrations SQL (extensões, produtos, pedidos/storage, categorias, fix de RLS, dados do cliente, status/tempo de pedidos, mesas, logo do restaurante, leads, observações/destaque de produto, cor de destaque do restaurante, WhatsApp do restaurante)
   functions/ai-waiter/         Edge Function do garçom IA (TypeScript/Deno, roda no Supabase)
   functions/admin-login/       Edge Function que verifica a senha do admin contra o secret SENHA_ADMIN
+  functions/admin-generate-access/   gera login + senha provisórios do restaurante (exige a senha do admin)
+  functions/restaurant-finish-setup/ conclui o primeiro acesso do restaurante (desliga must_reset)
 ```
 
 A Edge Function continua em TypeScript/Deno porque roda no servidor do
@@ -424,12 +425,36 @@ ou WAF muito estritas podem estar barrando o robô do WhatsApp/Facebook antes
 mesmo dele chegar na Vercel (esse é o suspeito nº 1 se tudo no código estiver
 certo e mesmo assim não funcionar).
 
+## Autenticação do restaurante
+
+Cada restaurante tem um usuário no Supabase Auth (`restaurants.auth_user_id`).
+
+**Fluxo**
+
+1. Ao cadastrar um restaurante no admin, abre o modal **Gerar acesso provisório**. Você repete a sua senha de admin; a Edge Function `admin-generate-access` cria o usuário e devolve **login** (o slug do restaurante) e **senha provisória**, uma única vez, pra você repassar ao dono. Restaurantes que já existiam têm o mesmo botão "Gerar acesso provisório" no cartão.
+2. Primeiro acesso, em `restaurante/index.html`: o dono entra com o login e a senha provisórios → informa o **e-mail** → recebe o link de confirmação (Resend) → clica → define a **nova senha**. Só então o painel abre. Até lá a RLS bloqueia todos os dados (`app_metadata.must_reset`).
+3. Nos acessos seguintes o login é o e-mail + a senha nova. **Esqueci minha senha** envia o link de redefinição pro e-mail cadastrado.
+4. "Gerar acesso provisório" num restaurante que já tem e-mail/senha própria **substitui** as credenciais e liga `must_reset` de novo (o bloqueio vale na hora, inclusive pra sessões abertas): o dono refaz o primeiro acesso. Se ele perdeu o acesso ao e-mail, é o caminho.
+
+Os links antigos `restaurante/index.html?token=...` **deixam de funcionar**: gere o acesso provisório de cada restaurante existente e repasse.
+
+**Configuração (uma vez, no Supabase + Resend)**
+
+1. **Resend**: crie conta, verifique o seu domínio (DNS) e crie uma API key.
+2. **Supabase → Authentication → Emails → SMTP Settings**: ative o SMTP próprio — Host `smtp.resend.com`, porta `465`, usuário `resend`, senha = a API key, remetente = um endereço do domínio verificado (ex: `PapeiAI <nao-responda@seudominio.com.br>`). Sem SMTP próprio o Supabase só envia uns poucos e-mails por hora, só pra membros do time.
+3. **Supabase → Authentication → Sign In / Providers → Email**: mantenha "Confirm email" ligado e **desligue "Secure email change"**. Com ele ligado o Supabase também exige confirmação no e-mail antigo, que aqui é o sintético do acesso provisório (`<slug>@acesso.papeiai.com.br`, nunca recebe nada) — o dono ficaria travado. (Equivalente no `config.toml`: `double_confirm_changes = false`.)
+4. **Authentication → URL Configuration**: em *Site URL* e *Redirect URLs* coloque o endereço do painel (`https://www.papeiai.com.br/restaurante/index.html`, e o de localhost se for testar local). É pra lá que os links dos e-mails levam.
+5. **Authentication → Emails → Templates** (opcional): traduza "Change Email Address" e "Reset Password" pra português.
+6. **Deploy**: rode a migration `0015_restaurant_auth.sql` e publique as Edge Functions `admin-generate-access` e `restaurant-finish-setup` (mesmo processo das outras; ambas com "Verify JWT" desligado, e usam `SENHA_ADMIN` + as variáveis `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` que o Supabase já injeta).
+
+**Limitações conhecidas**: não há limite de tentativas na senha do admin (mesma situação do `admin-login`); o Supabase limita o envio de e-mails por conta própria (429, tratado na tela). A escrita em `restaurants`/`mesas`/`leads` pelo admin continua sem Supabase Auth (gate de senha no frontend — ver abaixo).
+
 ## Segurança — pontos importantes (MVP sem login)
 
 - **RLS ativo em todas as tabelas** (`restaurants`, `products`, `orders`, `order_items`, `mesas`, `leads`) e nos buckets `products` e `logos` do Storage.
 - **`leads`**: mesmo aviso do `admin/index.html` logo abaixo — a leitura (aba "Leads" do admin) usa a mesma anon key pública, protegida só pelo gate de senha no frontend, não pela RLS (`leads_select_admin_mvp`, migration `0010`). Como o formulário coleta nome/telefone/email, isso é uma concessão deliberada de MVP; migrar pra Supabase Auth antes de produção também resolve esse ponto.
 - **`mesas`**: leitura é pública (`using (true)`, mesmo padrão de `restaurants_select_public`/`products_select_public`) — não tem como a RLS diferenciar "o admin lendo" de "um cliente anônimo lendo" neste MVP sem Supabase Auth, então a regra "só mesa ativa aceita pedido" é aplicada na aplicação (`cliente/cardapio.js`), não escondida via RLS. Escrita (gerar/renomear/ativar/excluir mesa) segue o mesmo aviso do próximo item.
-- **Painel do restaurante** (`restaurante/index.html?token=...`) não usa Supabase Auth: o token da URL é enviado em todo request como header `x-restaurant-token`, e as policies de RLS (`current_restaurant_token()`) só liberam escrita nas linhas do restaurante dono do token.
+- **Painel do restaurante** usa Supabase Auth (migration `0015`): as policies de RLS liberam escrita/leitura privada só pro usuário dono do restaurante (`owned_restaurant_ids()`) e só depois do primeiro acesso concluído. O antigo `access_token` (legível por qualquer um, porque `restaurants` tem leitura pública) não dá mais acesso a nada.
 - **`admin/index.html`**: o login chama a Edge Function `admin-login`, que compara a senha digitada com o secret `SENHA_ADMIN` — a senha em si não fica mais em nenhum arquivo do frontend (antes ficava em `PEDEAI_CONFIG.ADMIN_PASSWORD`, visível em "ver código-fonte" por qualquer visitante). Isso fecha o vazamento da senha, mas **não** fecha a brecha de fundo: como ainda não há Supabase Auth, a policy de `insert`/`update` em `restaurants` continua permissiva pra qualquer request com a anon key (comentado em detalhe na migration `0001`) — ou seja, tecnicamente dá pra pular a tela de login inteira e chamar a API do Supabase direto com a anon key pública, sem precisar de senha nenhuma. `admin.js` também não guarda um token de sessão assinado, só uma flag em `sessionStorage` depois do "ok" da função — o "login" não é reverificado a cada request, só na hora de entrar. **Antes de produção**, migrar para Supabase Auth de verdade (ou mover o cadastro/edição de restaurantes para Edge Functions com `service_role`, cada uma revalidando a sessão).
 - **`DEEPSEEK_API_KEY`** e **`SENHA_ADMIN`** só existem como secrets do Supabase, usadas dentro das Edge Functions (`ai-waiter` e `admin-login`, respectivamente) — nunca aparecem em nenhum arquivo do frontend.
 - **`config.js` é público** (fica no navegador de qualquer visitante): só a `anon key` do Supabase e a `APP_URL` ficam ali. Nunca coloque a `service_role key`, a chave da DeepSeek ou a senha do admin nesse arquivo — essas três são sempre secrets de Edge Function.

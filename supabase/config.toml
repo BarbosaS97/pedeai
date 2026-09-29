@@ -5,3 +5,20 @@ verify_jwt = false
 
 [functions.admin-login]
 verify_jwt = false
+
+[functions.admin-generate-access]
+verify_jwt = false
+
+# Valida o JWT do usuário por dentro (auth.getUser), pra devolver mensagens de
+# erro próprias em vez do 401 genérico do gateway.
+[functions.restaurant-finish-setup]
+verify_jwt = false
+
+# Primeiro acesso do restaurante: o e-mail novo é confirmado por link enviado
+# via Resend (SMTP). "double_confirm_changes = false" é ESSENCIAL: com true o
+# Supabase também pede confirmação no e-mail antigo, que aqui é o sintético
+# do acesso provisório (nunca recebe nada) e o dono ficaria travado.
+# No projeto hospedado isso se configura no Dashboard — ver README.
+[auth.email]
+enable_confirmations = true
+double_confirm_changes = false

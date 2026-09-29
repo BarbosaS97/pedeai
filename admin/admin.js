@@ -18,6 +18,14 @@ const state = {
   qrRestaurant: null,
   qrDataUrl: null,
   whatsappRestaurant: null,
+  // Modal "Gerar acesso provisório": fase 'password' (pede a senha do admin de
+  // novo) → 'result' (mostra login + senha provisória, uma única vez).
+  accessRestaurant: null,
+  accessPhase: 'password',
+  accessLoading: false,
+  accessError: '',
+  accessResult: null,
+  accessIsNew: false,
   whatsappEditDraft: '',
   mesasRestaurant: null,
   mesasList: [],
@@ -144,6 +152,7 @@ function dashboardHtml() {
       ${state.qrRestaurant ? qrModalHtml() : ''}
       ${state.mesasRestaurant ? mesasModalHtml() : ''}
       ${state.whatsappRestaurant ? whatsappModalHtml() : ''}
+      ${state.accessRestaurant ? accessModalHtml() : ''}
     </div>
   `
 }
@@ -190,8 +199,9 @@ function restaurantListHtml() {
               </div>
               <div class="flex items-center gap-1.5 text-neutral-500">
                 <span>🧑‍🍳</span>
-                <a href="${escapeHtml(panelUrl(r.access_token))}" target="_blank" rel="noreferrer" class="underline truncate text-brand-blue hover:opacity-80 transition">Abrir painel do restaurante</a>
+                <a href="${escapeHtml(panelUrl())}" target="_blank" rel="noreferrer" class="underline truncate text-brand-blue hover:opacity-80 transition">Abrir painel do restaurante</a>
                 <button data-copy-id="${r.id}" data-copy-kind="panel" title="Copiar link do painel" class="text-neutral-400 hover:text-brand-blue transition shrink-0">⧉</button>
+                ${r.auth_user_id ? '' : '<span class="italic text-neutral-400 shrink-0">· sem acesso gerado</span>'}
               </div>
               <div class="flex items-center gap-1.5 text-neutral-500">
                 <span>📱</span>
@@ -208,7 +218,7 @@ function restaurantListHtml() {
             <button data-action="qr" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-blue/10 text-brand-blue font-medium rounded-lg px-3 py-1.5 hover:bg-brand-blue/20 transition">QR Code</button>
             <button data-action="mesas" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-orange/10 text-brand-orange font-medium rounded-lg px-3 py-1.5 hover:bg-brand-orange/20 transition">Mesas</button>
             <button data-action="toggle" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-neutral-100 text-neutral-600 font-medium rounded-lg px-3 py-1.5 hover:bg-neutral-200 transition">${r.is_active ? 'Desativar' : 'Ativar'}</button>
-            <button data-action="regen" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-red/10 text-brand-red font-medium rounded-lg px-3 py-1.5 hover:bg-brand-red/20 transition">Regenerar link</button>
+            <button data-action="access" data-id="${r.id}" class="flex-1 sm:flex-none text-xs bg-brand-red/10 text-brand-red font-medium rounded-lg px-3 py-1.5 hover:bg-brand-red/20 transition">Gerar acesso provisório</button>
           </div>
         </div>
       `
@@ -318,6 +328,58 @@ function whatsappModalHtml() {
         <div class="flex gap-2 pt-1">
           <button type="submit" class="flex-1 bg-brand-blue text-white font-semibold rounded-lg py-2 hover:opacity-90 transition">Salvar</button>
           <button type="button" id="whatsapp-close-btn" class="flex-1 bg-neutral-100 text-neutral-600 font-semibold rounded-lg py-2 hover:bg-neutral-200 transition">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  `
+}
+
+// ---- Acesso provisório do restaurante (login + senha) ----
+
+function accessModalHtml() {
+  const r = state.accessRestaurant
+  if (state.accessPhase === 'result') {
+    const { login, password } = state.accessResult
+    return `
+      <div id="access-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="modal-box bg-white rounded-2xl p-6 max-w-sm w-full space-y-4">
+          <h3 class="font-semibold text-lg">Acesso provisório — ${escapeHtml(r.name)}</h3>
+          <p class="text-sm text-neutral-500">Envie estes dados ao dono. No primeiro acesso ele vai cadastrar o próprio e-mail e uma nova senha.</p>
+          <dl class="bg-neutral-50 border border-neutral-200 rounded-xl p-3 space-y-2 text-sm">
+            <div><dt class="text-xs text-neutral-400">Endereço do painel</dt><dd class="break-all font-medium">${escapeHtml(panelUrl())}</dd></div>
+            <div><dt class="text-xs text-neutral-400">Login</dt><dd class="font-mono font-semibold">${escapeHtml(login)}</dd></div>
+            <div><dt class="text-xs text-neutral-400">Senha provisória</dt><dd class="font-mono font-semibold">${escapeHtml(password)}</dd></div>
+          </dl>
+          <p class="text-xs text-brand-red">⚠️ A senha só aparece agora — não fica salva em lugar nenhum. Se perder, gere outro acesso provisório.</p>
+          <div class="flex gap-2">
+            <button type="button" id="access-copy-btn" class="flex-1 bg-brand-blue text-white font-semibold rounded-lg py-2 hover:opacity-90 transition">Copiar dados</button>
+            <button type="button" id="access-close-btn" class="flex-1 bg-neutral-100 text-neutral-600 font-semibold rounded-lg py-2 hover:bg-neutral-200 transition">Fechar</button>
+          </div>
+        </div>
+      </div>
+    `
+  }
+  return `
+    <div id="access-overlay" class="modal-overlay fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <form id="access-form" class="modal-box bg-white rounded-2xl p-6 max-w-sm w-full space-y-4">
+        <h3 class="font-semibold text-lg">Gerar acesso provisório — ${escapeHtml(r.name)}</h3>
+        <p class="text-sm text-neutral-500">${
+          state.accessIsNew
+            ? 'Restaurante cadastrado! Falta gerar o login e a senha provisórios dele.'
+            : 'Cria um login e uma senha provisórios. Se o restaurante já tem e-mail e senha próprios, eles deixam de valer e o dono precisa refazer o primeiro acesso.'
+        }</p>
+        <input
+          id="access-password-input"
+          type="password"
+          autocomplete="current-password"
+          autofocus
+          placeholder="Repita a sua senha de admin"
+          class="w-full border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
+        />
+        ${state.accessError ? `<p class="text-brand-red text-sm flex items-center gap-1.5">⚠️ ${escapeHtml(state.accessError)}</p>` : ''}
+        <div class="flex gap-2 pt-1">
+          <button type="submit" ${state.accessLoading ? 'disabled' : ''} class="flex-1 bg-brand-blue text-white font-semibold rounded-lg py-2 hover:opacity-90 transition disabled:opacity-50">${state.accessLoading ? 'Gerando...' : 'Gerar acesso'}</button>
+          <button type="button" id="access-close-btn" class="flex-1 bg-neutral-100 text-neutral-600 font-semibold rounded-lg py-2 hover:bg-neutral-200 transition">${state.accessIsNew ? 'Depois' : 'Cancelar'}</button>
         </div>
       </form>
     </div>
@@ -610,6 +672,18 @@ function bindEvents() {
     bindMesasListEvents()
   }
 
+  const accessOverlay = document.getElementById('access-overlay')
+  if (accessOverlay) {
+    accessOverlay.addEventListener('click', (e) => {
+      if (e.target === accessOverlay) closeAccessModal()
+    })
+    document.getElementById('access-close-btn').addEventListener('click', closeAccessModal)
+    const accessForm = document.getElementById('access-form')
+    if (accessForm) accessForm.addEventListener('submit', handleAccessSubmit)
+    const accessCopy = document.getElementById('access-copy-btn')
+    if (accessCopy) accessCopy.addEventListener('click', copyAccessCredentials)
+  }
+
   const whatsappOverlay = document.getElementById('whatsapp-overlay')
   if (whatsappOverlay) {
     whatsappOverlay.addEventListener('click', (e) => {
@@ -634,7 +708,7 @@ function bindRestaurantListEvents() {
       if (action === 'mesas') openMesasModal(restaurant)
       if (action === 'whatsapp') openWhatsappModal(restaurant)
       if (action === 'toggle') toggleActive(restaurant)
-      if (action === 'regen') regenerateToken(restaurant)
+      if (action === 'access') openAccessModal(restaurant)
     })
   })
 
@@ -643,7 +717,7 @@ function bindRestaurantListEvents() {
       const restaurant = state.restaurants.find((r) => r.id === btn.getAttribute('data-copy-id'))
       if (!restaurant) return
       const kind = btn.getAttribute('data-copy-kind')
-      const link = kind === 'panel' ? panelUrl(restaurant.access_token) : menuShareUrl(restaurant.slug)
+      const link = kind === 'panel' ? panelUrl() : menuShareUrl(restaurant.slug)
       copyLinkWithFeedback(link)
     })
   })
@@ -724,7 +798,7 @@ async function handleCreate(e) {
 
   const slug = slugify(name)
   const whatsapp = state.whatsappDraft.replace(/\D/g, '') || null
-  const { error } = await supabaseClient.from('restaurants').insert({ name, slug, whatsapp })
+  const { data: created, error } = await supabaseClient.from('restaurants').insert({ name, slug, whatsapp }).select().single()
 
   if (error) {
     state.formError = error.message
@@ -732,6 +806,9 @@ async function handleCreate(e) {
     state.nameDraft = ''
     state.whatsappDraft = ''
     showToast(`"${name}" cadastrado!`, 'success')
+    // Restaurante novo já nasce sem acesso: abre o modal pra gerar o login
+    // provisório (pede a senha do admin de novo).
+    openAccessModal(created, { isNew: true })
   }
   state.creating = false
   await loadRestaurants()
@@ -744,19 +821,66 @@ async function toggleActive(r) {
   loadRestaurants()
 }
 
-async function regenerateToken(r) {
-  const confirmed = await showConfirm({
-    title: 'Regenerar link do painel',
-    message: `O link atual do painel de "${r.name}" deixará de funcionar e um novo será gerado. Continuar?`,
-    confirmLabel: 'Regenerar',
-    danger: true,
-  })
-  if (!confirmed) return
-  const newToken = crypto.randomUUID().replace(/-/g, '')
-  const { error } = await supabaseClient.from('restaurants').update({ access_token: newToken }).eq('id', r.id)
-  if (error) showToast('Erro ao regenerar link.', 'error')
-  else showToast('Novo link gerado.', 'success')
+function openAccessModal(r, { isNew = false } = {}) {
+  state.accessRestaurant = r
+  state.accessPhase = 'password'
+  state.accessLoading = false
+  state.accessError = ''
+  state.accessResult = null
+  state.accessIsNew = isNew
+  render()
+}
+
+function closeAccessModal() {
+  state.accessRestaurant = null
+  state.accessResult = null
+  render()
   loadRestaurants()
+}
+
+// A senha de admin é enviada a cada geração (não fica guardada em lugar
+// nenhum no navegador) e conferida no servidor, contra o secret SENHA_ADMIN,
+// na Edge Function admin-generate-access — que também é quem mexe no
+// Supabase Auth (service_role nunca sai do servidor).
+async function handleAccessSubmit(e) {
+  e.preventDefault()
+  const senha = document.getElementById('access-password-input').value
+  if (!senha) return
+  state.accessLoading = true
+  state.accessError = ''
+  render()
+
+  try {
+    const anonKey = window.PEDEAI_CONFIG.SUPABASE_ANON_KEY
+    const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/admin-generate-access`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+      body: JSON.stringify({ senha, restaurant_id: state.accessRestaurant.id }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (data.ok) {
+      state.accessResult = { login: data.login, password: data.password }
+      state.accessPhase = 'result'
+    } else {
+      state.accessError = data.error || 'Não foi possível gerar o acesso.'
+    }
+  } catch {
+    state.accessError = 'Não deu para gerar o acesso agora. Tente de novo.'
+  }
+  state.accessLoading = false
+  render()
+}
+
+async function copyAccessCredentials() {
+  const { login, password } = state.accessResult
+  const text = `Acesso ao painel do ${state.accessRestaurant.name}
+Endereço: ${panelUrl()}
+Login: ${login}
+Senha provisória: ${password}
+
+No primeiro acesso você vai cadastrar seu e-mail e uma nova senha.`
+  const ok = await copyToClipboard(text)
+  showToast(ok ? 'Dados copiados!' : 'Não deu para copiar — copie manualmente.', ok ? 'success' : 'error')
 }
 
 function openQrModal(r) {

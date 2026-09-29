@@ -49,14 +49,13 @@ function menuShareUrl(slug) {
   return `${base}cardapio/${encodeURIComponent(slug)}`
 }
 
-// URL do painel do restaurante: {APP_URL}restaurante/index.html?token=...
-// Mesma lógica de resolução de base que menuUrl(). Chamada a partir de
-// admin/index.html (uma pasta abaixo da raiz).
-function panelUrl(accessToken) {
+// URL do painel do restaurante: {APP_URL}restaurante/index.html (o acesso é
+// por login — ver restaurante/auth.js). Mesma lógica de resolução de base que
+// menuUrl(). Chamada a partir de admin/index.html (uma pasta abaixo da raiz).
+function panelUrl() {
   const configured = window.PEDEAI_CONFIG.APP_URL
   const base = configured
     ? configured.replace(/\/?$/, '/') + 'restaurante/'
     : new URL('../restaurante/', window.location.href).href
-  return `${base}index.html?token=${encodeURIComponent(accessToken)}`
+  return `${base}index.html`
 }
-

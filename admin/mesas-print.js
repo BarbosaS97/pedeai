@@ -3,7 +3,6 @@
 // Parâmetros aceitos na URL (qualquer um identifica o restaurante):
 //   ?restaurant_id=<uuid>  (ou o antigo ?restaurant=<uuid>)
 //   ?slug=<slug>
-//   ?access_token=<token>
 //
 // Gera a arte completa do display de mesa (images/arte-mesa-base.png) uma por
 // mesa, com o QR Code e o número da mesa encaixados por cima da arte, e
@@ -31,11 +30,9 @@ function nextFrame() {
 async function findRestaurant() {
   const id = params.get('restaurant_id') || params.get('restaurant')
   const slug = params.get('slug')
-  const token = params.get('access_token')
   let q = supabaseClient.from('restaurants').select('id, name, slug')
   if (id) q = q.eq('id', id)
   else if (slug) q = q.eq('slug', slug)
-  else if (token) q = q.eq('access_token', token)
   else return null
   const { data } = await q.maybeSingle()
   return data
