@@ -858,13 +858,10 @@ function cartSheetHtml() {
               <span class="text-sm text-neutral-400">Subtotal</span>
               <span class="font-bold text-lg text-ink">R$ ${formatBRL(total)}</span>
             </div>
-            <button id="place-order-btn" ${placing ? 'disabled' : ''} class="w-full bg-brand-red text-white font-semibold rounded-lg py-3 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50">
-              ${placing ? 'Enviando...' : 'Finalizar pedido'}
-            </button>
             ${
               restaurant.whatsapp
-                ? `<button id="place-order-whatsapp-btn" ${placing ? 'disabled' : ''} class="w-full bg-emerald-600 text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 flex items-center justify-center gap-2">${ICON_WHATSAPP}Enviar pedido no WhatsApp</button>`
-                : ''
+                ? `<button id="place-order-whatsapp-btn" ${placing ? 'disabled' : ''} class="w-full bg-emerald-600 text-white font-semibold rounded-lg py-3 hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50 flex items-center justify-center gap-2">${ICON_WHATSAPP}${placing ? 'Enviando...' : 'Enviar pedido no WhatsApp'}</button>`
+                : `<p class="text-sm text-neutral-400 text-center leading-relaxed">Este restaurante ainda não ativou o envio de pedidos por aqui. Chame um atendente para fazer o seu pedido.</p>`
             }
           </div>
         `
@@ -1155,8 +1152,6 @@ function bindPageEvents() {
     btn.addEventListener('click', () => updateQuantity(btn.getAttribute('data-dec'), -1))
   )
 
-  const placeBtn = document.getElementById('place-order-btn')
-  if (placeBtn) placeBtn.addEventListener('click', () => placeOrder(false))
   const placeWaBtn = document.getElementById('place-order-whatsapp-btn')
   if (placeWaBtn) {
     placeWaBtn.addEventListener('click', () => {
@@ -1168,7 +1163,7 @@ function bindPageEvents() {
       // navegamos essa aba pro link de verdade quando o pedido termina de
       // salvar (ver placeOrder).
       const waWindow = window.open('', '_blank')
-      placeOrder(true, waWindow)
+      placeOrder(waWindow)
     })
   }
 
@@ -1328,7 +1323,9 @@ function whatsappOrderLink(total) {
   return `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(buildWhatsAppOrderMessage(total))}`
 }
 
-async function placeOrder(viaWhatsApp, waWindow) {
+// Único jeito de enviar o pedido: salva no banco (fica no histórico e no painel
+// do restaurante) e abre o WhatsApp do restaurante com o resumo pronto.
+async function placeOrder(waWindow) {
   placing = true
   renderPage()
   try {
@@ -1365,12 +1362,10 @@ async function placeOrder(viaWhatsApp, waWindow) {
     const { error: itemsError } = await supabaseClient.from('order_items').insert(items)
     if (itemsError) throw itemsError
 
-    // "Enviar pedido no WhatsApp": o pedido é salvo no banco igual ao
-    // "Finalizar pedido" normal (fica no histórico do restaurante), e além
-    // disso abre o WhatsApp com o resumo já pronto pra enviar — o cliente só
-    // confirma o envio lá. Calculado antes de limpar o carrinho, que precisa
-    // dos itens ainda no estado.
-    const waLink = viaWhatsApp ? whatsappOrderLink(total) : null
+    // Depois de salvar, abre o WhatsApp com o resumo já pronto pra enviar — o
+    // cliente só confirma o envio lá. Calculado antes de limpar o carrinho,
+    // que precisa dos itens ainda no estado.
+    const waLink = whatsappOrderLink(total)
 
     placing = false
     cart = []
@@ -1389,7 +1384,7 @@ async function placeOrder(viaWhatsApp, waWindow) {
     // abre uma aba nova aqui, que seria bloqueada por já não estar mais
     // "dentro" do clique original.
     if (waLink && waWindow) waWindow.location.href = waLink
-    else if (waWindow) waWindow.close() // pediu WhatsApp mas o restaurante não tem número: fecha a aba em branco
+    else if (waWindow) waWindow.close() // restaurante sem número (o botão nem aparece nesse caso): fecha a aba em branco
   } catch (err) {
     placing = false
     renderPage()

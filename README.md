@@ -131,7 +131,8 @@ carrinho, no caso de remover/alterar?) antes de devolver — e o frontend
 (`cliente/cardapio.js`, função `applyAiActions`) faz uma segunda validação
 independente antes de mexer no carrinho de verdade. Não existe ação de
 "finalizar pedido" no esquema: o modelo é estruturalmente incapaz de fechar
-um pedido sozinho, só pode orientar o cliente a tocar em "Finalizar pedido".
+um pedido sozinho, só pode orientar o cliente a tocar em "Enviar pedido no
+WhatsApp".
 Cada ação aplicada aparece no chat como um cartãozinho (entrada animada,
 `prefers-reduced-motion` respeitado) e pulsa o botão do carrinho.
 
@@ -211,12 +212,13 @@ controle de quantidade e remoção.
 quando o restaurante cadastra um número de WhatsApp (no admin, ao cadastrar
 ou depois pelo botão "✎" na lista — `admin/admin.js` — ou no próprio painel,
 seção "Identidade visual" — `restaurante/painel.js`), o carrinho do cardápio
-ganha um segundo botão, "Enviar pedido no WhatsApp", ao lado de "Finalizar
-pedido". Os dois salvam o pedido normalmente em `orders`/`order_items`
-(mesmo histórico, mesma validação); o botão do WhatsApp faz isso e, além
+mostra o botão "Enviar pedido no WhatsApp" — **o único jeito de enviar um
+pedido** (não existe mais "Finalizar pedido"). Ele salva o pedido em
+`orders`/`order_items` (fica no histórico e no painel do restaurante) e, além
 disso, abre `https://wa.me/55<numero>?text=...` com um resumo do pedido
 (itens, observação, mesa, subtotal) pronto pra enviar — o cliente só confirma
-o envio lá. Sem WhatsApp cadastrado, esse botão simplesmente não aparece. O
+o envio lá. Sem WhatsApp cadastrado, o carrinho mostra um aviso pedindo pra
+chamar um atendente (por isso vale cadastrar o número de todo restaurante). O
 número é guardado só como dígitos (DDD + número, 10-11 dígitos, sem "+55" —
 mesmo padrão usado antes pro telefone do cliente, agora removido); o "+55" é
 prefixado só na hora de montar o link (`whatsappOrderLink()`,
