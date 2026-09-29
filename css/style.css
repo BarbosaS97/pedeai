@@ -10,6 +10,25 @@
   --brand-orange-rgb: 255 104 35;
 }
 
+/* ---- Paleta do cardápio do cliente (cliente/index.html, tailwind "surface"/"ink") ----
+   Escuro é o padrão (também vale se o JS falhar); js/theme.js liga
+   data-theme="light" pra quem prefere claro. Triplets "R G B" pro Tailwind
+   aplicar opacidade (bg-surface/95, bg-ink/10...). */
+:root {
+  --surface: 18 18 18;
+  --surface-card: 28 26 25;
+  --surface-raised: 36 33 32;
+  --surface-line: rgba(255, 255, 255, 0.07);
+  --ink: 255 255 255;
+}
+html[data-theme='light'] {
+  --surface: 246 243 238;
+  --surface-card: 255 255 255;
+  --surface-raised: 240 236 229;
+  --surface-line: rgba(23, 23, 23, 0.1);
+  --ink: 23 23 23;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: #d4d4d4 transparent;
@@ -225,10 +244,10 @@ textarea {
   font-weight: 600;
   padding: 0.5rem 0.75rem 0.5rem 0.65rem;
   border-radius: 0.7rem;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--surface-line);
   border-left: 3px solid var(--action-accent, #a3a3a3);
-  background: #1c1a19;
-  color: #f5f5f5;
+  background: rgb(var(--surface-card));
+  color: rgb(var(--ink));
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
   opacity: 0;
   animation: action-card-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -243,7 +262,7 @@ textarea {
   font-size: 0.7rem;
   line-height: 1;
   flex-shrink: 0;
-  background: var(--action-accent-bg, rgba(255, 255, 255, 0.08));
+  background: var(--action-accent-bg, rgb(var(--ink) / 0.08));
   color: var(--action-accent, #a3a3a3);
 }
 .action-card--add {
@@ -338,55 +357,55 @@ html[data-theme='dark'] .theme-icon-moon {
 html[data-theme='dark'] {
   color-scheme: dark;
 }
-html[data-theme='dark'] body {
+html[data-theme='dark']:not([data-app='menu']) body {
   background-color: #121212;
   color: #f5f5f4;
 }
-html[data-theme='dark'] * {
+html[data-theme='dark']:not([data-app='menu']) * {
   scrollbar-color: #44403c transparent;
 }
-html[data-theme='dark'] ::-webkit-scrollbar-thumb {
+html[data-theme='dark']:not([data-app='menu']) ::-webkit-scrollbar-thumb {
   background: #44403c;
 }
 
 /* superfícies */
-html[data-theme='dark'] .bg-white { background-color: #1c1a19; }
-html[data-theme='dark'] .bg-white\/90 { background-color: rgb(28 26 25 / 0.9); }
-html[data-theme='dark'] .bg-neutral-50 { background-color: #121212; }
-html[data-theme='dark'] .bg-neutral-100,
-html[data-theme='dark'] .hover\:bg-neutral-100:hover { background-color: #242120; }
-html[data-theme='dark'] .bg-neutral-200,
-html[data-theme='dark'] .hover\:bg-neutral-200:hover { background-color: #2f2c2a; }
-html[data-theme='dark'] .via-neutral-50 { --tw-gradient-stops: var(--tw-gradient-from), #121212, var(--tw-gradient-to); }
-html[data-theme='dark'] .bg-neutral-900 { background-color: #3a3635; }
-html[data-theme='dark'] .bg-emerald-100 { background-color: rgb(16 185 129 / 0.18); }
-html[data-theme='dark'] .hover\:bg-emerald-50:hover { background-color: rgb(16 185 129 / 0.12); }
+html[data-theme='dark']:not([data-app='menu']) .bg-white { background-color: #1c1a19; }
+html[data-theme='dark']:not([data-app='menu']) .bg-white\/90 { background-color: rgb(28 26 25 / 0.9); }
+html[data-theme='dark']:not([data-app='menu']) .bg-neutral-50 { background-color: #121212; }
+html[data-theme='dark']:not([data-app='menu']) .bg-neutral-100,
+html[data-theme='dark']:not([data-app='menu']) .hover\:bg-neutral-100:hover { background-color: #242120; }
+html[data-theme='dark']:not([data-app='menu']) .bg-neutral-200,
+html[data-theme='dark']:not([data-app='menu']) .hover\:bg-neutral-200:hover { background-color: #2f2c2a; }
+html[data-theme='dark']:not([data-app='menu']) .via-neutral-50 { --tw-gradient-stops: var(--tw-gradient-from), #121212, var(--tw-gradient-to); }
+html[data-theme='dark']:not([data-app='menu']) .bg-neutral-900 { background-color: #3a3635; }
+html[data-theme='dark']:not([data-app='menu']) .bg-emerald-100 { background-color: rgb(16 185 129 / 0.18); }
+html[data-theme='dark']:not([data-app='menu']) .hover\:bg-emerald-50:hover { background-color: rgb(16 185 129 / 0.12); }
 
 /* texto */
-html[data-theme='dark'] .text-neutral-900 { color: #f5f5f4; }
-html[data-theme='dark'] .text-neutral-800,
-html[data-theme='dark'] .text-neutral-700 { color: #d6d3d1; }
-html[data-theme='dark'] .text-neutral-600,
-html[data-theme='dark'] .hover\:text-neutral-600:hover { color: #b5b0ad; }
-html[data-theme='dark'] .text-neutral-500 { color: #a09b98; }
-html[data-theme='dark'] .text-neutral-400 { color: #8a8582; }
-html[data-theme='dark'] .text-neutral-300 { color: #57534e; }
-html[data-theme='dark'] .text-emerald-700 { color: #6ee7b7; }
-html[data-theme='dark'] .text-emerald-600 { color: #34d399; }
+html[data-theme='dark']:not([data-app='menu']) .text-neutral-900 { color: #f5f5f4; }
+html[data-theme='dark']:not([data-app='menu']) .text-neutral-800,
+html[data-theme='dark']:not([data-app='menu']) .text-neutral-700 { color: #d6d3d1; }
+html[data-theme='dark']:not([data-app='menu']) .text-neutral-600,
+html[data-theme='dark']:not([data-app='menu']) .hover\:text-neutral-600:hover { color: #b5b0ad; }
+html[data-theme='dark']:not([data-app='menu']) .text-neutral-500 { color: #a09b98; }
+html[data-theme='dark']:not([data-app='menu']) .text-neutral-400 { color: #8a8582; }
+html[data-theme='dark']:not([data-app='menu']) .text-neutral-300 { color: #57534e; }
+html[data-theme='dark']:not([data-app='menu']) .text-emerald-700 { color: #6ee7b7; }
+html[data-theme='dark']:not([data-app='menu']) .text-emerald-600 { color: #34d399; }
 
 /* bordas */
-html[data-theme='dark'] .border-neutral-100 { border-color: rgb(255 255 255 / 0.06); }
-html[data-theme='dark'] .border-neutral-200 { border-color: rgb(255 255 255 / 0.1); }
-html[data-theme='dark'] .border-neutral-300 { border-color: rgb(255 255 255 / 0.18); }
+html[data-theme='dark']:not([data-app='menu']) .border-neutral-100 { border-color: rgb(255 255 255 / 0.06); }
+html[data-theme='dark']:not([data-app='menu']) .border-neutral-200 { border-color: rgb(255 255 255 / 0.1); }
+html[data-theme='dark']:not([data-app='menu']) .border-neutral-300 { border-color: rgb(255 255 255 / 0.18); }
 
 /* campos de formulário (o navegador pinta branco por padrão) */
-html[data-theme='dark'] input:not([type='color']):not([type='checkbox']):not([type='radio']),
-html[data-theme='dark'] select,
-html[data-theme='dark'] textarea {
+html[data-theme='dark']:not([data-app='menu']) input:not([type='color']):not([type='checkbox']):not([type='radio']),
+html[data-theme='dark']:not([data-app='menu']) select,
+html[data-theme='dark']:not([data-app='menu']) textarea {
   background-color: #1c1a19;
   color: #f5f5f4;
 }
-html[data-theme='dark'] ::placeholder {
+html[data-theme='dark']:not([data-app='menu']) ::placeholder {
   color: #78716c;
 }
 
@@ -763,3 +782,24 @@ html[data-theme='dark'] .auth-step-bar {
 html[data-theme='dark'] .auth-step-dot.is-current { background: #ff6823; }
 html[data-theme='dark'] .auth-step-dot.is-done,
 html[data-theme='dark'] .auth-step-bar.is-done { background: #10b981; }
+
+/* ---- Cardápio do cliente: ajustes do tema claro ----
+   Os cinzas de texto do cardápio (neutral-200..500) foram escolhidos pra
+   fundo escuro; no claro precisam escurecer pra manter contraste. Escopo
+   .menu-app: admin e painel não são afetados. */
+html[data-theme='light'] .menu-app .text-neutral-500 { color: #6b6662; }
+html[data-theme='light'] .menu-app .text-neutral-400 { color: #77716d; }
+html[data-theme='light'] .menu-app .text-neutral-300,
+html[data-theme='light'] .menu-app .hover\:text-neutral-300:hover { color: #57524e; }
+html[data-theme='light'] .menu-app .text-neutral-200 { color: #3a3634; }
+html[data-theme='light'] .menu-app ::placeholder { color: #9a948f; }
+
+/* Botão de tema no cabeçalho do cardápio: segue as cores da paleta em vez das
+   do admin (as classes de hover dele assumem fundo branco). */
+.menu-app .theme-toggle {
+  color: rgb(var(--ink) / 0.6);
+}
+.menu-app .theme-toggle:hover {
+  color: rgb(var(--ink));
+  background: rgb(var(--ink) / 0.1);
+}

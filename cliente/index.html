@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" data-logo="dark">
+<html lang="pt-BR" data-app="menu">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="../images/favicon.png" />
@@ -21,8 +21,8 @@
          faixa de navegadores, 100dvh já reflete o teclado aberto sozinho, sem
          depender só do fallback via window.visualViewport (ver cardapio.js). -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-    <!-- Tema escuro (só o cardápio do cliente, ver README/tailwind.config
-         abaixo) — a cor da barra do navegador/status bar acompanha. -->
+    <!-- Cor da barra do navegador/status bar: começa escura e js/theme.js a
+         atualiza conforme o tema (claro/escuro) do cardápio. -->
     <meta name="theme-color" content="#121212" />
     <title>PapeiAI — Cardápio Digital</title>
     <!-- Open Graph: fallback genérico pra quando alguém compartilha o link
@@ -53,17 +53,22 @@
               // cadastrada por CADA restaurante (restaurants.theme_color,
               // migration 0012), em vez de fixa — red/blue continuam fixos.
               brand: { orange: 'rgb(var(--brand-orange-rgb) / <alpha-value>)', red: '#E63946', blue: '#2563EB' },
-              // Tema escuro do cardápio público: fundo quase-preto com leve
-              // calor (não é cinza puro), cartões um tom acima do fundo, e
-              // uma borda quase invisível só pra separar o cartão do fundo
-              // sem precisar de sombra (sombra não "lê" direito em cima de
-              // um fundo já escuro).
+              // Superfícies do cardápio público, em CSS vars (css/style.css,
+              // ".menu-app"/"data-theme"): escuro = fundo quase-preto com leve
+              // calor (não é cinza puro), cartões um tom acima do fundo e uma
+              // borda quase invisível; claro = off-white quente com cartões
+              // brancos. O tema segue o celular da pessoa e pode ser trocado
+              // no botão do topo (js/theme.js). "ink" = cor do texto principal
+              // (branco no escuro, quase-preto no claro) — use no lugar de
+              // text-white em texto sobre superfície; text-white fica pra texto
+              // sobre laranja/vermelho/gradiente.
               surface: {
-                DEFAULT: '#121212',
-                card: '#1c1a19',
-                raised: '#242120',
-                line: 'rgba(255,255,255,0.07)',
+                DEFAULT: 'rgb(var(--surface) / <alpha-value>)',
+                card: 'rgb(var(--surface-card) / <alpha-value>)',
+                raised: 'rgb(var(--surface-raised) / <alpha-value>)',
+                line: 'var(--surface-line)',
               },
+              ink: 'rgb(var(--ink) / <alpha-value>)',
             },
             fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
           },
@@ -71,9 +76,10 @@
       }
     </script>
     <link rel="stylesheet" href="../css/style.css" />
+    <script src="../js/theme.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   </head>
-  <body class="bg-surface">
+  <body class="bg-surface menu-app">
     <div id="root"></div>
 
     <script src="../config.js"></script>

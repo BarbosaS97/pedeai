@@ -1,10 +1,11 @@
-// theme.js — tema claro/escuro do admin e do painel do restaurante.
+// theme.js — tema claro/escuro do admin, do painel do restaurante e do
+// cardápio do cliente.
 //
 // Carregado no <head> (síncrono) pra aplicar o tema ANTES da primeira pintura
-// e não piscar branco. Sem escolha salva, segue a preferência do sistema
+// e não piscar. Sem escolha salva, segue a preferência do sistema
 // (prefers-color-scheme); depois que a pessoa clica no botão, a escolha dela
-// vale e fica salva no navegador. O cardápio público do cliente tem tema
-// escuro próprio e não carrega este arquivo.
+// vale e fica salva no navegador (a mesma chave vale nas 3 telas do mesmo
+// navegador).
 
 const THEME_STORAGE_KEY = 'papeiai-theme'
 
@@ -21,8 +22,13 @@ function currentTheme() {
   return storedTheme() || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
 }
 
+// Cor da barra do navegador/status bar (só existe no cardápio do cliente).
+const THEME_COLOR_META = { dark: '#121212', light: '#f6f3ee' }
+
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme)
+  const meta = document.querySelector('meta[name="theme-color"]')
+  if (meta) meta.setAttribute('content', THEME_COLOR_META[theme])
 }
 
 function toggleTheme() {

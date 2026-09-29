@@ -516,8 +516,15 @@ campo de texto hex, com pré-visualização ao vivo) que substitui o laranja em
 tudo que hoje é `brand-orange` — botões, badges (ex: "Destaque"), preços,
 avatar/bolha do chat do Ari, FAB — tanto no cardápio público quanto no
 próprio painel. Vermelho (erro/exclusão/gradiente) e azul (links) continuam
-fixos, só a cor de destaque é editável; o tema do cardápio continua **sempre
-escuro** (o botão de tema claro/escuro existe só no admin e no painel do restaurante — `js/theme.js` + overrides `html[data-theme='dark']` em `css/style.css`; sem escolha salva, segue a preferência do sistema). Tecnicamente, como o Tailwind vem
+fixos, só a cor de destaque é editável; o tema claro/escuro
+(botão pequeno no topo, em todas as telas: admin, painel e cardápio) segue a
+preferência do celular/computador da pessoa e guarda a escolha dela no
+navegador (`js/theme.js`). No admin e no painel isso é feito com overrides
+`html[data-theme='dark']` em `css/style.css`; o cardápio usa uma paleta em CSS
+vars (`--surface*`, `--ink`, ver `tailwind.config` de `cliente/index.html`) —
+escuro é o padrão, `data-theme="light"` troca os valores. Em texto sobre
+superfície do cardápio use `text-ink` (não `text-white`, que fica só pra texto
+sobre laranja/vermelho/gradiente). Tecnicamente, como o Tailwind vem
 por CDN sem build, isso é feito sem trocar nenhuma classe: `brand.orange` no
 `tailwind.config` de `cliente/index.html`/`restaurante/index.html` é definido
 como `rgb(var(--brand-orange-rgb) / <alpha-value>)`, e `applyThemeColor()`

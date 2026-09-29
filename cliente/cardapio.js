@@ -193,7 +193,7 @@ function ariIntroHtml() {
     <div id="ari-intro" class="fade-slide-in bg-surface-card border border-surface-line rounded-2xl p-3 sm:p-4 flex items-center gap-3">
       ${chatAvatarHtml('w-12 h-12 sm:w-14 sm:h-14 ring-2 ring-brand-orange/40 shrink-0')}
       <div class="min-w-0">
-        <h2 class="text-white font-bold text-sm sm:text-base leading-snug">Sou o <span class="text-brand-orange">Ari</span>, seu garçom</h2>
+        <h2 class="text-ink font-bold text-sm sm:text-base leading-snug">Sou o <span class="text-brand-orange">Ari</span>, seu garçom</h2>
         <p class="text-neutral-400 text-[11px] sm:text-xs mt-0.5 leading-relaxed">Peça sugestões, tire dúvidas ou monte seu pedido — é só chamar.</p>
         <button id="ari-intro-btn" class="mt-2 inline-flex items-center gap-1.5 bg-brand-orange text-white text-[11px] sm:text-xs font-semibold rounded-full pl-3 pr-2.5 py-1.5 shadow-brand-ai hover:opacity-90 active:scale-[0.98] transition [&>svg]:w-3.5 [&>svg]:h-3.5">
           ${ICON_CHAT_BUBBLE}
@@ -246,7 +246,7 @@ function mesaUnavailableHtml() {
     <div class="min-h-[100dvh] flex items-center justify-center text-center px-6 bg-surface">
       <div class="max-w-sm">
         ${renderLogo({ size: 'md' })}
-        <p class="text-white font-semibold mt-4">Esta mesa está temporariamente indisponível.</p>
+        <p class="text-ink font-semibold mt-4">Esta mesa está temporariamente indisponível.</p>
         <p class="text-neutral-400 text-sm mt-1">Chame um atendente.</p>
       </div>
     </div>
@@ -373,6 +373,7 @@ function welcomeScreenHtml() {
       <div class="absolute -top-28 -left-24 w-72 h-72 rounded-full bg-brand-blue/20 blur-3xl" aria-hidden="true"></div>
       <div class="absolute -bottom-32 -right-20 w-80 h-80 rounded-full bg-brand-orange/20 blur-3xl" aria-hidden="true"></div>
 
+      ${themeToggleHtml('absolute top-3 right-3 z-10 !w-8 !h-8')}
       <div class="relative flex-1 flex flex-col items-center justify-center px-6 py-10">
         <div class="w-full max-w-sm fade-slide-in">
           <div class="flex justify-center">${renderLogo({ size: 'md' })}</div>
@@ -389,7 +390,7 @@ function welcomeScreenHtml() {
                 />
               </div>
             </div>
-            <h1 class="text-2xl font-bold text-white mt-4">Oi, eu sou o Ari</h1>
+            <h1 class="text-2xl font-bold text-ink mt-4">Oi, eu sou o Ari</h1>
             <p class="text-sm text-neutral-400 mt-2 leading-relaxed px-2">
               Seu garçom pessoal no ${escapeHtml(restaurant.name)}. Vou te ajudar a escolher os
               pratos e montar o pedido, tudo por aqui.
@@ -406,7 +407,7 @@ function welcomeScreenHtml() {
                 aria-label="Primeiro nome (opcional)"
                 autocomplete="given-name"
                 autofocus
-                class="w-full bg-surface-raised border border-surface-line text-white placeholder-neutral-500 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
+                class="w-full bg-surface-raised border border-surface-line text-ink placeholder-neutral-500 rounded-xl pl-10 pr-3.5 py-3 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition"
               />
             </div>
             <button
@@ -465,14 +466,17 @@ function pageHtml() {
             }
             <div class="min-w-0">
               <p class="text-[11px] text-neutral-400 leading-tight">Oi${customerName ? `, ${escapeHtml(customerName)}` : ''}!</p>
-              <h1 class="text-sm font-extrabold text-white leading-tight truncate">${escapeHtml(restaurant.name)}</h1>
+              <h1 class="text-sm font-extrabold text-ink leading-tight truncate">${escapeHtml(restaurant.name)}</h1>
             </div>
           </div>
-          ${
-            numero
-              ? `<span class="shrink-0 text-[10px] font-semibold text-neutral-300 bg-surface-card border border-surface-line rounded-full px-2.5 py-1">Mesa ${escapeHtml(numero)}</span>`
-              : ''
-          }
+          <div class="flex items-center gap-1.5 shrink-0">
+            ${
+              numero
+                ? `<span class="text-[10px] font-semibold text-neutral-300 bg-surface-card border border-surface-line rounded-full px-2.5 py-1">Mesa ${escapeHtml(numero)}</span>`
+                : ''
+            }
+            ${themeToggleHtml('!w-8 !h-8')}
+          </div>
         </div>
       </header>
 
@@ -556,7 +560,7 @@ function destaqueSectionHtml() {
     <section class="space-y-2.5">
       <div class="flex items-center gap-1.5">
         <span class="text-brand-orange [&>svg]:w-4 [&>svg]:h-4">${ICON_SPARKLE}</span>
-        <h2 class="text-sm font-bold text-white">Destaques da casa</h2>
+        <h2 class="text-sm font-bold text-ink">Destaques da casa</h2>
       </div>
       <div class="flex gap-2.5 overflow-x-auto scroll-contain -mx-3 px-3 sm:-mx-6 sm:px-6 pb-1">
         ${destaques.map(destaqueCardHtml).join('')}
@@ -576,7 +580,7 @@ function destaqueCardHtml(p) {
         <button data-add="${p.id}" title="Adicionar" class="absolute bottom-1.5 right-1.5 w-7 h-7 rounded-full bg-brand-orange text-white flex items-center justify-center shadow-lg ring-1 ring-surface-card active:scale-90 transition">${ICON_PLUS}</button>
       </div>
       <div class="p-2.5">
-        <p class="text-xs font-semibold text-white leading-snug line-clamp-1">${escapeHtml(p.name)}</p>
+        <p class="text-xs font-semibold text-ink leading-snug line-clamp-1">${escapeHtml(p.name)}</p>
         ${p.description ? `<p class="text-[10px] text-neutral-400 line-clamp-2 mt-0.5 leading-snug">${escapeHtml(p.description)}</p>` : ''}
         <p class="text-brand-orange font-bold text-xs mt-1">R$ ${formatBRL(p.price)}</p>
       </div>
@@ -604,7 +608,7 @@ function categoryNavHtml(groups) {
                 : 'bg-surface-card border border-surface-line text-neutral-400'
             }">${categoryStyle(g.name, g.icon).icon}</span>
             <span data-pill-label class="text-[9px] font-medium text-center leading-tight truncate w-full ${
-              idx === 0 ? 'text-white' : 'text-neutral-400'
+              idx === 0 ? 'text-ink' : 'text-neutral-400'
             }">${escapeHtml(g.name)}</span>
           </a>`
           )
@@ -621,7 +625,7 @@ function menuSectionHtml(g) {
       <div>
         <div class="flex items-center gap-1.5">
           <span class="w-1 h-4 rounded-full bg-brand-orange shrink-0"></span>
-          <h2 class="text-sm font-bold text-white">${escapeHtml(g.name)}</h2>
+          <h2 class="text-sm font-bold text-ink">${escapeHtml(g.name)}</h2>
         </div>
         <p class="text-xs text-neutral-400 mt-0.5 ml-2.5">${tagline}</p>
       </div>
@@ -656,7 +660,7 @@ function productCardHtml(p) {
           <button data-add="${p.id}" title="Adicionar" class="absolute bottom-1.5 right-1.5 w-6 h-6 rounded-full bg-brand-orange text-white flex items-center justify-center shadow-lg ring-1 ring-surface-card active:scale-90 transition">${ICON_PLUS}</button>
         </div>
         <div class="p-2">
-          <p class="text-[11px] font-semibold text-white leading-snug line-clamp-1">${escapeHtml(p.name)}</p>
+          <p class="text-[11px] font-semibold text-ink leading-snug line-clamp-1">${escapeHtml(p.name)}</p>
           <p class="text-brand-orange font-bold text-[11px] mt-0.5">R$ ${formatBRL(p.price)}</p>
         </div>
       </div>
@@ -665,7 +669,7 @@ function productCardHtml(p) {
   return `
     <div data-expand="${p.id}" class="fade-slide-in bg-surface-card border border-surface-line rounded-xl p-2.5 flex flex-col justify-between min-h-[5.5rem] cursor-pointer active:opacity-90 transition">
       <div>
-        <p class="text-[11px] font-semibold text-white leading-snug line-clamp-2">${escapeHtml(p.name)}</p>
+        <p class="text-[11px] font-semibold text-ink leading-snug line-clamp-2">${escapeHtml(p.name)}</p>
         ${p.description ? `<p class="text-[10px] text-neutral-400 line-clamp-1 mt-0.5">${escapeHtml(p.description)}</p>` : ''}
       </div>
       <div class="flex items-center justify-between mt-1.5 gap-1">
@@ -692,11 +696,11 @@ function productDetailModalHtml() {
               ? `<img src="${escapeHtml(p.image_url)}" alt="${escapeHtml(p.name)}" class="w-full h-44 sm:h-52 object-cover" />`
               : ''
           }
-          <button id="detail-close" title="Fechar" class="absolute top-3 right-3 z-10 bg-surface-card/90 hover:bg-surface-card text-white rounded-full w-9 h-9 flex items-center justify-center shadow transition">✕</button>
+          <button id="detail-close" title="Fechar" class="absolute top-3 right-3 z-10 bg-surface-card/90 hover:bg-surface-card text-ink rounded-full w-9 h-9 flex items-center justify-center shadow transition">✕</button>
         </div>
         <div class="p-5 ${p.image_url ? '' : 'pt-10'} space-y-3">
           <div>
-            <h3 class="text-lg font-bold text-white leading-snug">${escapeHtml(p.name)}</h3>
+            <h3 class="text-lg font-bold text-ink leading-snug">${escapeHtml(p.name)}</h3>
             <p class="text-brand-orange font-semibold mt-0.5">R$ ${formatBRL(p.price)}</p>
           </div>
           ${p.description ? `<p class="text-sm text-neutral-400 leading-relaxed">${escapeHtml(p.description)}</p>` : ''}
@@ -722,7 +726,7 @@ function productDetailModalHtml() {
               rows="2"
               maxlength="140"
               placeholder="Ex: sem cebola, ponto da carne, tirar o queijo…"
-              class="w-full bg-surface-card border border-surface-line text-white placeholder-neutral-500 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition resize-none"
+              class="w-full bg-surface-card border border-surface-line text-ink placeholder-neutral-500 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition resize-none"
             >${escapeHtml(productNoteDraft)}</textarea>
           </div>
           <button id="detail-save-btn" class="w-full bg-brand-orange text-white font-semibold rounded-lg py-3 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition mt-1">
@@ -772,7 +776,7 @@ function cartItemRowHtml(i) {
       <div class="flex-1 min-w-0">
         <div data-edit-item="${i.product.id}" class="cursor-pointer">
           <div class="flex items-start justify-between gap-2">
-            <p class="font-medium text-sm text-white leading-snug">${escapeHtml(i.product.name)}</p>
+            <p class="font-medium text-sm text-ink leading-snug">${escapeHtml(i.product.name)}</p>
             <button data-remove="${i.product.id}" title="Remover item" class="text-neutral-500 hover:text-brand-red transition shrink-0 w-9 h-9 -mt-1.5 -mr-1.5 flex items-center justify-center">${ICON_TRASH}</button>
           </div>
           <p class="text-xs text-neutral-500">R$ ${formatBRL(i.product.price)} cada</p>
@@ -780,9 +784,9 @@ function cartItemRowHtml(i) {
         </div>
         <div class="flex items-center justify-between mt-2">
           <div class="flex items-center gap-2">
-            <button data-dec="${i.product.id}" class="qty-btn w-9 h-9 text-base text-white bg-surface-raised hover:bg-white/15 rounded-lg">−</button>
-            <span class="w-5 text-center text-sm text-white tabular-nums">${i.quantity}</span>
-            <button data-inc="${i.product.id}" class="qty-btn w-9 h-9 text-base text-white bg-surface-raised hover:bg-white/15 rounded-lg">+</button>
+            <button data-dec="${i.product.id}" class="qty-btn w-9 h-9 text-base text-ink bg-surface-raised hover:bg-ink/10 rounded-lg">−</button>
+            <span class="w-5 text-center text-sm text-ink tabular-nums">${i.quantity}</span>
+            <button data-inc="${i.product.id}" class="qty-btn w-9 h-9 text-base text-ink bg-surface-raised hover:bg-ink/10 rounded-lg">+</button>
           </div>
           <span class="font-semibold text-sm text-brand-orange">R$ ${formatBRL(lineTotal)}</span>
         </div>
@@ -804,7 +808,7 @@ function cartSheetHtml() {
     <div id="cart-overlay" class="modal-overlay fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center z-50">
       <div id="cart-box" class="modal-box bg-surface border border-surface-line rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[85dvh] flex flex-col overflow-hidden">
         <div class="flex items-center justify-between px-4 py-3 border-b border-surface-line shrink-0">
-          <span class="inline-flex items-center gap-2 font-semibold text-white">${ICON_CART}Seu carrinho</span>
+          <span class="inline-flex items-center gap-2 font-semibold text-ink">${ICON_CART}Seu carrinho</span>
           <button id="cart-close" title="Fechar" class="text-neutral-500 hover:text-neutral-300 transition text-xl leading-none w-9 h-9 flex items-center justify-center -mr-2">✕</button>
         </div>
         <div class="scroll-contain flex-1 overflow-y-auto px-4 py-3">
@@ -816,7 +820,7 @@ function cartSheetHtml() {
           <div class="safe-bottom border-t border-surface-line p-4 space-y-3 shrink-0">
             <div class="flex items-center justify-between">
               <span class="text-sm text-neutral-400">Subtotal</span>
-              <span class="font-bold text-lg text-white">R$ ${formatBRL(total)}</span>
+              <span class="font-bold text-lg text-ink">R$ ${formatBRL(total)}</span>
             </div>
             <button id="place-order-btn" ${placing ? 'disabled' : ''} class="w-full bg-brand-red text-white font-semibold rounded-lg py-3 shadow-brand-ai hover:opacity-90 active:scale-[0.99] transition disabled:opacity-50">
               ${placing ? 'Enviando...' : 'Finalizar pedido'}
@@ -890,7 +894,7 @@ function chatModalHtml() {
             placeholder="${notingOrder ? 'Anotando seu pedido…' : 'Ex: algo vegetariano e picante'}"
             autocomplete="off"
             ${notingOrder ? 'disabled' : ''}
-            class="flex-1 min-w-0 bg-surface-card border border-surface-line text-white placeholder-neutral-500 rounded-full px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition disabled:opacity-50"
+            class="flex-1 min-w-0 bg-surface-card border border-surface-line text-ink placeholder-neutral-500 rounded-full px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-orange transition disabled:opacity-50"
           />
           <button type="submit" ${chatLoading || notingOrder ? 'disabled' : ''} title="Enviar" class="bg-gradient-to-br from-brand-orange to-brand-red text-white rounded-full w-11 h-11 flex items-center justify-center shadow-brand-ai hover:opacity-90 active:scale-95 transition disabled:opacity-50 shrink-0">${ICON_SEND}</button>
         </form>
@@ -950,7 +954,7 @@ function productMiniCardHtml(p) {
     <div data-mini-product="${p.id}" class="flex items-center gap-2.5 bg-surface border border-surface-line rounded-xl p-2 w-full cursor-pointer active:opacity-80 transition">
       ${productImageHtml(p)}
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium text-white leading-snug truncate">${escapeHtml(p.name)}</p>
+        <p class="text-sm font-medium text-ink leading-snug truncate">${escapeHtml(p.name)}</p>
         <p class="text-xs font-semibold text-brand-orange mt-0.5">R$ ${formatBRL(p.price)}</p>
       </div>
       <span class="text-neutral-500 shrink-0" aria-hidden="true">›</span>
@@ -1044,7 +1048,7 @@ function bindPageEvents() {
         const label = el.querySelector('[data-pill-label]')
         circle.classList.remove('bg-brand-orange', 'text-white')
         circle.classList.add('bg-surface-card', 'border', 'border-surface-line', 'text-neutral-400')
-        label.classList.remove('text-white')
+        label.classList.remove('text-ink')
         label.classList.add('text-neutral-400')
       })
       const activeCircle = pill.querySelector('[data-pill-circle]')
@@ -1052,7 +1056,7 @@ function bindPageEvents() {
       activeCircle.classList.remove('bg-surface-card', 'border', 'border-surface-line', 'text-neutral-400')
       activeCircle.classList.add('bg-brand-orange', 'text-white')
       activeLabel.classList.remove('text-neutral-400')
-      activeLabel.classList.add('text-white')
+      activeLabel.classList.add('text-ink')
     })
   }
 
