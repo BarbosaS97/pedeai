@@ -59,7 +59,8 @@ function loginHtml() {
           placeholder="Senha de admin"
           class="w-full border border-neutral-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-blue transition"
         />
-        ${state.loginError ? `<p class="text-brand-red text-sm flex items-center gap-1.5">⚠️ ${escapeHtml(state.loginError)}</p>` : ''}
+        <div id="login-turnstile"></div>
+        <div id="login-error">${state.loginError ? `<p class="text-brand-red text-sm flex items-start gap-1.5">⚠️ <span>${escapeHtml(state.loginError)}</span></p>` : ''}</div>
         <button
           type="submit"
           class="w-full bg-brand-blue text-white font-semibold rounded-lg py-2.5 shadow-brand-blue hover:opacity-90 active:scale-[0.99] transition"
@@ -708,6 +709,7 @@ function bindMesasListEvents() {
 function bindEvents() {
   if (!state.authenticated) {
     document.getElementById('login-form').addEventListener('submit', handleLogin)
+    loginTurnstile = mountTurnstile(document.getElementById('login-turnstile'))
     return
   }
 
@@ -842,10 +844,26 @@ async function copyLinkWithFeedback(link) {
 // foi digitado e só recebe { ok: true/false } de volta. Ainda não é
 // autenticação real (sem token de sessão assinado — ver aviso no README);
 // antes de produção, migrar para Supabase Auth.
+// Widget do Turnstile da tela de login (recriado a cada render da tela).
+let loginTurnstile = null
+
+function formatWait(seconds) {
+  const minutes = Math.ceil(seconds / 60)
+  return minutes <= 1 ? 'cerca de 1 minuto' : `${minutes} minutos`
+}
+
 async function handleLogin(e) {
   e.preventDefault()
   const password = document.getElementById('password-input').value
   state.loginError = ''
+
+  const turnstileToken = loginTurnstile ? loginTurnstile.getToken() : ''
+  if (turnstileEnabled() && !turnstileToken) {
+    // Sem re-render: recriar a tela reiniciaria a verificação que já está rodando.
+    document.getElementById('login-error').innerHTML =
+      '<p class="text-brand-red text-sm flex items-start gap-1.5">⚠️ <span>Aguarde a verificação de segurança terminar e tente de novo.</span></p>'
+    return
+  }
 
   const submitBtn = document.querySelector('#login-form button[type="submit"]')
   submitBtn.disabled = true
@@ -860,7 +878,7 @@ async function handleLogin(e) {
         apikey: anonKey,
         Authorization: `Bearer ${anonKey}`,
       },
-      body: JSON.stringify({ senha: password }),
+      body: JSON.stringify({ senha: password, turnstile_token: turnstileToken }),
     })
     const data = await res.json()
 
@@ -872,7 +890,13 @@ async function handleLogin(e) {
       loadLeads()
       return
     }
-    state.loginError = 'Senha incorreta.'
+    if (data.error === 'rate_limited') {
+      state.loginError = `Muitas tentativas erradas. Tente de novo em ${formatWait(data.retry_after || 900)}.`
+    } else if (data.error === 'captcha_failed') {
+      state.loginError = 'Não foi possível validar a verificação de segurança. Tente de novo.'
+    } else {
+      state.loginError = 'Senha incorreta.'
+    }
   } catch {
     state.loginError = 'Não deu para verificar a senha agora. Tenta de novo.'
   }

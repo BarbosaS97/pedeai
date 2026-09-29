@@ -7,8 +7,10 @@
 //
 // Exige a senha do super admin em CADA chamada (o admin digita de novo no
 // modal), comparada com o secret SENHA_ADMIN — mesma verificação do
-// admin-login. Usa a service_role key (só existe aqui, no servidor) pra
-// mexer no Supabase Auth.
+// admin-login, inclusive o limite de tentativas por IP (5 erros/15 min →
+// bloqueio de 15 min, migration 0016): sem isso este endpoint seria uma
+// segunda porta pra adivinhar a senha. Usa a service_role key (só existe
+// aqui, no servidor) pra mexer no Supabase Auth.
 //
 // O login provisório é o slug do restaurante, convertido num e-mail sintético
 // "<slug>@acesso.papeiai.com.br" (o Supabase Auth só entende e-mail; o
@@ -19,7 +21,7 @@
 // o dono precisa refazer o primeiro acesso (novo e-mail + nova senha).
 //
 // Request body: { senha: string, restaurant_id: string }
-// Response body: { ok: true, login, password } | { ok: false, error }
+// Response body: { ok: true, login, password } | { ok: false, error, retry_after? }
 //
 // Arquivo autocontido (sem imports de ../_shared/), mesmo padrão das outras
 // funções.
@@ -39,6 +41,18 @@ function json(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+const WINDOW_SECONDS = 15 * 60
+const BLOCK_SECONDS = 15 * 60
+const MAX_FAILURES_PER_IP = 5
+
+function clientIp(req: Request): string {
+  return (
+    req.headers.get('cf-connecting-ip') ||
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    'unknown'
+  )
 }
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -68,16 +82,35 @@ Deno.serve(async (req) => {
 
     const expected = Deno.env.get('SENHA_ADMIN')
     if (!expected) throw new Error('SENHA_ADMIN não configurada nos secrets do Supabase')
-    if (typeof senha !== 'string' || senha.length === 0 || !timingSafeEqual(senha, expected)) {
-      return json({ ok: false, error: 'Senha de admin incorreta.' }, 401)
-    }
-    if (typeof restaurant_id !== 'string' || !restaurant_id) {
-      return json({ ok: false, error: 'restaurant_id é obrigatório.' }, 400)
-    }
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
       auth: { persistSession: false, autoRefreshToken: false },
     })
+
+    // Compartilha o contador do admin-login: errar a senha aqui também conta.
+    const ipKey = `admin-login:ip:${clientIp(req)}`
+    const { data: blocked } = await supabase.rpc('rate_limit_blocked_seconds', { p_key: ipKey })
+    if (Number(blocked) > 0) {
+      return json({ ok: false, error: 'Muitas tentativas. Tente de novo mais tarde.', retry_after: Number(blocked) }, 429)
+    }
+
+    if (typeof senha !== 'string' || senha.length === 0 || !timingSafeEqual(senha, expected)) {
+      const { data: nowBlocked } = await supabase.rpc('rate_limit_register_failure', {
+        p_key: ipKey,
+        p_max: MAX_FAILURES_PER_IP,
+        p_window_seconds: WINDOW_SECONDS,
+        p_block_seconds: BLOCK_SECONDS,
+      })
+      if (Number(nowBlocked) > 0) {
+        return json({ ok: false, error: 'Muitas tentativas. Tente de novo mais tarde.', retry_after: Number(nowBlocked) }, 429)
+      }
+      return json({ ok: false, error: 'Senha de admin incorreta.' }, 401)
+    }
+    await supabase.rpc('rate_limit_reset', { p_key: ipKey })
+
+    if (typeof restaurant_id !== 'string' || !restaurant_id) {
+      return json({ ok: false, error: 'restaurant_id é obrigatório.' }, 400)
+    }
 
     const { data: restaurant, error: findError } = await supabase
       .from('restaurants')

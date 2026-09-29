@@ -19,4 +19,11 @@ window.PEDEAI_CONFIG = {
   // (funciona direto com o Live Server, em localhost, ou em qualquer
   // hospedagem).
   APP_URL: '',
+
+  // Site key PÚBLICA do Cloudflare Turnstile (captcha dos logins). O secret
+  // correspondente NUNCA vai aqui: ele fica em Edge Function
+  // (TURNSTILE_SECRET_KEY) e no Supabase Auth (Attack Protection). Em branco =
+  // sem captcha (só pra desenvolvimento). Ver README, "Turnstile e limite de
+  // tentativas".
+  TURNSTILE_SITE_KEY: '0x4AAAAAAFJYF2qKEMZZ-OfB',
 }

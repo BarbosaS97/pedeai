@@ -185,6 +185,19 @@ document.addEventListener('click', (e) => {
   input.focus()
 })
 
+// Mensagem amigável pros erros de login/recuperação do Supabase Auth. Com o
+// CAPTCHA ligado (Attack Protection) o Auth recusa sem token válido
+// (captcha_failed); os rate limits do Auth respondem 429.
+function authFailureMessage(error, fallback) {
+  if (error?.code === 'captcha_failed' || /captcha/i.test(error?.message || ''))
+    return 'Não foi possível validar a verificação de segurança. Tente de novo.'
+  if (error?.status === 429 || error?.code === 'over_request_rate_limit')
+    return 'Muitas tentativas. Aguarde alguns minutos e tente de novo.'
+  return fallback
+}
+
+const AUTH_CAPTCHA_WAIT = 'Aguarde a verificação de segurança terminar e tente de novo.'
+
 function validateNewPassword(password, confirm) {
   if (password.length < MIN_PASSWORD_LENGTH) return `A senha precisa ter pelo menos ${MIN_PASSWORD_LENGTH} caracteres.`
   if (password !== confirm) return 'As senhas não conferem.'
@@ -207,6 +220,7 @@ function showLoginScreen(root, { info = '' } = {}) {
         ${info ? `<p class="auth-info text-sm text-emerald-700 bg-emerald-50 rounded-xl px-3 py-2.5">${escapeHtml(info)}</p>` : ''}
         ${authFieldHtml({ name: 'login', placeholder: 'E-mail ou login provisório', autocomplete: 'username', icon: 'user', extra: 'autocapitalize="none" spellcheck="false"' })}
         ${authPasswordFieldHtml({ name: 'password', placeholder: 'Senha', autocomplete: 'current-password' })}
+        <div id="auth-login-turnstile"></div>
         <div data-auth-error></div>
         ${authSubmitBtn('Entrar')}
         <div class="text-center pt-1"><button type="button" id="auth-forgot-btn" class="auth-link">Esqueci minha senha</button></div>
@@ -214,12 +228,19 @@ function showLoginScreen(root, { info = '' } = {}) {
       <p class="text-xs text-neutral-400 text-center leading-relaxed">Primeiro acesso? Use o login e a senha provisórios que você recebeu do PapeiAI.</p>
     `
   )
+  const turnstile = mountTurnstile(document.getElementById('auth-login-turnstile'))
   bindAuthForm('auth-login-form', async (form) => {
+    const captchaToken = turnstile.getToken()
+    if (turnstileEnabled() && !captchaToken) return { error: AUTH_CAPTCHA_WAIT }
     const { error } = await supabaseClient.auth.signInWithPassword({
       email: loginToEmail(form.get('login')),
       password: form.get('password'),
+      options: { captchaToken },
     })
-    if (error) return { error: 'Login ou senha incorretos.' }
+    if (error) {
+      turnstile.reset() // o token vale uma tentativa só
+      return { error: authFailureMessage(error, 'Login ou senha incorretos.') }
+    }
     // onAuthStateChange (authGate) reavalia a sessão e troca de tela.
   })
   document.getElementById('auth-forgot-btn').addEventListener('click', () => showForgotScreen(root))
@@ -232,6 +253,7 @@ function showForgotScreen(root) {
     `
       <form id="auth-forgot-form" class="space-y-3.5">
         ${authFieldHtml({ name: 'email', type: 'email', placeholder: 'Seu e-mail', autocomplete: 'email', icon: 'mail' })}
+        <div id="auth-forgot-turnstile"></div>
         <div data-auth-error></div>
         ${authSubmitBtn('Enviar link')}
         <div class="text-center pt-1"><button type="button" id="auth-back-btn" class="auth-link">← Voltar ao login</button></div>
@@ -239,11 +261,20 @@ function showForgotScreen(root) {
       <p class="text-xs text-neutral-400 text-center leading-relaxed">Ainda não definiu seu e-mail (primeiro acesso)? Peça um novo acesso provisório ao PapeiAI.</p>
     `
   )
+  const turnstile = mountTurnstile(document.getElementById('auth-forgot-turnstile'))
   bindAuthForm('auth-forgot-form', async (form) => {
     const email = String(form.get('email')).trim().toLowerCase()
     if (isProvisionalEmail(email)) return { error: 'Use o e-mail que você cadastrou.' }
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: panelReturnUrl() })
-    if (error && error.status === 429) return { error: 'Muitas tentativas. Aguarde alguns minutos.' }
+    const captchaToken = turnstile.getToken()
+    if (turnstileEnabled() && !captchaToken) return { error: AUTH_CAPTCHA_WAIT }
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: panelReturnUrl(),
+      captchaToken,
+    })
+    if (error && (error.status === 429 || error.code === 'captcha_failed' || /captcha/i.test(error.message || ''))) {
+      turnstile.reset()
+      return { error: authFailureMessage(error, 'Não foi possível enviar o link. Tente de novo.') }
+    }
     // Resposta igual exista o e-mail ou não (não revela quais e-mails estão cadastrados).
     showLoginScreen(root, { info: 'Se esse e-mail estiver cadastrado, enviamos o link para redefinir a senha. Confira também o spam.' })
   })

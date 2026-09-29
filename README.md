@@ -447,7 +447,28 @@ Os links antigos `restaurante/index.html?token=...` **deixam de funcionar**: ger
 5. **Authentication → Emails → Templates**: os e-mails saem em inglês por padrão. Os modelos em português, com logo e o Ari, estão em `supabase/templates/`. Abra a aba **Change email address**, troque o *Subject* por `Confirme seu e-mail no PapeiAI` e cole o conteúdo de `email_change.html` no corpo; na aba **Reset password**, use o assunto `Redefina sua senha do PapeiAI` e o conteúdo de `recovery.html`. As imagens vêm de `https://www.papeiai.com.br/images/email/` (versões leves do logo e do Ari), então só aparecem depois que o site com essa pasta estiver publicado. As variáveis `{{ .ConfirmationURL }}` e `{{ .NewEmail }}` são do Supabase — não mexa nelas.
 6. **Deploy**: rode a migration `0015_restaurant_auth.sql` e publique as Edge Functions `admin-generate-access` e `restaurant-finish-setup` (mesmo processo das outras; ambas com "Verify JWT" desligado, e usam `SENHA_ADMIN` + as variáveis `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` que o Supabase já injeta).
 
-**Limitações conhecidas**: não há limite de tentativas na senha do admin (mesma situação do `admin-login`); o Supabase limita o envio de e-mails por conta própria (429, tratado na tela). A escrita em `restaurants`/`mesas`/`leads` pelo admin continua sem Supabase Auth (gate de senha no frontend — ver abaixo).
+**Limitações conhecidas**: o Supabase limita o envio de e-mails por conta própria (429, tratado na tela); proteção contra força bruta no login: ver a próxima seção. A escrita em `restaurants`/`mesas`/`leads` pelo admin continua sem Supabase Auth (gate de senha no frontend — ver abaixo).
+
+## Turnstile e limite de tentativas
+
+Os dois logins (super admin e restaurante) têm captcha do **Cloudflare Turnstile** e limite de tentativas.
+
+| Login | Captcha | Limite de tentativas |
+|---|---|---|
+| **Super admin** (`admin/`) | Verificado pela Edge Function `admin-login` (secret `TURNSTILE_SECRET_KEY`) | 5 senhas erradas em 15 min → o **IP** fica bloqueado 15 min (429, com o tempo restante na tela). Vale também pro "Gerar acesso provisório" (`admin-generate-access`), que compartilha o contador. Contadores em `auth_rate_limits` (migration `0016`). |
+| **Restaurante** (`restaurante/`) | **Nativo do Supabase Auth** (Attack Protection → CAPTCHA), cobre login e "esqueci minha senha" | **Rate limits do próprio Supabase Auth** (por IP). Não há bloqueio por conta. |
+
+Por que o restaurante usa o captcha nativo e não uma função minha na frente: o login dele fala direto com o Supabase Auth, então qualquer proteção "de fora" pode ser contornada chamando `/auth/v1/token` direto com a anon key (que é pública). Com o CAPTCHA ligado no Auth, o próprio Supabase recusa qualquer tentativa sem token válido, inclusive as diretas. O preço é não ter bloqueio por conta (só por IP).
+
+**Configuração (uma vez)**
+
+1. **Cloudflare → Turnstile → Add widget**: hostnames `papeiai.com.br` e `www.papeiai.com.br` (e `localhost` pra testar), modo *Managed*. Guarde a **Site Key** (pública) e a **Secret Key**.
+2. **Site key**: em `config.js`, `TURNSTILE_SITE_KEY: '<site key>'`.
+3. **Admin** — secret da Edge Function: Dashboard → Edge Functions → Secrets → `TURNSTILE_SECRET_KEY` = a Secret Key. Rode a migration `0016_auth_rate_limits.sql` e republique `admin-login` e `admin-generate-access`. (Sem o secret, `admin-login` **pula** a checagem do captcha pra não te trancar pra fora — mas aí o login não está protegido.)
+4. **Restaurante** — Dashboard → Authentication → **Attack Protection** → *Enable CAPTCHA protection* → provedor **Cloudflare Turnstile** → cole a mesma Secret Key. **Ordem importa**: só ligue depois de publicar o site com a site key (item 2); antes disso o login dos restaurantes fica sem widget e o Supabase recusa tudo.
+5. **Rate limits do Auth** — Authentication → **Rate Limits**: reduza "Rate limit for sign-ups and sign-ins" (padrão 30 a cada 5 min por IP) para algo como **10**.
+
+**Desenvolvimento local**: a Cloudflare tem chaves de teste (site key `1x00000000000000000000AA` sempre passa, secret `1x0000000000000000000000000000000AA`). Com site key vazia em `config.js` o widget nem aparece.
 
 ## Segurança — pontos importantes (MVP sem login)
 
